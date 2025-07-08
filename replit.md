@@ -117,6 +117,11 @@ This is a full-stack web application for IIG Israilov Import Group, a profession
 ```
 Changelog:
 - July 08, 2025. Initial setup
+- July 08, 2025. Added PostgreSQL database support with Drizzle ORM
+  - Created database connection in server/db.ts
+  - Added DatabaseStorage class to replace MemStorage
+  - Successfully pushed schema to database
+  - Database now ready for user management and future features
 ```
 
 ## User Preferences

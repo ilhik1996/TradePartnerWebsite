@@ -36,4 +36,35 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const { db } = await import('./db');
+    const { eq } = await import('drizzle-orm');
+    const { users } = await import('@shared/schema');
+    
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const { db } = await import('./db');
+    const { eq } = await import('drizzle-orm');
+    const { users } = await import('@shared/schema');
+    
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const { db } = await import('./db');
+    const { users } = await import('@shared/schema');
+    
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+}
+
+export const storage = new DatabaseStorage();
