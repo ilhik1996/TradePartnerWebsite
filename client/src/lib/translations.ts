@@ -191,7 +191,7 @@ export const translations: Record<string, Translation> = {
       contact: "Контакты"
     },
     hero: {
-      title: "IIG Израилов Импорт Групп",
+      title: "IIG Israilov Import Group",
       subtitle: "Ваш надежный партнер в глобальных закупках и поиске поставщиков",
       cta1: "Наши услуги",
       cta2: "Связаться с нами"
@@ -227,7 +227,7 @@ export const translations: Record<string, Translation> = {
       }
     },
     about: {
-      title: "О IIG Израилов Импорт Групп",
+      title: "О IIG Israilov Import Group",
       description1: "Базируясь в Лос-Анджелесе, Калифорния, мы являемся независимым партнером по закупкам и поиску поставщиков, посвященным соединению бизнеса с надежными производителями и поставщиками по всему миру.",
       description2: "Наша экспертиза охватывает различные отрасли с особым акцентом на потребительские товары, фотооборудование и аксессуары. Мы гордимся нашим гибким подходом и приверженностью построению долгосрочных партнерств.",
       stats: {
@@ -270,7 +270,7 @@ export const translations: Record<string, Translation> = {
       services: "Услуги",
       company: "Компания",
       connect: "Связаться",
-      copyright: "2023 IIG Израилов Импорт Групп. Все права защищены."
+      copyright: "2023 IIG Israilov Import Group. Все права защищены."
     }
   },
   es: {
