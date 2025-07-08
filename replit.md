@@ -123,4 +123,5 @@ Changelog:
 
 ```
 Preferred communication style: Simple, everyday language.
+Communication language: Russian (пользователь предпочитает общение на русском языке)
 ```
