@@ -599,7 +599,7 @@ function PetitionPanel() {
 
 // ─── Partners panel ────────────────────────────────────────────────────────────
 
-const PARTNER_CATEGORIES = ["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"] as const;
+const PARTNER_CATEGORIES = ["food", "retail", "pharmacy", "telecom", "fuel", "entertainment", "electronics", "delivery", "beauty", "fitness", "travel", "finance"] as const;
 type PartnerCategory = typeof PARTNER_CATEGORIES[number];
 
 interface PartnerFormData {

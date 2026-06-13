@@ -26,6 +26,7 @@ export default function Partners() {
 
   const categoryIcon: Record<string, string> = {
     food: '🍔', retail: '🛍️', pharmacy: '💊', telecom: '📱', fuel: '⛽', entertainment: '🎬',
+    electronics: '🖥️', delivery: '📦', beauty: '💄', fitness: '💪', travel: '✈️', finance: '💳',
   };
 
   return (

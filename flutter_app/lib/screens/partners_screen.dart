@@ -127,11 +127,18 @@ class _PartnerCard extends StatelessWidget {
   final Map<String, dynamic> partner;
   const _PartnerCard({required this.partner});
 
+  static const _categoryEmoji = {
+    'food': '🍔', 'retail': '🛍️', 'pharmacy': '💊', 'telecom': '📱',
+    'fuel': '⛽', 'entertainment': '🎬', 'electronics': '🖥️', 'delivery': '📦',
+    'beauty': '💄', 'fitness': '💪', 'travel': '✈️', 'finance': '💳',
+  };
+
   @override
   Widget build(BuildContext context) {
     final cashback = double.tryParse(partner['cashbackPercent']?.toString() ?? '0') ?? 0;
     final category = partner['category'] as String? ?? '';
     final logoUrl = partner['logoUrl'] as String?;
+    final emoji = _categoryEmoji[category] ?? '🏪';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -155,9 +162,9 @@ class _PartnerCard extends StatelessWidget {
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(11),
                   child: Image.network(logoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.store_outlined, color: VionaColors.textSecondary)),
+                    Center(child: Text(emoji, style: const TextStyle(fontSize: 24)))),
                 )
-              : const Icon(Icons.store_outlined, color: VionaColors.textSecondary),
+              : Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
           ),
           const SizedBox(width: 14),
           Expanded(
