@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { countries, draws, users, userProfiles, wallets, drawEntries } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
 import { awardXp, checkAndAwardBadges } from "./gamification";
@@ -78,6 +78,36 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
                     prizeAmount: result.prizeAmount,
                     currencySymbol: country.currencySymbol ?? "",
                   }).catch(() => {});
+                }
+              }).catch(() => {});
+
+            // Send loser emails non-blocking — fetch all entries except winner
+            db.select({
+              email: users.email,
+              firstName: userProfiles.firstName,
+              ticketNumber: drawEntries.ticketNumber,
+            })
+              .from(drawEntries)
+              .innerJoin(users, eq(users.id, drawEntries.userId))
+              .leftJoin(userProfiles, eq(userProfiles.userId, drawEntries.userId))
+              .where(and(
+                eq(drawEntries.drawId, openDraw.id),
+                ne(drawEntries.userId, result.winnerUserId),
+              ))
+              .then(async (loserRows) => {
+                for (const loser of loserRows) {
+                  if (loser.email) {
+                    sendDrawResultEmail({
+                      to: loser.email,
+                      firstName: loser.firstName ?? undefined,
+                      drawDate: openDraw.drawDate,
+                      isWinner: false,
+                      myTicket: loser.ticketNumber ?? undefined,
+                      winnerTicket: result.winnerTicket,
+                      totalEntries: openDraw.totalEntries,
+                      currencySymbol: country.currencySymbol ?? "",
+                    }).catch(() => {});
+                  }
                 }
               }).catch(() => {});
           }

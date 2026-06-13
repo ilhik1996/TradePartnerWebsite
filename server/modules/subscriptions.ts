@@ -1,10 +1,11 @@
 import { db } from "../db";
-import { subscriptions, users, countries, notifications } from "@shared/schema";
+import { subscriptions, users, countries } from "@shared/schema";
 import { eq, and, lte } from "drizzle-orm";
 import { addPaidEntry, getOrCreateDraw, todayDateString } from "./lottery";
 import { processDeposit } from "./payments";
 import { nanoid } from "nanoid";
 import { awardXp, checkAndAwardBadges } from "./gamification";
+import { insertNotification } from "./notifications";
 
 // ─── Create subscription ──────────────────────────────────────────────────────
 
@@ -65,12 +66,13 @@ export async function createSubscription(
     paymentMethodToken,
   }).returning();
 
-  await db.insert(notifications).values({
+  await insertNotification({
     userId,
     type: "subscription_created",
     title: `${type === "weekly" ? "Weekly" : "Monthly"} subscription active`,
     body: `${country.currencySymbol}${amount.toFixed(2)} charged. You'll automatically enter every daily draw in ${country.name}.`,
     metadata: { subscriptionId: sub.id },
+    pushUrl: "/subscription",
   });
 
   return sub;
@@ -141,11 +143,12 @@ export async function renewDueSubscriptions() {
           .set({ status: "paused" })
           .where(eq(subscriptions.id, sub.id));
 
-        await db.insert(notifications).values({
+        await insertNotification({
           userId: sub.userId,
           type: "subscription_renewal_failed",
           title: "Subscription renewal failed",
           body: "We couldn't charge your payment method. Your subscription is paused — please update your payment details.",
+          pushUrl: "/subscription",
         });
       }
     } catch (err) {

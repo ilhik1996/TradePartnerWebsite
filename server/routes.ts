@@ -61,6 +61,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // General API rate limit
   app.use("/api", apiRateLimit);
 
+  // ── Health check ─────────────────────────────────────────────────────────
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({ ok: true, ts: new Date().toISOString() });
+  });
+
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   app.post("/api/auth/register", authRateLimit, async (req: Request, res: Response) => {

@@ -1,7 +1,8 @@
 import { db } from "../db";
-import { draws, drawEntries, wallets, transactions, users, countries, notifications, responsibleGaming } from "@shared/schema";
+import { draws, drawEntries, wallets, transactions, users, countries, responsibleGaming } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { createHash, randomInt } from "crypto";
+import { createHash } from "crypto";
+import { insertNotification } from "./notifications";
 
 export async function getOrCreateDraw(countryId: number, dateStr: string) {
   const [existing] = await db
@@ -234,33 +235,32 @@ export async function conductDraw(drawId: number) {
     completedAt: new Date(),
   }).where(eq(draws.id, drawId));
 
-  // Notify winner
-  await db.insert(notifications).values({
+  // Notify winner (with push)
+  await insertNotification({
     userId: winnerEntry.userId,
     type: "winner",
     title: "🎉 You won!",
     body: `You won ${country.currencySymbol}${prizeAmount.toFixed(2)} in today's draw!`,
     metadata: { drawId, prizeAmount: prizeAmount.toFixed(2) },
+    pushUrl: "/wallet",
   });
 
-  // Notify all participants about result
+  // Notify all participants about result (fire-and-forget, non-blocking)
   const allEntries = await db.select().from(drawEntries).where(eq(drawEntries.drawId, drawId));
-  const loserIds = allEntries
-    .filter(e => e.userId !== winnerEntry.userId)
-    .map(e => e.userId);
+  const loserEntries = allEntries.filter(e => e.userId !== winnerEntry.userId);
 
-  for (const uid of loserIds) {
-    const myTicket = allEntries.find(e => e.userId === uid)?.ticketNumber ?? 0;
-    const distance = Math.abs(myTicket - winnerTicket);
+  Promise.all(loserEntries.map(entry => {
+    const distance = Math.abs((entry.ticketNumber ?? 0) - winnerTicket);
     const proximity = Math.round((1 - distance / draw.totalEntries) * 100);
-    await db.insert(notifications).values({
-      userId: uid,
+    return insertNotification({
+      userId: entry.userId!,
       type: "draw_result",
       title: "Today's draw completed",
       body: `Your ticket was ${proximity}% close to the winner. Better luck tomorrow!`,
-      metadata: { drawId, winnerTicket, myTicket },
+      metadata: { drawId, winnerTicket, myTicket: entry.ticketNumber },
+      pushUrl: "/history",
     });
-  }
+  })).catch(() => {});
 
   return {
     drawId,
