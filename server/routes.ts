@@ -18,7 +18,7 @@ import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detec
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
-  subscriptions, referrals, partners,
+  subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
@@ -740,13 +740,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Web Push ─────────────────────────────────────────────────────────────
 
-  // Store push subscription (in production save to DB, send via web-push package)
+  // Store push subscription
   app.post("/api/push/subscribe", requireAuth, async (req: Request, res: Response) => {
-    // In production: save req.body (PushSubscription JSON) to push_subscriptions table
-    // and use web-push npm package to send notifications
-    // For MVP: log and acknowledge
-    console.log(`[Push] User ${uid(req)} subscribed:`, JSON.stringify(req.body).slice(0, 100));
-    res.json({ ok: true });
+    try {
+      const { endpoint, keys } = z.object({
+        endpoint: z.string().url(),
+        keys: z.object({ p256dh: z.string(), auth: z.string() }),
+      }).parse(req.body);
+      const userId = uid(req);
+      const ua = req.headers["user-agent"] ?? null;
+      // Upsert: if endpoint already stored, update keys; otherwise insert
+      await db.insert(pushSubscriptions).values({ userId, endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent: ua })
+        .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { userId, p256dh: keys.p256dh, auth: keys.auth, userAgent: ua } });
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
   });
 
   // ── KYC initiation ───────────────────────────────────────────────────────
