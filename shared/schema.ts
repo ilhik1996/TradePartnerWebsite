@@ -215,6 +215,37 @@ export const petitionSignatures = pgTable("petition_signatures", {
   revokedAt: timestamp("revoked_at"),
 });
 
+// ─── Gamification ─────────────────────────────────────────────────────────────
+
+export const gamificationEvents = pgTable("gamification_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  xp: integer("xp").notNull(),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const gamificationBadges = pgTable("gamification_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  badgeId: text("badge_id").notNull(),
+  awardedAt: timestamp("awarded_at").notNull().defaultNow(),
+});
+
+// ─── Partners ─────────────────────────────────────────────────────────────────
+
+export const partners = pgTable("partners", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  cashbackPercent: numeric("cashback_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+  countryId: integer("country_id").references(() => countries.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
 export const userSessions = pgTable("user_sessions", {
@@ -263,3 +294,6 @@ export type Notification = typeof notifications.$inferSelect;
 export type ResponsibleGaming = typeof responsibleGaming.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type GamificationEvent = typeof gamificationEvents.$inferSelect;
+export type GamificationBadge = typeof gamificationBadges.$inferSelect;
+export type Partner = typeof partners.$inferSelect;

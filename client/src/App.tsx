@@ -15,6 +15,7 @@ import Notifications from "@/pages/notifications";
 import Referrals from "@/pages/referrals";
 import Subscription from "@/pages/subscription";
 import Admin from "@/pages/admin";
+import Partners from "@/pages/partners";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/referrals" component={() => <ProtectedRoute component={Referrals} />} />
       <Route path="/subscription" component={() => <ProtectedRoute component={Subscription} />} />
       <Route path="/admin" component={Admin} />
+      <Route path="/partners" component={() => <ProtectedRoute component={Partners} />} />
       <Route component={NotFound} />
     </Switch>
   );

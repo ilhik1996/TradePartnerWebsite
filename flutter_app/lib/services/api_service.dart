@@ -1,0 +1,210 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class ApiService {
+  static const String _baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://viona.app/api',
+  );
+
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+  final _storage = const FlutterSecureStorage();
+  late final Dio _dio = Dio(BaseOptions(
+    baseUrl: _baseUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 30),
+    headers: {'Content-Type': 'application/json'},
+  ))..interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      final token = await _storage.read(key: 'viona_token');
+      if (token != null) options.headers['Authorization'] = 'Bearer $token';
+      handler.next(options);
+    },
+    onError: (e, handler) {
+      if (e.response?.statusCode == 401) {
+        _storage.delete(key: 'viona_token');
+      }
+      handler.next(e);
+    },
+  ));
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> register({
+    String? email, String? phone, required String password, int? countryId,
+  }) async {
+    final r = await _dio.post('/auth/register', data: {
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      'password': password,
+      if (countryId != null) 'countryId': countryId,
+    });
+    await _storage.write(key: 'viona_token', value: r.data['token']);
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> login(String identifier, String password) async {
+    final r = await _dio.post('/auth/login', data: {
+      'identifier': identifier, 'password': password,
+    });
+    await _storage.write(key: 'viona_token', value: r.data['token']);
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> me() async {
+    final r = await _dio.get('/auth/me');
+    return r.data;
+  }
+
+  Future<void> logout() async {
+    await _storage.delete(key: 'viona_token');
+  }
+
+  Future<bool> hasToken() async {
+    final t = await _storage.read(key: 'viona_token');
+    return t != null;
+  }
+
+  // ── Countries ─────────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getCountries() async {
+    final r = await _dio.get('/countries');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> getCountry(int id) async {
+    final r = await _dio.get('/countries/$id');
+    return r.data;
+  }
+
+  // ── Draws ─────────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getTodayDraw(int countryId) async {
+    final r = await _dio.get('/draws/today/$countryId');
+    return r.data;
+  }
+
+  Future<List<dynamic>> getDrawHistory(int countryId) async {
+    final r = await _dio.get('/draws/history/$countryId');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> enterDraw(int drawId) async {
+    final r = await _dio.post('/draws/$drawId/enter');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> enterFree(int drawId, {
+    required String firstName, required String lastName,
+    required String email, required int countryId,
+  }) async {
+    final r = await _dio.post('/draws/$drawId/enter-free', data: {
+      'firstName': firstName, 'lastName': lastName,
+      'email': email, 'countryId': countryId,
+    });
+    return r.data;
+  }
+
+  Future<dynamic> getMyEntry(int drawId) async {
+    final r = await _dio.get('/draws/$drawId/my-entry');
+    return r.data;
+  }
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getWallet() async {
+    final r = await _dio.get('/wallet');
+    return r.data;
+  }
+
+  Future<List<dynamic>> getTransactions({int limit = 20, int offset = 0}) async {
+    final r = await _dio.get('/wallet/transactions?limit=$limit&offset=$offset');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> deposit(double amount, String currency) async {
+    final r = await _dio.post('/wallet/deposit', data: {
+      'amount': amount, 'currency': currency,
+    });
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> withdraw(double amount) async {
+    final r = await _dio.post('/wallet/withdraw', data: {'amount': amount});
+    return r.data;
+  }
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getProfile() async {
+    final r = await _dio.get('/profile');
+    return r.data;
+  }
+
+  Future<void> updateProfile({String? firstName, String? lastName}) async {
+    await _dio.patch('/profile', data: {
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+    });
+  }
+
+  Future<void> setAutoParticipate(bool enabled) async {
+    await _dio.patch('/settings/auto-participate', data: {'enabled': enabled});
+  }
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getNotifications() async {
+    final r = await _dio.get('/notifications');
+    return r.data;
+  }
+
+  Future<void> markNotificationRead(int id) async {
+    await _dio.patch('/notifications/$id/read');
+  }
+
+  // ── Referrals ─────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getReferrals() async {
+    final r = await _dio.get('/referrals/my');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> applyReferralCode(String code) async {
+    final r = await _dio.post('/referrals/apply', data: {'code': code});
+    return r.data;
+  }
+
+  // ── Subscription ──────────────────────────────────────────────────────────
+
+  Future<dynamic> getSubscription() async {
+    final r = await _dio.get('/subscription');
+    return r.data;
+  }
+
+  Future<Map<String, dynamic>> createSubscription(String type) async {
+    final r = await _dio.post('/subscription', data: {'type': type});
+    return r.data;
+  }
+
+  Future<void> cancelSubscription(int id) async {
+    await _dio.delete('/subscription/$id');
+  }
+
+  // ── Gamification ──────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getUserLevel() async {
+    final r = await _dio.get('/gamification/me');
+    return r.data;
+  }
+
+  // ── Partners ──────────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getPartners() async {
+    final r = await _dio.get('/partners');
+    return r.data;
+  }
+}

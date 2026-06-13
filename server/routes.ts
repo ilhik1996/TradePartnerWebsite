@@ -12,6 +12,8 @@ import {
 import { processDeposit, chargebackRiskScore } from "./modules/payments";
 import { createSubscription, cancelSubscription, getActiveSubscription } from "./modules/subscriptions";
 import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail } from "./modules/email";
+import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamification";
+import { getPartners, getPartner } from "./modules/partners";
 import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
@@ -766,6 +768,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await seedInitialData();
       res.json({ ok: true, message: "Database seeded" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Gamification ──────────────────────────────────────────────────────────
+
+  // GET /api/gamification/me — current user's level, XP and badges
+  app.get("/api/gamification/me", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const data = await getUserLevel(uid(req), db);
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // POST /api/gamification/award — admin-only: manually award XP to a user
+  app.post("/api/gamification/award", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId, reason } = z.object({
+        userId: z.number().int().positive(),
+        reason: z.enum(["entry", "win", "referral", "weekly_sub", "monthly_sub", "deposit"]),
+      }).parse(req.body);
+
+      const totalXp = await awardXp(userId, reason, db);
+      await checkAndAwardBadges(userId, db);
+
+      await db.insert(auditLogs).values({
+        adminUserId: adminUid(req),
+        action: "award_xp",
+        entityType: "user",
+        entityId: userId,
+        dataAfter: { reason, xpAwarded: XP[reason], newTotal: totalXp },
+      });
+
+      res.json({ ok: true, totalXp });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // ── Partners ──────────────────────────────────────────────────────────────
+
+  // GET /api/partners — list active partners, optionally filtered by ?countryId
+  app.get("/api/partners", async (req: Request, res: Response) => {
+    try {
+      const countryId = req.query.countryId !== undefined
+        ? parseInt(req.query.countryId as string)
+        : undefined;
+
+      if (countryId !== undefined && isNaN(countryId)) {
+        res.status(400).json({ message: "countryId must be a valid integer" });
+        return;
+      }
+
+      const partners = await getPartners(countryId);
+      res.json(partners);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // GET /api/partners/:id — single partner by id
+  app.get("/api/partners/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
+
+      const partner = await getPartner(id);
+      if (!partner) { res.status(404).json({ message: "Partner not found" }); return; }
+
+      res.json(partner);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
