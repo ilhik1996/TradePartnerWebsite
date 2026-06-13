@@ -151,7 +151,7 @@ class _DrawCardState extends State<_DrawCard> {
     final prize = double.tryParse(draw['prizeAmount']?.toString() ?? '0') ?? 0;
     final totalEntries = (draw['totalEntries'] as int?) ?? 1;
     final myTicket = myEntry?['ticketNumber'] as int? ?? 0;
-    final winnerTicket = (draw['winnerTicket'] as int?) ?? 0;
+    final winnerTicket = (draw['winnerTicketNumber'] as int?) ?? 0;
     final distance = (myTicket - winnerTicket).abs();
     final proximity = participated && totalEntries > 0
       ? ((1 - (distance / totalEntries).clamp(0.0, 1.0)) * 100).toInt()

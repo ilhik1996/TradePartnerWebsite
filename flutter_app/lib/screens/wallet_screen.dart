@@ -326,16 +326,17 @@ class _TxTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = tx['type'] as String? ?? '';
     final amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0;
-    final isCredit = type == 'prize' || type == 'deposit' || type == 'referral_bonus';
+    final isCredit = type == 'prize_payout' || type == 'deposit' || type == 'referral_bonus' || type == 'ad_reward' || type == 'refund';
 
     IconData icon;
     Color color;
     switch (type) {
-      case 'prize':  icon = Icons.emoji_events; color = VionaColors.gold; break;
-      case 'deposit': icon = Icons.add_circle_outline; color = VionaColors.teal; break;
-      case 'entry': icon = Icons.confirmation_number_outlined; color = VionaColors.purple; break;
-      case 'withdraw': icon = Icons.arrow_circle_up_outlined; color = VionaColors.danger; break;
-      default: icon = Icons.swap_horiz; color = VionaColors.textSecondary;
+      case 'prize_payout':   icon = Icons.emoji_events; color = VionaColors.gold; break;
+      case 'deposit':        icon = Icons.add_circle_outline; color = VionaColors.teal; break;
+      case 'lottery_entry':  icon = Icons.confirmation_number_outlined; color = VionaColors.purple; break;
+      case 'withdrawal':     icon = Icons.arrow_circle_up_outlined; color = VionaColors.danger; break;
+      case 'referral_bonus': icon = Icons.people_outline; color = VionaColors.teal; break;
+      default:               icon = Icons.swap_horiz; color = VionaColors.textSecondary;
     }
 
     return Container(
