@@ -14,6 +14,8 @@ import { createSubscription, cancelSubscription, getActiveSubscription } from ".
 import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail } from "./modules/email";
 import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamification";
 import { getPartners, getPartner } from "./modules/partners";
+import { sendPushToUser, VAPID_PUBLIC_KEY } from "./modules/push";
+import { insertNotification } from "./modules/notifications";
 import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
@@ -809,6 +811,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Web Push ─────────────────────────────────────────────────────────────
 
+  // Return VAPID public key so the browser can subscribe
+  app.get("/api/push/vapid-key", (_req: Request, res: Response) => {
+    if (!VAPID_PUBLIC_KEY) { res.status(503).json({ message: "Push not configured" }); return; }
+    res.json({ publicKey: VAPID_PUBLIC_KEY });
+  });
+
   // Store push subscription
   app.post("/api/push/subscribe", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -842,23 +850,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (level === "age") {
       if (user.kycLevel !== "none") { res.status(400).json({ message: "Already verified" }); return; }
+      // Validate age — must be 18+
+      if (dateOfBirth) {
+        const dob = new Date(dateOfBirth);
+        if (isNaN(dob.getTime())) { res.status(400).json({ message: "Invalid date of birth" }); return; }
+        const ageMsec = Date.now() - dob.getTime();
+        const ageYears = ageMsec / (1000 * 60 * 60 * 24 * 365.25);
+        if (ageYears < 18) { res.status(400).json({ message: "You must be 18 or older to participate" }); return; }
+      }
       // In production: create Sumsub/Onfido applicant and return redirect URL.
       // For MVP: set age_verified immediately after form submission.
       await db.update(users).set({ kycLevel: "age_verified" }).where(eq(users.id, userId));
-      await db.insert(notifications).values({
-        userId,
-        type: "kyc_approved",
+      await insertNotification({
+        userId, type: "kyc_approved",
         title: "Age verified",
         body: "Your age verification is complete. You can now make deposits.",
+        pushUrl: "/wallet",
       });
       res.json({ ok: true, kycLevel: "age_verified" });
     } else {
       if (user.kycLevel !== "age_verified") { res.status(400).json({ message: "Complete age verification first" }); return; }
       // In production: initiate full KYC document review.
       // For MVP: mark as pending (stays age_verified, notification sent, webhook upgrades to full).
-      await db.insert(notifications).values({
-        userId,
-        type: "kyc_approved",
+      await insertNotification({
+        userId, type: "kyc_approved",
         title: "KYC submitted",
         body: "Your documents have been received. Review takes 1-3 business days.",
       });
@@ -880,23 +895,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const reviewAnswer = reviewResult?.reviewAnswer;  // "GREEN" | "RED"
 
     if (reviewAnswer === "GREEN") {
-      // Full KYC passed
-      await db.update(users)
-        .set({ kycLevel: "full" })
-        .where(eq(users.id, userId));
+      await db.update(users).set({ kycLevel: "full" }).where(eq(users.id, userId));
       await db.update(userProfiles)
         .set({ kycVerifiedAt: new Date(), kycProviderToken: applicantId })
         .where(eq(userProfiles.userId, userId));
-      await db.insert(notifications).values({
-        userId,
-        type: "kyc_approved",
+      await insertNotification({
+        userId, type: "kyc_approved",
         title: "Identity verified",
         body: "Your KYC verification was approved. You can now withdraw funds.",
+        pushUrl: "/wallet",
       });
     } else if (reviewAnswer === "RED") {
-      await db.insert(notifications).values({
-        userId,
-        type: "kyc_rejected",
+      await insertNotification({
+        userId, type: "kyc_rejected",
         title: "Verification rejected",
         body: "Your KYC verification was not approved. Please try again or contact support.",
       });
@@ -916,14 +927,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const event = req.body;
 
     if (event.type === "payment_intent.payment_failed") {
-      // Log failed payment — could notify user
       const userId = parseInt(event.data?.object?.metadata?.userId ?? "0");
       if (userId) {
-        await db.insert(notifications).values({
-          userId,
-          type: "payment_failed",
+        insertNotification({
+          userId, type: "payment_failed",
           title: "Payment failed",
           body: "Your payment could not be processed. Please try a different card.",
+          pushUrl: "/wallet",
         }).catch(() => {});
       }
     }

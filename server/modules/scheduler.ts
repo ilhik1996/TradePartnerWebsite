@@ -1,10 +1,11 @@
 import { db } from "../db";
-import { countries, draws, users, userProfiles, wallets, drawEntries, notifications } from "@shared/schema";
+import { countries, draws, users, userProfiles, wallets, drawEntries } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
 import { awardXp, checkAndAwardBadges } from "./gamification";
 import { sendDrawResultEmail, sendLowBalanceEmail } from "./email";
+import { insertNotification } from "./notifications";
 
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
@@ -126,13 +127,13 @@ async function autoEnterUsers() {
           // Check balance — notify user if insufficient
           const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, user.id));
           if (!wallet || parseFloat(wallet.balance as string) < entryAmount) {
-            // Create in-app notification (non-blocking, best-effort)
-            db.insert(notifications).values({
+            insertNotification({
               userId: user.id,
               type: "balance_low",
               title: "Balance too low for today's draw",
               body: `Your balance is below ${country.currencySymbol}${entryAmount}. Top up to enter automatically.`,
               metadata: { entryAmount, currency: country.currency },
+              pushUrl: "/wallet",
             }).catch(() => {});
             // Email (non-blocking) — fetch user row to get email
             db.select({ email: users.email })

@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
 
-// VAPID public key — generate real one in production:
-// npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.VITE_VAPID_PUBLIC_KEY
-  ?? "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
-
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -17,16 +12,25 @@ function urlBase64ToUint8Array(base64String: string) {
 export function usePush() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [supported, setSupported] = useState(false);
+  const [vapidKey, setVapidKey] = useState<string | null>(null);
 
   useEffect(() => {
-    setSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+    const browserOk = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    setSupported(browserOk);
     if ("Notification" in window) setPermission(Notification.permission);
+
+    // Fetch VAPID key from server — if server has none, push is unavailable
+    if (browserOk) {
+      fetch("/api/push/vapid-key")
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.publicKey) setVapidKey(data.publicKey); })
+        .catch(() => {});
+    }
   }, []);
 
   const subscribe = async (): Promise<PushSubscription | null> => {
-    if (!supported) return null;
+    if (!supported || !vapidKey) return null;
 
-    // Register service worker
     const reg = await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
 
@@ -36,10 +40,9 @@ export function usePush() {
 
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
     });
 
-    // Send subscription to backend
     await fetch("/api/push/subscribe", {
       method: "POST",
       headers: {
@@ -52,5 +55,6 @@ export function usePush() {
     return sub;
   };
 
-  return { supported, permission, subscribe };
+  // Push is only available when the browser supports it AND the server has VAPID keys
+  return { supported: supported && vapidKey !== null, permission, subscribe };
 }
