@@ -44,7 +44,8 @@ class ApiService {
       if (countryId != null) 'countryId': countryId,
       'autoParticipate': autoParticipate,
     });
-    await _storage.write(key: 'viona_token', value: r.data['token']);
+    final token = r.data['token'] as String?;
+    if (token != null) await _storage.write(key: 'viona_token', value: token);
     return r.data;
   }
 
@@ -52,7 +53,8 @@ class ApiService {
     final r = await _dio.post('/auth/login', data: {
       'identifier': identifier, 'password': password,
     });
-    await _storage.write(key: 'viona_token', value: r.data['token']);
+    final token = r.data['token'] as String?;
+    if (token != null) await _storage.write(key: 'viona_token', value: token);
     return r.data;
   }
 

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 // Proximity bar: how close to winning (0–100%)
@@ -127,6 +128,7 @@ export default function History() {
   const [draws, setDraws] = useState<any[]>([]);
   const [symbol, setSymbol] = useState("₴");
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const countryId = user?.countryId ?? 1;
 
@@ -137,6 +139,8 @@ export default function History() {
     ]).then(([d, c]) => {
       setDraws(d);
       setSymbol(c?.currencySymbol ?? "₴");
+    }).catch((err: any) => {
+      toast({ title: "Failed to load history", description: err.message, variant: "destructive" });
     }).finally(() => setLoading(false));
   }, [countryId]);
 
