@@ -21,8 +21,9 @@ export default function Register() {
   const [countries, setCountries] = useState<any[]>([]);
   const [age18, setAge18] = useState(false);
   const [termsOk, setTermsOk] = useState(false);
-  const [autoOk, setAutoOk] = useState(true);   // explicit consent for auto-participate
+  const [autoOk, setAutoOk] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [refCode] = useState(() => new URLSearchParams(window.location.search).get("ref") ?? "");
 
   useEffect(() => {
     api.countries.list().then(setCountries).catch(() => {});
@@ -41,6 +42,10 @@ export default function Register() {
     setLoading(true);
     try {
       await register({ email, password, countryId });
+      // Apply referral code from ?ref= query param if present
+      if (refCode) {
+        api.referrals.apply(refCode).catch(() => {});
+      }
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
@@ -174,6 +179,13 @@ export default function Register() {
                 </label>
               </div>
             </div>
+
+            {refCode && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent/10 border border-accent/20 text-sm">
+                <CheckCircle className="w-4 h-4 text-accent shrink-0" />
+                <span>Referral code <strong className="font-mono">{refCode}</strong> will be applied automatically</span>
+              </div>
+            )}
 
             <Button
               type="submit"
