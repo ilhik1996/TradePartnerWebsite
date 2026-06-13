@@ -603,7 +603,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/countries", requireAdmin, async (req: Request, res: Response) => {
     try {
-      const [country] = await db.insert(countries).values(req.body).returning();
+      const schema = z.object({
+        code: z.string().length(2).toUpperCase(),
+        name: z.string().min(1),
+        currency: z.string().min(1),
+        currencySymbol: z.string().min(1),
+        locale: z.string().min(1),
+        entryAmountDaily: z.coerce.number().positive(),
+        entryAmountWeekly: z.coerce.number().positive(),
+        entryAmountMonthly: z.coerce.number().positive(),
+        prizePercentage: z.coerce.number().min(1).max(99),
+        drawHourUtc: z.coerce.number().int().min(0).max(23),
+        isActive: z.boolean().optional().default(true),
+      });
+      const body = schema.parse(req.body);
+      const [country] = await db.insert(countries).values({
+        ...body,
+        entryAmountDaily: body.entryAmountDaily.toFixed(2),
+        entryAmountWeekly: body.entryAmountWeekly.toFixed(2),
+        entryAmountMonthly: body.entryAmountMonthly.toFixed(2),
+        prizePercentage: body.prizePercentage.toFixed(2),
+      }).returning();
       res.status(201).json(country);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -611,8 +631,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/admin/countries/:id", requireAdmin, async (req: Request, res: Response) => {
-    const [country] = await db.update(countries).set(req.body).where(eq(countries.id, parseInt(req.params.id))).returning();
-    res.json(country);
+    try {
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        currency: z.string().min(1).optional(),
+        currencySymbol: z.string().min(1).optional(),
+        locale: z.string().min(1).optional(),
+        entryAmountDaily: z.coerce.number().positive().optional(),
+        entryAmountWeekly: z.coerce.number().positive().optional(),
+        entryAmountMonthly: z.coerce.number().positive().optional(),
+        prizePercentage: z.coerce.number().min(1).max(99).optional(),
+        drawHourUtc: z.coerce.number().int().min(0).max(23).optional(),
+        isActive: z.boolean().optional(),
+      });
+      const body = schema.parse(req.body);
+      const updateData: Record<string, any> = { ...body };
+      if (body.entryAmountDaily !== undefined) updateData.entryAmountDaily = body.entryAmountDaily.toFixed(2);
+      if (body.entryAmountWeekly !== undefined) updateData.entryAmountWeekly = body.entryAmountWeekly.toFixed(2);
+      if (body.entryAmountMonthly !== undefined) updateData.entryAmountMonthly = body.entryAmountMonthly.toFixed(2);
+      if (body.prizePercentage !== undefined) updateData.prizePercentage = body.prizePercentage.toFixed(2);
+      const [country] = await db.update(countries).set(updateData).where(eq(countries.id, parseInt(req.params.id))).returning();
+      if (!country) { res.status(404).json({ message: "Country not found" }); return; }
+      res.json(country);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
   });
 
   // ── Admin: Draws ──────────────────────────────────────────────────────────
@@ -1005,7 +1048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schema = z.object({
         name: z.string().min(1),
-        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"]),
+        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment", "electronics", "delivery", "beauty", "fitness", "travel", "finance"]),
         description: z.string().optional(),
         logoUrl: z.string().optional(),
         cashbackPercent: z.number().min(0).max(50),
@@ -1046,7 +1089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const schema = z.object({
         name: z.string().min(1).optional(),
-        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"]).optional(),
+        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment", "electronics", "delivery", "beauty", "fitness", "travel", "finance"]).optional(),
         description: z.string().optional(),
         logoUrl: z.string().optional(),
         cashbackPercent: z.number().min(0).max(50).optional(),

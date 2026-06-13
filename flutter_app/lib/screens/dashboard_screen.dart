@@ -19,6 +19,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final _ws = WebSocketService();
 
   Map<String, dynamic>? _user;
+  Map<String, dynamic>? _profile;
   Map<String, dynamic>? _country;
   Map<String, dynamic>? _draw;
   Map<String, dynamic>? _wallet;
@@ -69,10 +70,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _api.getCountry(countryId),
         _api.getWallet(),
         _api.getTodayDraw(countryId),
+        _api.getProfile(),
       ]);
       _country = results[0] as Map<String, dynamic>?;
       _wallet = results[1] as Map<String, dynamic>?;
       _draw = results[2] as Map<String, dynamic>?;
+      _profile = results[3] as Map<String, dynamic>?;
       if (_draw != null) {
         _myEntry = await _api.getMyEntry(_draw!['id']);
       }
@@ -167,9 +170,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(width: 8),
                     const Text('VIONA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                     const Spacer(),
-                    if (_user?['firstName'] != null)
+                    if (_profile?['firstName'] != null)
                       Text(
-                        'Hi, ${_user!['firstName']}',
+                        'Hi, ${_profile!['firstName']}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                   ],
