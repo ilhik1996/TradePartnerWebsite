@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Bell, Trophy, Wallet, Info, CheckCheck } from "lucide-react";
+import { ArrowLeft, Bell, Trophy, Wallet, Info, CheckCheck, ShieldCheck, ShieldX, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 const NOTIF_ICONS: Record<string, any> = {
-  winner: { icon: Trophy, color: "text-amber-400", bg: "bg-amber-400/10" },
-  draw_result: { icon: Info, color: "text-primary", bg: "bg-primary/10" },
-  balance_low: { icon: Wallet, color: "text-muted-foreground", bg: "bg-muted" },
+  winner:                     { icon: Trophy,        color: "text-amber-400",          bg: "bg-amber-400/10" },
+  draw_result:                { icon: Info,           color: "text-primary",            bg: "bg-primary/10" },
+  balance_low:                { icon: Wallet,         color: "text-muted-foreground",   bg: "bg-muted" },
+  kyc_approved:               { icon: ShieldCheck,    color: "text-green-400",          bg: "bg-green-500/10" },
+  kyc_rejected:               { icon: ShieldX,        color: "text-red-400",            bg: "bg-red-500/10" },
+  payment_failed:             { icon: AlertTriangle,  color: "text-red-400",            bg: "bg-red-500/10" },
+  subscription_created:       { icon: CreditCard,     color: "text-accent",             bg: "bg-accent/10" },
+  subscription_renewal_failed:{ icon: AlertTriangle,  color: "text-amber-400",          bg: "bg-amber-400/10" },
 };
 
 function timeAgo(dateStr: string) {

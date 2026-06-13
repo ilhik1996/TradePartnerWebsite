@@ -121,18 +121,20 @@ class _NotifTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = notif['type'] as String? ?? '';
-    final read = notif['read'] as bool? ?? false;
+    final read = notif['isRead'] as bool? ?? false;
 
     IconData icon;
     Color color;
     switch (type) {
-      case 'draw_win': icon = Icons.emoji_events; color = VionaColors.gold; break;
-      case 'draw_result': icon = Icons.casino_outlined; color = VionaColors.purple; break;
-      case 'deposit': icon = Icons.add_circle_outline; color = VionaColors.teal; break;
-      case 'withdrawal': icon = Icons.arrow_upward; color = VionaColors.danger; break;
-      case 'low_balance': icon = Icons.warning_amber_outlined; color = VionaColors.gold; break;
-      case 'referral': icon = Icons.people_outline; color = VionaColors.purple; break;
-      default: icon = Icons.info_outline; color = VionaColors.textSecondary;
+      case 'winner':                      icon = Icons.emoji_events;           color = VionaColors.gold; break;
+      case 'draw_result':                 icon = Icons.casino_outlined;        color = VionaColors.purple; break;
+      case 'kyc_approved':                icon = Icons.verified_user_outlined; color = VionaColors.teal; break;
+      case 'kyc_rejected':                icon = Icons.gpp_bad_outlined;       color = VionaColors.danger; break;
+      case 'payment_failed':              icon = Icons.error_outline;          color = VionaColors.danger; break;
+      case 'subscription_created':        icon = Icons.card_membership;        color = VionaColors.teal; break;
+      case 'subscription_renewal_failed': icon = Icons.warning_amber_outlined; color = VionaColors.danger; break;
+      case 'balance_low':                 icon = Icons.account_balance_wallet_outlined; color = VionaColors.gold; break;
+      default:                            icon = Icons.info_outline;           color = VionaColors.textSecondary;
     }
 
     return GestureDetector(
