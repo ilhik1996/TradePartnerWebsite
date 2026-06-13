@@ -1,10 +1,10 @@
 import { db } from "../db";
-import { countries, draws, users, wallets, drawEntries } from "@shared/schema";
+import { countries, draws, users, userProfiles, wallets, drawEntries, notifications } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
 import { awardXp, checkAndAwardBadges } from "./gamification";
-import { sendDrawResultEmail } from "./email";
+import { sendDrawResultEmail, sendLowBalanceEmail } from "./email";
 
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
@@ -63,12 +63,15 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
               awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
             }
             // Send winner email non-blocking
-            db.select({ email: users.email, firstName: users.email }).from(users)
+            db.select({ email: users.email, firstName: userProfiles.firstName })
+              .from(users)
+              .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
               .where(eq(users.id, result.winnerUserId))
               .then(([winner]) => {
                 if (winner?.email) {
                   sendDrawResultEmail({
                     to: winner.email,
+                    firstName: winner.firstName ?? undefined,
                     drawDate: openDraw.drawDate,
                     isWinner: true,
                     prizeAmount: result.prizeAmount,
@@ -120,9 +123,25 @@ async function autoEnterUsers() {
           );
           if (existing) continue;
 
-          // Check balance
+          // Check balance — notify user if insufficient
           const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, user.id));
-          if (!wallet || parseFloat(wallet.balance as string) < entryAmount) continue;
+          if (!wallet || parseFloat(wallet.balance as string) < entryAmount) {
+            // Create in-app notification (non-blocking, best-effort)
+            db.insert(notifications).values({
+              userId: user.id,
+              type: "balance_low",
+              title: "Balance too low for today's draw",
+              body: `Your balance is below ${country.currencySymbol}${entryAmount}. Top up to enter automatically.`,
+              metadata: { entryAmount, currency: country.currency },
+            }).catch(() => {});
+            // Email (non-blocking) — fetch user row to get email
+            db.select({ email: users.email })
+              .from(users).where(eq(users.id, user.id))
+              .then(([u]) => {
+                if (u?.email) sendLowBalanceEmail(u.email, country.currencySymbol, entryAmount.toFixed(2)).catch(() => {});
+              }).catch(() => {});
+            continue;
+          }
 
           await addPaidEntry(user.id, draw.id);
           // Award XP for auto-entry non-blocking
