@@ -9,7 +9,10 @@ process.on("unhandledRejection", (reason) => {
 });
 
 const app = express();
-app.use(express.json());
+// Save raw body buffer on every request — required for Stripe webhook HMAC verification
+app.use(express.json({
+  verify: (_req, _res, buf) => { (_req as any).rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {

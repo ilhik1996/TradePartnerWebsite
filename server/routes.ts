@@ -16,7 +16,7 @@ import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamifi
 import { getPartners, getPartner } from "./modules/partners";
 import { sendPushToUser, VAPID_PUBLIC_KEY } from "./modules/push";
 import { insertNotification } from "./modules/notifications";
-import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious } from "./middleware/security";
+import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious, verifyStripeSignature, verifyKycSignature } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
@@ -1005,9 +1005,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── KYC Webhooks (Sumsub / Onfido) ───────────────────────────────────────
 
-  app.post("/api/webhooks/kyc", async (req: Request, res: Response) => {
-    // Verify webhook signature in production (provider-specific HMAC)
-    const sig = req.headers["x-sumsub-signature"] ?? req.headers["x-onfido-signature"];
+  app.post("/api/webhooks/kyc", ar(async (req: Request, res: Response) => {
+    const sig = (req.headers["x-payload-digest"] ?? req.headers["x-sumsub-signature"]) as string | undefined;
+    const secret = process.env.SUMSUB_SECRET_KEY;
+    const rawBody: Buffer | undefined = (req as any).rawBody;
+
+    if (secret) {
+      if (!sig || !rawBody) {
+        res.status(400).json({ message: "Missing webhook signature" });
+        return;
+      }
+      if (!verifyKycSignature(rawBody, sig, secret)) {
+        res.status(400).json({ message: "Invalid webhook signature" });
+        return;
+      }
+    }
 
     const { applicantId, reviewResult, externalUserId } = req.body;
     const userId = parseInt(externalUserId ?? "0");
@@ -1036,16 +1048,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json({ ok: true });
-  });
+  }));
 
   // ── Payment Webhooks (Stripe) ──────────────────────────────────────────────
 
-  // Raw body needed for Stripe signature verification — mount before JSON middleware
-  app.post("/api/webhooks/stripe", async (req: Request, res: Response) => {
-    const sig = req.headers["stripe-signature"];
+  app.post("/api/webhooks/stripe", ar(async (req: Request, res: Response) => {
+    const sig = req.headers["stripe-signature"] as string | undefined;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const rawBody: Buffer | undefined = (req as any).rawBody;
 
-    // In production: verify signature with stripe.webhooks.constructEvent(req.body, sig, secret)
+    if (webhookSecret) {
+      if (!sig || !rawBody) {
+        res.status(400).json({ message: "Missing Stripe signature header" });
+        return;
+      }
+      if (!verifyStripeSignature(rawBody, sig, webhookSecret)) {
+        res.status(400).json({ message: "Invalid Stripe webhook signature" });
+        return;
+      }
+    }
+
     const event = req.body;
 
     if (event.type === "payment_intent.payment_failed") {
@@ -1061,7 +1083,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     if (event.type === "charge.dispute.created") {
-      // Chargeback detected — flag user
       const userId = parseInt(event.data?.object?.metadata?.userId ?? "0");
       if (userId) {
         await db.update(users)
@@ -1077,7 +1098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json({ received: true });
-  });
+  }));
 
   // ── Seed initial data (dev only) ──────────────────────────────────────────
 

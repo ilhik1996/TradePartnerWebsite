@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
-import { createHash } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 // ─── Blocked jurisdictions (sanctions + no-license markets) ──────────────────
 
@@ -106,3 +106,67 @@ setInterval(() => {
     if (val.firstAt < cutoff) recentActions.delete(key);
   });
 }, 5 * 60_000);
+
+// ─── Webhook signature verification ──────────────────────────────────────────
+
+/**
+ * Verify Stripe webhook HMAC-SHA256 signature.
+ * Header format: "t=<timestamp>,v1=<hex_signature>"
+ * Signed payload: "<timestamp>.<rawBody>"
+ * Rejects replays older than 5 minutes.
+ */
+export function verifyStripeSignature(
+  rawBody: Buffer,
+  header: string,
+  secret: string,
+): boolean {
+  const parts: Record<string, string[]> = {};
+  for (const part of header.split(",")) {
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    const key = part.slice(0, idx);
+    const val = part.slice(idx + 1);
+    (parts[key] ??= []).push(val);
+  }
+
+  const timestamp = parts["t"]?.[0];
+  const signatures = parts["v1"] ?? [];
+  if (!timestamp || signatures.length === 0) return false;
+
+  // Reject replays older than 5 minutes
+  const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - parseInt(timestamp, 10));
+  if (ageSeconds > 300) return false;
+
+  const signedPayload = `${timestamp}.${rawBody.toString("utf8")}`;
+  const expectedHex = createHmac("sha256", secret).update(signedPayload).digest("hex");
+  const expectedBuf = Buffer.from(expectedHex, "hex");
+
+  return signatures.some((sig) => {
+    try {
+      const sigBuf = Buffer.from(sig, "hex");
+      return sigBuf.length === expectedBuf.length && timingSafeEqual(sigBuf, expectedBuf);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Verify Sumsub KYC webhook HMAC-SHA1 signature.
+ * Sumsub computes: HMAC-SHA1(secretKey, rawBody), hex-encoded.
+ * Header: x-payload-digest
+ */
+export function verifyKycSignature(
+  rawBody: Buffer,
+  header: string,
+  secret: string,
+): boolean {
+  try {
+    const expectedHex = createHmac("sha1", secret).update(rawBody).digest("hex");
+    const expectedBuf = Buffer.from(expectedHex, "hex");
+    const headerBuf = Buffer.from(header.toLowerCase(), "hex");
+    return headerBuf.length === expectedBuf.length && timingSafeEqual(headerBuf, expectedBuf);
+  } catch {
+    return false;
+  }
+}
