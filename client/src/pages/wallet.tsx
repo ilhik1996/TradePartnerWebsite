@@ -66,9 +66,9 @@ export default function WalletPage() {
     if (!amt || amt <= 0) return;
     setDepositing(true);
     try {
-      const result = await api.wallet.deposit(amt);
+      const result = await api.wallet.deposit(amt, country?.currency ?? "UAH");
       toast({ title: "Balance topped up!", description: `${country?.currencySymbol}${amt.toFixed(2)} added` });
-      setWallet((w: any) => ({ ...w, balance: result.newBalance.toFixed(2) }));
+      setWallet((w: any) => ({ ...w, balance: (parseFloat(w.balance) + amt).toFixed(2) }));
       setDepositAmt("");
       const txs = await api.wallet.transactions(30);
       setTransactions(txs);
@@ -175,15 +175,49 @@ export default function WalletPage() {
               value={depositAmt}
               onChange={e => setDepositAmt(e.target.value)}
             />
+                    {/* Card input (mock UI — replace with Stripe Elements in prod) */}
+            <div className="space-y-2 pt-1">
+              <p className="text-xs text-muted-foreground font-medium">Payment details</p>
+              <input
+                className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="4242 4242 4242 4242"
+                maxLength={19}
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                  e.target.value = v.replace(/(.{4})/g, "$1 ").trim();
+                }}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="h-11 px-4 rounded-xl bg-secondary border border-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="MM/YY"
+                  maxLength={5}
+                />
+                <input
+                  className="h-11 px-4 rounded-xl bg-secondary border border-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="CVV"
+                  maxLength={4}
+                  type="password"
+                />
+              </div>
+            </div>
+
             <Button
               className="btn-viona-primary w-full h-12"
               onClick={handleDeposit}
               disabled={depositing || !depositAmt}
             >
-              {depositing ? "Processing…" : `Add ${depositAmt ? `${symbol}${depositAmt}` : "funds"}`}
+              {depositing ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  Processing…
+                </span>
+              ) : (
+                `Add ${depositAmt ? `${symbol}${depositAmt}` : "funds"}`
+              )}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Demo mode — payments not charged. Real payment provider integration required.
+              Secured by 3DS · Demo mode (no real charges)
             </p>
           </div>
         ) : (

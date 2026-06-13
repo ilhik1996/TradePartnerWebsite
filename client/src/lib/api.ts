@@ -53,7 +53,8 @@ export const api = {
   wallet: {
     get: () => request<any>("/wallet"),
     transactions: (limit = 20, offset = 0) => request<any[]>(`/wallet/transactions?limit=${limit}&offset=${offset}`),
-    deposit: (amount: number) => request<any>("/wallet/deposit", { method: "POST", body: JSON.stringify({ amount }) }),
+    deposit: (amount: number, currency = "UAH", paymentMethodToken = "mock_pm_token") =>
+      request<any>("/wallet/deposit", { method: "POST", body: JSON.stringify({ amount, currency, paymentMethodToken }) }),
     withdraw: (amount: number) => request<any>("/wallet/withdraw", { method: "POST", body: JSON.stringify({ amount }) }),
   },
 

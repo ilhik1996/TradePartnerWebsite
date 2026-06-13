@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, User, Trophy, Shield, Bell, LogOut,
-  ChevronRight, AlertTriangle, CheckCircle, Clock
+  ChevronRight, AlertTriangle, CheckCircle, Clock, BellRing
 } from "lucide-react";
+import { usePush } from "@/hooks/use-push";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +47,7 @@ export default function Cabinet() {
   // Self-exclusion
   const [exDays, setExDays] = useState(30);
   const [excluding, setExcluding] = useState(false);
+  const { supported: pushSupported, permission: pushPerm, subscribe: pushSubscribe } = usePush();
 
   useEffect(() => {
     Promise.all([
@@ -190,6 +192,29 @@ export default function Cabinet() {
                 </Button>
               )}
             </div>
+
+            {/* Push notifications */}
+            {pushSupported && (
+              <div className="viona-card p-5 space-y-3">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <BellRing className="w-4 h-4 text-primary" /> Push Notifications
+                </h3>
+                {pushPerm === "granted" ? (
+                  <div className="flex items-center gap-2 text-sm text-green-400">
+                    <CheckCircle className="w-4 h-4" /> Enabled
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Get notified about draw results, wins, and balance updates.
+                    </p>
+                    <Button className="btn-viona-primary w-full h-10 text-sm" onClick={() => pushSubscribe()}>
+                      Enable push notifications
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
 
             <button
               onClick={() => { logout(); navigate("/"); }}

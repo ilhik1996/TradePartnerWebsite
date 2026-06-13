@@ -9,6 +9,8 @@ import { getOrCreateWallet, depositFunds, getBalance, getTransactionHistory } fr
 import {
   getOrCreateDraw, todayDateString, addPaidEntry, addFreeEntry, conductDraw
 } from "./modules/lottery";
+import { processDeposit, chargebackRiskScore } from "./modules/payments";
+import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
@@ -46,9 +48,15 @@ function adminUid(req: Request): number {
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
+  // Apply device fingerprint to every request
+  app.use(deviceFingerprint);
+
+  // General API rate limit
+  app.use("/api", apiRateLimit);
+
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
+  app.post("/api/auth/register", authRateLimit, async (req: Request, res: Response) => {
     try {
       const data = insertUserSchema.parse(req.body);
       const { password, email, phone, countryId } = data;
@@ -98,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/login", authRateLimit, async (req: Request, res: Response) => {
     try {
       const { identifier, password } = loginSchema.parse(req.body);
       const [user] = await db.select().from(users).where(
@@ -224,12 +232,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(txs);
   });
 
-  // Mock top-up (real payment provider integrates here)
-  app.post("/api/wallet/deposit", requireAuth, async (req: Request, res: Response) => {
+  // Deposit via payment provider (Stripe / mock in dev)
+  app.post("/api/wallet/deposit", requireAuth, paymentRateLimit, async (req: Request, res: Response) => {
     try {
-      const { amount } = z.object({ amount: z.number().positive().max(10000) }).parse(req.body);
-      const result = await depositFunds(uid(req), amount, `mock-${nanoid(12)}`);
-      res.json(result);
+      const { amount, paymentMethodToken, currency } = z.object({
+        amount: z.number().positive().max(10000),
+        paymentMethodToken: z.string().default("mock_pm_token"),
+        currency: z.string().default("UAH"),
+      }).parse(req.body);
+
+      // Anti-fraud: chargeback risk check
+      const riskScore = chargebackRiskScore({
+        userId: uid(req),
+        ip: req.ip ?? "",
+        userAgent: req.headers["user-agent"] ?? "",
+        amountUsd: amount,
+      });
+      if (riskScore >= 80) {
+        res.status(403).json({ message: "Transaction flagged for review. Please contact support." });
+        return;
+      }
+
+      // Suspicious velocity check
+      if (detectSuspicious("deposit", String(uid(req)), 5)) {
+        res.status(429).json({ message: "Too many deposit attempts. Please wait." });
+        return;
+      }
+
+      const result = await processDeposit(
+        uid(req), amount, currency, paymentMethodToken,
+        `VIONA deposit ${currency} ${amount.toFixed(2)}`
+      );
+
+      if (!result.ok) {
+        if (result.requiresAction) {
+          res.status(202).json({ requiresAction: true, actionUrl: result.actionUrl });
+          return;
+        }
+        res.status(400).json({ message: result.message });
+        return;
+      }
+
+      res.json({ ok: true, transactionId: result.transactionId });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
@@ -537,6 +581,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/audit-logs", requireAdmin, async (_req: Request, res: Response) => {
     const list = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(100);
     res.json(list);
+  });
+
+  // ── Web Push ─────────────────────────────────────────────────────────────
+
+  // Store push subscription (in production save to DB, send via web-push package)
+  app.post("/api/push/subscribe", requireAuth, async (req: Request, res: Response) => {
+    // In production: save req.body (PushSubscription JSON) to push_subscriptions table
+    // and use web-push npm package to send notifications
+    // For MVP: log and acknowledge
+    console.log(`[Push] User ${uid(req)} subscribed:`, JSON.stringify(req.body).slice(0, 100));
+    res.json({ ok: true });
+  });
+
+  // ── KYC Webhooks (Sumsub / Onfido) ───────────────────────────────────────
+
+  app.post("/api/webhooks/kyc", async (req: Request, res: Response) => {
+    // Verify webhook signature in production (provider-specific HMAC)
+    const sig = req.headers["x-sumsub-signature"] ?? req.headers["x-onfido-signature"];
+
+    const { applicantId, reviewResult, externalUserId } = req.body;
+    const userId = parseInt(externalUserId ?? "0");
+
+    if (!userId) { res.status(400).json({ message: "Missing externalUserId" }); return; }
+
+    const reviewAnswer = reviewResult?.reviewAnswer;  // "GREEN" | "RED"
+
+    if (reviewAnswer === "GREEN") {
+      // Full KYC passed
+      await db.update(users)
+        .set({ kycLevel: "full" })
+        .where(eq(users.id, userId));
+      await db.update(userProfiles)
+        .set({ kycVerifiedAt: new Date(), kycProviderToken: applicantId })
+        .where(eq(userProfiles.userId, userId));
+      await db.insert(notifications).values({
+        userId,
+        type: "kyc_approved",
+        title: "Identity verified",
+        body: "Your KYC verification was approved. You can now withdraw funds.",
+      });
+    } else if (reviewAnswer === "RED") {
+      await db.insert(notifications).values({
+        userId,
+        type: "kyc_rejected",
+        title: "Verification rejected",
+        body: "Your KYC verification was not approved. Please try again or contact support.",
+      });
+    }
+
+    res.json({ ok: true });
+  });
+
+  // ── Payment Webhooks (Stripe) ──────────────────────────────────────────────
+
+  // Raw body needed for Stripe signature verification — mount before JSON middleware
+  app.post("/api/webhooks/stripe", async (req: Request, res: Response) => {
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    // In production: verify signature with stripe.webhooks.constructEvent(req.body, sig, secret)
+    const event = req.body;
+
+    if (event.type === "payment_intent.payment_failed") {
+      // Log failed payment — could notify user
+      const userId = parseInt(event.data?.object?.metadata?.userId ?? "0");
+      if (userId) {
+        await db.insert(notifications).values({
+          userId,
+          type: "payment_failed",
+          title: "Payment failed",
+          body: "Your payment could not be processed. Please try a different card.",
+        }).catch(() => {});
+      }
+    }
+
+    if (event.type === "charge.dispute.created") {
+      // Chargeback detected — flag user
+      const userId = parseInt(event.data?.object?.metadata?.userId ?? "0");
+      if (userId) {
+        await db.update(users)
+          .set({ status: "suspended" })
+          .where(eq(users.id, userId));
+        await db.insert(auditLogs).values({
+          action: "chargeback_auto_suspend",
+          entityType: "user",
+          entityId: userId,
+          dataAfter: { reason: "chargeback_detected", chargeId: event.data?.object?.id },
+        });
+      }
+    }
+
+    res.json({ received: true });
   });
 
   // ── Seed initial data (dev only) ──────────────────────────────────────────
