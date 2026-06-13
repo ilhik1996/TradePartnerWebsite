@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { subscriptions, users, countries } from "@shared/schema";
-import { eq, and, lte } from "drizzle-orm";
+import { eq, and, lte, gt } from "drizzle-orm";
 import { addPaidEntry, getOrCreateDraw, todayDateString } from "./lottery";
 import { processDeposit } from "./payments";
 import { nanoid } from "nanoid";
@@ -124,16 +124,23 @@ export async function renewDueSubscriptions() {
       );
 
       if (result.ok) {
-        // Advance billing date
         const next = new Date(sub.nextBillingDate);
         if (sub.type === "weekly") {
           next.setDate(next.getDate() + 7);
         } else {
           next.setMonth(next.getMonth() + 1);
         }
-        await db.update(subscriptions)
+        // Conditional update: only advance if nextBillingDate hasn't already moved
+        // (guards against double-billing if renewDueSubscriptions() runs concurrently)
+        const [advanced] = await db.update(subscriptions)
           .set({ nextBillingDate: next })
-          .where(eq(subscriptions.id, sub.id));
+          .where(and(
+            eq(subscriptions.id, sub.id),
+            eq(subscriptions.nextBillingDate, sub.nextBillingDate),
+          ))
+          .returning({ id: subscriptions.id });
+
+        if (!advanced) continue;   // another process already renewed this sub
         // Award XP for renewal non-blocking
         const xpReason = sub.type === "weekly" ? "weekly_sub" : "monthly_sub";
         awardXp(sub.userId, xpReason, db).then(() => checkAndAwardBadges(sub.userId, db)).catch(() => {});

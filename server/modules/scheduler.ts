@@ -45,11 +45,6 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
 
       if (!openDraw) continue;
 
-      // Check if draw was created more than drawHourUtc hours ago (i.e. it's past draw time)
-      const drawOpenedAt = openDraw.openedAt ?? openDraw.createdAt;
-      const msSinceOpen = now.getTime() - new Date(drawOpenedAt).getTime();
-      const hoursSinceOpen = msSinceOpen / (1000 * 60 * 60);
-
       // If past the scheduled draw hour, conduct it
       const scheduledTime = new Date();
       scheduledTime.setUTCHours(country.drawHourUtc, 0, 0, 0);
