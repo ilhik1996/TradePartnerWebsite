@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Trophy, Ticket, Target, CheckCircle, Clock, XCircle, ChevronDown
+  ArrowLeft, Trophy, Target, CheckCircle, Clock, XCircle, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -127,34 +127,21 @@ export default function History() {
   const { user } = useAuth();
   const [draws, setDraws] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [myEntries, setMyEntries] = useState<Record<number, any>>({});
 
   const countryId = user?.countryId ?? 1;
 
   useEffect(() => {
-    api.draws.history(countryId).then(async (drawList) => {
-      setDraws(drawList);
-      // Fetch my entry for each draw to get ticket number
-      const entries: Record<number, any> = {};
-      await Promise.all(
-        drawList.map(async d => {
-          try {
-            const e = await api.draws.myEntry(d.id);
-            if (e) entries[d.id] = e;
-          } catch {}
-        })
-      );
-      setMyEntries(entries);
-    }).finally(() => setLoading(false));
+    // Server enriches history with myEntry + isWinner when authenticated
+    api.draws.history(countryId).then(setDraws).finally(() => setLoading(false));
   }, [countryId]);
 
   const enriched = draws.map(d => ({
     ...d,
-    myTicket: myEntries[d.id]?.ticketNumber ?? null,
+    myTicket: d.myEntry?.ticketNumber ?? null,
   }));
 
-  const wins = enriched.filter(d => d.winnerUserId === user?.id).length;
-  const participated = enriched.filter(d => myEntries[d.id]).length;
+  const wins = enriched.filter(d => d.isWinner).length;
+  const participated = enriched.filter(d => d.myEntry).length;
 
   if (loading) {
     return (

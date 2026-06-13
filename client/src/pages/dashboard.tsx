@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Trophy, Wallet, Bell, User, LogOut, ChevronRight, Zap, Clock,
-  Gift, ToggleLeft, ToggleRight, History, Settings, Star, Users
+  Gift, ToggleLeft, ToggleRight, History, Star, Users, Store, CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -42,8 +42,7 @@ function fmt(amount: string | number, symbol: string) {
 
 // ── Nav ────────────────────────────────────────────────────────────────────────
 
-function DashNav({ onLogout }: { onLogout: () => void }) {
-  const [, navigate] = useLocation();
+function DashNav({ onLogout, unreadCount }: { onLogout: () => void; unreadCount: number }) {
   return (
     <nav className="viona-nav fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -54,8 +53,13 @@ function DashNav({ onLogout }: { onLogout: () => void }) {
       </div>
       <div className="flex items-center gap-1">
         <Link href="/notifications">
-          <Button variant="ghost" size="icon" className="text-muted-foreground">
+          <Button variant="ghost" size="icon" className="text-muted-foreground relative">
             <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Button>
         </Link>
         <Link href="/cabinet">
@@ -86,6 +90,7 @@ export default function Dashboard() {
   const [autoParticipate, setAutoParticipate] = useState(user?.autoParticipate ?? true);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Free entry modal state
   const [freeModal, setFreeModal] = useState(false);
@@ -108,14 +113,16 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     try {
-      const [c, w, g] = await Promise.all([
+      const [c, w, g, notifs] = await Promise.all([
         api.countries.get(countryId),
         api.wallet.get(),
         api.gamification.me(),
+        api.notifications.list(),
       ]);
       setCountry(c);
       setWallet(w);
       setGamification(g);
+      setUnreadCount(notifs.filter((n: any) => !n.isRead).length);
       const d = await api.draws.today(countryId);
       setDraw(d);
       if (d) {
@@ -194,7 +201,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashNav onLogout={handleLogout} />
+      <DashNav onLogout={handleLogout} unreadCount={unreadCount} />
 
       <div className="pt-20 pb-24 px-4 md:px-6 max-w-2xl mx-auto space-y-4">
 
@@ -323,36 +330,21 @@ export default function Dashboard() {
 
         {/* Quick links */}
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/cabinet">
-            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
-              <User className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">My Account</span>
-            </div>
-          </Link>
-          <Link href="/history">
-            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
-              <History className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Draw History</span>
-            </div>
-          </Link>
-          <Link href="/wallet">
-            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
-              <Wallet className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Wallet</span>
-            </div>
-          </Link>
-          <Link href="/notifications">
-            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
-              <Bell className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Notifications</span>
-            </div>
-          </Link>
-          <Link href="/referrals">
-            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors col-span-2 sm:col-span-1">
-              <Users className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Refer a Friend</span>
-            </div>
-          </Link>
+          {[
+            { href: "/cabinet",      icon: User,        label: "My Account" },
+            { href: "/history",      icon: History,     label: "Draw History" },
+            { href: "/wallet",       icon: Wallet,      label: "Wallet" },
+            { href: "/subscription", icon: CreditCard,  label: "Subscription" },
+            { href: "/partners",     icon: Store,       label: "Partners" },
+            { href: "/referrals",    icon: Users,       label: "Refer a Friend" },
+          ].map(({ href, icon: Icon, label }) => (
+            <Link key={href} href={href}>
+              <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
+                <Icon className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium">{label}</span>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 
