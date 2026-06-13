@@ -54,6 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: pw,
         countryId: _selectedCountry,
+        autoParticipate: _agreeAuto,
       );
       if (mounted) context.go('/dashboard');
     } catch (e) {
@@ -119,7 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: const InputDecoration(hintText: 'Select country'),
                     items: _countries.map((c) => DropdownMenuItem<int>(
                       value: c['id'] as int,
-                      child: Text('${c['flag'] ?? ''} ${c['name']}'),
+                      child: Text('${c['name']} (${c['currencySymbol']})'),
                     )).toList(),
                     onChanged: (v) => setState(() => _selectedCountry = v),
                   ),

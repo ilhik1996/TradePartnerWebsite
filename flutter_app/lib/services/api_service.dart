@@ -35,12 +35,14 @@ class ApiService {
 
   Future<Map<String, dynamic>> register({
     String? email, String? phone, required String password, int? countryId,
+    bool autoParticipate = true,
   }) async {
     final r = await _dio.post('/auth/register', data: {
       if (email != null) 'email': email,
       if (phone != null) 'phone': phone,
       'password': password,
       if (countryId != null) 'countryId': countryId,
+      'autoParticipate': autoParticipate,
     });
     await _storage.write(key: 'viona_token', value: r.data['token']);
     return r.data;

@@ -41,7 +41,7 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await register({ email, password, countryId });
+      await register({ email, password, countryId, autoParticipate: autoOk });
       // Apply referral code from ?ref= query param if present
       if (refCode) {
         api.referrals.apply(refCode).catch(() => {});

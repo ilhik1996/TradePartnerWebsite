@@ -25,7 +25,7 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
 
 export const api = {
   auth: {
-    register: (body: { email?: string; phone?: string; password: string; countryId?: number }) =>
+    register: (body: { email?: string; phone?: string; password: string; countryId?: number; autoParticipate?: boolean }) =>
       request<{ token: string; user: any }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
 
     login: (identifier: string, password: string) =>

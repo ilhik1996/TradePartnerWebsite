@@ -65,6 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = insertUserSchema.parse(req.body);
       const { password, email, phone, countryId } = data;
+      const autoParticipate = req.body.autoParticipate !== false;
 
       // Check uniqueness
       if (email) {
@@ -89,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordHash,
         countryId: country?.id ?? null,
         referralCode,
-        autoParticipate: true,
+        autoParticipate,
       }).returning();
 
       await db.insert(userProfiles).values({ userId: user.id });

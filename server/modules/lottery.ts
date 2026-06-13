@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { draws, drawEntries, wallets, transactions, users, countries, notifications, responsibleGaming } from "@shared/schema";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { createHash, randomInt } from "crypto";
 
 export async function getOrCreateDraw(countryId: number, dateStr: string) {
