@@ -21,7 +21,8 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray, alias } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
