@@ -482,22 +482,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             const SizedBox(height: 10),
             Wrap(
               spacing: 8, runSpacing: 8,
-              children: badges.map((b) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: VionaColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: VionaColors.gold.withOpacity(0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🏅', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 6),
-                    Text(b['name'] as String? ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              )).toList(),
+              children: badges.map((b) {
+                const badgeLabels = {
+                  'first_entry': '🎟️ First Entry',
+                  'first_win': '🏆 First Win',
+                  'streak_7': '🔥 7-Day Streak',
+                  'referrer': '🤝 Referrer',
+                };
+                final badgeId = b as String;
+                final label = badgeLabels[badgeId] ?? '🏅 $badgeId';
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: VionaColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: VionaColors.gold.withOpacity(0.4)),
+                  ),
+                  child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                );
+              }).toList(),
             ),
           ],
         ],

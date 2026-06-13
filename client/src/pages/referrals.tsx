@@ -147,7 +147,7 @@ export default function Referrals() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">Friend #{r.refereeId}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(r.createdAt).toLocaleDateString()} · Bonus: {r.bonusAmount} {r.currency}
+                    Joined {new Date(r.joinedAt).toLocaleDateString()} · Bonus: {r.bonusAmount} {r.currency}
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
