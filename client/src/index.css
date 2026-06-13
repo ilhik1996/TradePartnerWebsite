@@ -2,167 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
+/* VIONA — Dark premium theme (Monobank-inspired) */
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(60, 4.8%, 95.9%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
-  --radius: 0.5rem;
-}
+  --background: hsl(220, 16%, 8%);
+  --foreground: hsl(0, 0%, 96%);
+  --muted: hsl(220, 13%, 14%);
+  --muted-foreground: hsl(220, 8%, 55%);
+  --popover: hsl(220, 16%, 10%);
+  --popover-foreground: hsl(0, 0%, 96%);
+  --card: hsl(220, 14%, 12%);
+  --card-foreground: hsl(0, 0%, 96%);
+  --border: hsl(220, 10%, 18%);
+  --input: hsl(220, 10%, 18%);
+  --primary: hsl(262, 83%, 63%);         /* VIONA purple */
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(220, 13%, 16%);
+  --secondary-foreground: hsl(0, 0%, 96%);
+  --accent: hsl(172, 66%, 50%);          /* accent teal */
+  --accent-foreground: hsl(220, 16%, 8%);
+  --destructive: hsl(0, 72%, 51%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(262, 83%, 63%);
+  --radius: 1rem;
 
-.dark {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
-  --radius: 0.5rem;
+  /* VIONA brand */
+  --viona-purple: hsl(262, 83%, 63%);
+  --viona-purple-dim: hsl(262, 60%, 40%);
+  --viona-teal: hsl(172, 66%, 50%);
+  --viona-gold: hsl(42, 100%, 60%);
+  --viona-surface: hsl(220, 14%, 12%);
+  --viona-surface-2: hsl(220, 12%, 17%);
+  --viona-border: hsl(220, 10%, 20%);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; box-sizing: border-box; }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+  html { scroll-behavior: smooth; }
+
+  h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
 }
 
 @layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.8s ease-in-out forwards;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s ease-out forwards;
-  }
-
-  .animate-scale-in {
-    animation: scaleIn 0.5s ease-out forwards;
-  }
-
-  .animate-bounce-slow {
-    animation: bounce 2s infinite;
-  }
+  /* ── Animations ── */
+  .animate-fade-in   { animation: fadeIn 0.5s ease-out forwards; }
+  .animate-slide-up  { animation: slideUp 0.4s ease-out forwards; }
+  .animate-scale-in  { animation: scaleIn 0.3s ease-out forwards; }
+  .animate-pulse-slow{ animation: pulseSlow 3s ease-in-out infinite; }
+  .animate-glow      { animation: glow 2s ease-in-out infinite alternate; }
+  .animate-counter   { animation: counterUp 1s ease-out forwards; }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
-
   @keyframes slideUp {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
   }
-
   @keyframes scaleIn {
-    from {
-      transform: scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
+    from { transform: scale(0.96); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+  @keyframes pulseSlow {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.65; }
+  }
+  @keyframes glow {
+    from { box-shadow: 0 0 12px 2px hsl(262, 83%, 63%, 0.3); }
+    to   { box-shadow: 0 0 28px 6px hsl(262, 83%, 63%, 0.55); }
+  }
+  @keyframes counterUp {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
   }
 
-  .hero-gradient {
-    background: linear-gradient(135deg, hsl(222, 84%, 5%) 0%, hsl(222, 84%, 8%) 40%, hsl(222, 84%, 5%) 100%);
+  /* ── VIONA Cards ── */
+  .viona-card {
+    background: var(--viona-surface);
+    border: 1px solid var(--viona-border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+  }
+  .viona-card:hover { border-color: hsl(262, 60%, 40%); }
+
+  .viona-card-glow {
+    background: linear-gradient(135deg, hsl(262, 40%, 14%) 0%, hsl(220, 14%, 12%) 100%);
+    border: 1px solid hsl(262, 50%, 25%);
+    border-radius: var(--radius);
+    box-shadow: 0 0 32px hsl(262, 83%, 63%, 0.12);
   }
 
-  .hero-overlay {
-    background: linear-gradient(135deg, 
-      hsl(222, 84%, 5%, 0.8) 0%, 
-      hsl(222, 84%, 8%, 0.7) 40%, 
-      hsl(222, 84%, 5%, 0.8) 100%
-    );
+  /* ── Prize pool gradient text ── */
+  .text-gradient-prize {
+    background: linear-gradient(135deg, var(--viona-purple) 0%, var(--viona-teal) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .glass-effect {
-    background: hsla(0, 0%, 100%, 0.95);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--viona-gold) 0%, hsl(38, 100%, 72%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .service-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ── Button styles ── */
+  .btn-viona-primary {
+    background: linear-gradient(135deg, var(--viona-purple) 0%, hsl(262, 70%, 50%) 100%);
+    color: white;
+    border: none;
+    border-radius: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px hsl(262, 83%, 63%, 0.25);
+  }
+  .btn-viona-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px hsl(262, 83%, 63%, 0.4);
+  }
+  .btn-viona-primary:active { transform: translateY(0); }
+
+  .btn-viona-outline {
+    background: transparent;
+    color: var(--viona-purple);
+    border: 1.5px solid hsl(262, 60%, 40%);
+    border-radius: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .btn-viona-outline:hover {
+    background: hsl(262, 83%, 63%, 0.1);
+    border-color: var(--viona-purple);
   }
 
-  .service-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px hsl(0, 0%, 0%, 0.1), 0 10px 10px -5px hsl(0, 0%, 0%, 0.04);
-  }
-
-  .gallery-item {
-    position: relative;
-    overflow: hidden;
+  /* ── Timer digits ── */
+  .timer-digit {
+    background: var(--viona-surface-2);
+    border: 1px solid var(--viona-border);
     border-radius: 0.5rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-variant-numeric: tabular-nums;
+    min-width: 3.5rem;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
   }
 
-  .gallery-item:hover {
-    transform: scale(1.02);
-    box-shadow: 0 20px 25px -5px hsl(0, 0%, 0%, 0.1), 0 10px 10px -5px hsl(0, 0%, 0%, 0.04);
+  /* ── Transaction type indicators ── */
+  .tx-prize    { color: var(--viona-gold); }
+  .tx-deposit  { color: var(--viona-teal); }
+  .tx-entry    { color: var(--viona-purple); }
+  .tx-withdraw { color: hsl(0, 72%, 60%); }
+
+  /* ── Nav ── */
+  .viona-nav {
+    background: hsl(220, 16%, 8%, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--viona-border);
   }
 
-  .gallery-item img {
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .gallery-item:hover img {
-    transform: scale(1.1);
-  }
-
-  .navbar-scroll {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .navbar-hidden {
-    transform: translateY(-100%);
-  }
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--viona-surface); }
+  ::-webkit-scrollbar-thumb { background: var(--viona-surface-2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(220, 10%, 30%); }
 }
