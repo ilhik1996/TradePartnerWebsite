@@ -13,6 +13,8 @@ const NOTIF_ICONS: Record<string, any> = {
   payment_failed:             { icon: AlertTriangle,  color: "text-red-400",            bg: "bg-red-500/10" },
   subscription_created:       { icon: CreditCard,     color: "text-accent",             bg: "bg-accent/10" },
   subscription_renewal_failed:{ icon: AlertTriangle,  color: "text-amber-400",          bg: "bg-amber-400/10" },
+  withdrawal_processed:       { icon: Wallet,         color: "text-green-400",          bg: "bg-green-500/10" },
+  withdrawal_rejected:        { icon: AlertTriangle,  color: "text-red-400",            bg: "bg-red-500/10" },
 };
 
 function timeAgo(dateStr: string) {

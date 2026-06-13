@@ -134,6 +134,8 @@ class _NotifTile extends StatelessWidget {
       case 'subscription_created':        icon = Icons.card_membership;        color = VionaColors.teal; break;
       case 'subscription_renewal_failed': icon = Icons.warning_amber_outlined; color = VionaColors.danger; break;
       case 'balance_low':                 icon = Icons.account_balance_wallet_outlined; color = VionaColors.gold; break;
+      case 'withdrawal_processed':        icon = Icons.check_circle_outline;   color = VionaColors.teal; break;
+      case 'withdrawal_rejected':         icon = Icons.cancel_outlined;        color = VionaColors.danger; break;
       default:                            icon = Icons.info_outline;           color = VionaColors.textSecondary;
     }
 

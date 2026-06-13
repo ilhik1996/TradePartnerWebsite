@@ -779,7 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     await insertNotification({
       userId: tx.userId!,
-      type: "payment_failed",  // reuse closest type — shows wallet icon
+      type: "withdrawal_processed",
       title: "Withdrawal processed",
       body: `Your withdrawal of ${Math.abs(parseFloat(tx.amount as string)).toFixed(2)} has been sent to your bank account.`,
       pushUrl: "/wallet",
@@ -821,7 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     await insertNotification({
       userId: tx.userId!,
-      type: "payment_failed",
+      type: "withdrawal_rejected",
       title: "Withdrawal rejected",
       body: `Your withdrawal could not be processed${reason ? `: ${reason}` : ". Your balance has been refunded."}`,
       pushUrl: "/wallet",
