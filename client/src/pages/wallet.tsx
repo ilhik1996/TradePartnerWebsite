@@ -58,6 +58,8 @@ export default function WalletPage() {
       setWallet(w);
       setTransactions(txs);
       setCountry(c);
+    }).catch((err: any) => {
+      toast({ title: "Failed to load wallet", description: err.message, variant: "destructive" });
     }).finally(() => setLoading(false));
   }, [countryId]);
 

@@ -78,6 +78,8 @@ export default function Cabinet() {
       setLimitDaily(rg?.dailyLimitAmount ?? "");
       setLimitWeekly(rg?.weeklyLimitAmount ?? "");
       setLimitMonthly(rg?.monthlyLimitAmount ?? "");
+    }).catch((err: any) => {
+      toast({ title: "Failed to load profile", description: err.message, variant: "destructive" });
     }).finally(() => setLoading(false));
   }, [user]);
 
