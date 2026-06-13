@@ -44,16 +44,19 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
+  Map<String, dynamic>? _user;
+
   Future<void> _load() async {
     try {
       final results = await Future.wait([
         _api.getWallet(),
         _api.getTransactions(),
+        _api.me(),
       ]);
       _wallet = results[0] as Map<String, dynamic>?;
       _txs = results[1] as List<dynamic>;
-      final user = await _api.me();
-      final countryId = user['countryId'] ?? 1;
+      _user = results[2] as Map<String, dynamic>?;
+      final countryId = _user?['countryId'] ?? 1;
       _country = await _api.getCountry(countryId);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
@@ -177,11 +180,36 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   }
 
   Widget _buildTopUp(String symbol) {
+    final kycLevel = _user?['kycLevel'] as String? ?? 'none';
+    final needsKyc = kycLevel == 'none';
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (needsKyc) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: VionaColors.gold.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: VionaColors.gold.withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_outlined, color: VionaColors.gold, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Age verification required to deposit. Go to Profile → Account to verify.',
+                      style: TextStyle(fontSize: 12, color: VionaColors.gold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Text('Quick amounts', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
           Wrap(
@@ -250,11 +278,11 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _processing ? null : _deposit,
+            onPressed: (_processing || needsKyc) ? null : _deposit,
             icon: _processing
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.add),
-            label: Text('Add $symbol${_amountCtrl.text.isEmpty ? "0.00" : _amountCtrl.text}'),
+            label: Text(needsKyc ? 'Verify age to deposit' : 'Add $symbol${_amountCtrl.text.isEmpty ? "0.00" : _amountCtrl.text}'),
             style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 56)),
           ),
           const SizedBox(height: 24),

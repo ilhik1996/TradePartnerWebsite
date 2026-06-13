@@ -153,6 +153,15 @@ export default function WalletPage() {
         {tab === "deposit" ? (
           <div className="viona-card p-5 space-y-4">
             <h3 className="font-semibold">Add funds</h3>
+            {user?.kycLevel === "none" && (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-400/90">
+                  Age verification required to deposit.{" "}
+                  <a href="/cabinet" className="underline hover:text-amber-300">Verify now →</a>
+                </p>
+              </div>
+            )}
             <div className="flex gap-2 flex-wrap">
               {quickAmounts.map(a => (
                 <button
@@ -205,7 +214,7 @@ export default function WalletPage() {
             <Button
               className="btn-viona-primary w-full h-12"
               onClick={handleDeposit}
-              disabled={depositing || !depositAmt}
+              disabled={depositing || !depositAmt || user?.kycLevel === "none"}
             >
               {depositing ? (
                 <span className="flex items-center gap-2">

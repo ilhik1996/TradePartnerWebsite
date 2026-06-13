@@ -270,6 +270,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency: z.string().default("UAH"),
       }).parse(req.body);
 
+      // Regulatory: deposits require age verification
+      const [depositor] = await db.select({ kycLevel: users.kycLevel, status: users.status })
+        .from(users).where(eq(users.id, uid(req)));
+      if (!depositor || depositor.status !== "active") {
+        res.status(403).json({ message: "Account is not active" }); return;
+      }
+      if (depositor.kycLevel === "none") {
+        res.status(403).json({ message: "Age verification required before depositing. Please verify your age in account settings." }); return;
+      }
+
       // Anti-fraud: chargeback risk check
       const riskScore = chargebackRiskScore({
         userId: uid(req),
