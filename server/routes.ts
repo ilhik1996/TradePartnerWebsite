@@ -35,6 +35,12 @@ function parseIntParam(value: string, res: Response): number | null {
   return n;
 }
 
+// Wrap async route handlers so unhandled rejections return 500 instead of crashing
+function ar(fn: (req: Request, res: Response) => Promise<any>) {
+  return (req: Request, res: Response) =>
+    fn(req, res).catch((err: any) => { if (!res.headersSent) res.status(500).json({ message: err.message }); });
+}
+
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
 
 let wss: WebSocketServer;
@@ -390,34 +396,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── User Profile & Settings ───────────────────────────────────────────────
 
-  app.get("/api/profile", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/profile", requireAuth, ar(async (req, res) => {
     const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, uid(req)));
     res.json(profile ?? null);
-  });
+  }));
 
-  app.patch("/api/profile", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/profile", requireAuth, ar(async (req, res) => {
     const { firstName, lastName } = z.object({
       firstName: z.string().optional(),
       lastName: z.string().optional(),
     }).parse(req.body);
     await db.update(userProfiles).set({ firstName, lastName }).where(eq(userProfiles.userId, uid(req)));
     res.json({ ok: true });
-  });
+  }));
 
   // Toggle auto-participate
-  app.patch("/api/settings/auto-participate", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/settings/auto-participate", requireAuth, ar(async (req, res) => {
     const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
     await db.update(users).set({ autoParticipate: enabled }).where(eq(users.id, uid(req)));
     res.json({ autoParticipate: enabled });
-  });
+  }));
 
   // Responsible gaming settings
-  app.get("/api/settings/responsible-gaming", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/settings/responsible-gaming", requireAuth, ar(async (req, res) => {
     const [rg] = await db.select().from(responsibleGaming).where(eq(responsibleGaming.userId, uid(req)));
     res.json(rg ?? null);
-  });
+  }));
 
-  app.patch("/api/settings/responsible-gaming", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/settings/responsible-gaming", requireAuth, ar(async (req, res) => {
     const data = z.object({
       dailyLimitAmount: z.number().nullable().optional(),
       weeklyLimitAmount: z.number().nullable().optional(),
@@ -430,10 +436,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       updatedAt: new Date(),
     }).where(eq(responsibleGaming.userId, uid(req)));
     res.json({ ok: true });
-  });
+  }));
 
   // Self-exclusion
-  app.post("/api/settings/self-exclude", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/settings/self-exclude", requireAuth, ar(async (req, res) => {
     const { days } = z.object({ days: z.number().int().min(1).max(365) }).parse(req.body);
     const until = new Date();
     until.setDate(until.getDate() + days);
@@ -442,32 +448,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .where(eq(responsibleGaming.userId, uid(req)));
     await db.update(users).set({ status: "self_excluded" }).where(eq(users.id, uid(req)));
     res.json({ selfExcludedUntil: until });
-  });
+  }));
 
   // ── Notifications ─────────────────────────────────────────────────────────
 
-  app.get("/api/notifications", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/notifications", requireAuth, ar(async (req, res) => {
     const list = await db.select().from(notifications)
       .where(eq(notifications.userId, uid(req)))
       .orderBy(desc(notifications.createdAt))
       .limit(30);
     res.json(list);
-  });
+  }));
 
-  app.patch("/api/notifications/:id/read", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/notifications/:id/read", requireAuth, ar(async (req, res) => {
     const id = parseIntParam(req.params.id, res); if (id === null) return;
     await db.update(notifications)
       .set({ isRead: true })
       .where(and(eq(notifications.id, id), eq(notifications.userId, uid(req))));
     res.json({ ok: true });
-  });
+  }));
 
   // ── Subscriptions ─────────────────────────────────────────────────────────
 
-  app.get("/api/subscription", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/subscription", requireAuth, ar(async (req, res) => {
     const sub = await getActiveSubscription(uid(req));
     res.json(sub);
-  });
+  }));
 
   app.post("/api/subscription", requireAuth, paymentRateLimit, async (req: Request, res: Response) => {
     try {
@@ -497,18 +503,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscription history
-  app.get("/api/subscription/history", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/subscription/history", requireAuth, ar(async (req, res) => {
     const list = await db.select().from(subscriptions)
       .where(eq(subscriptions.userId, uid(req)))
       .orderBy(desc(subscriptions.createdAt))
       .limit(20);
     res.json(list);
-  });
+  }));
 
   // ── Referrals ──────────────────────────────────────────────────────────────
 
   // Get my referral code + stats
-  app.get("/api/referrals/my", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/referrals/my", requireAuth, ar(async (req, res) => {
     const referee = alias(users, "referee");
     const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
     const myReferrals = await db
@@ -534,7 +540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalBonusEarned: totalBonus.toFixed(2),
       referralCount: myReferrals.length,
     });
-  });
+  }));
 
   // Apply referral code during / after registration
   app.post("/api/referrals/apply", requireAuth, async (req: Request, res: Response) => {
@@ -627,10 +633,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin: Countries ──────────────────────────────────────────────────────
 
-  app.get("/api/admin/countries", requireAdmin, async (_req: Request, res: Response) => {
+  app.get("/api/admin/countries", requireAdmin, ar(async (_req, res) => {
     const list = await db.select().from(countries).orderBy(countries.name);
     res.json(list);
-  });
+  }));
 
   app.post("/api/admin/countries", requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -741,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin: Users ──────────────────────────────────────────────────────────
 
-  app.get("/api/admin/users", requireAdmin, async (req: Request, res: Response) => {
+  app.get("/api/admin/users", requireAdmin, ar(async (req, res) => {
     const limit = parseInt((req.query.limit as string) || "50");
     const offset = parseInt((req.query.offset as string) || "0");
     const list = await db.select({
@@ -749,9 +755,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       kycLevel: users.kycLevel, createdAt: users.createdAt, countryId: users.countryId,
     }).from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
     res.json(list);
-  });
+  }));
 
-  app.patch("/api/admin/users/:id/status", requireAdmin, async (req: Request, res: Response) => {
+  app.patch("/api/admin/users/:id/status", requireAdmin, ar(async (req, res) => {
     const userParamId = parseIntParam(req.params.id, res); if (userParamId === null) return;
     const { status } = z.object({ status: z.enum(["active", "suspended", "banned"]) }).parse(req.body);
     const [user] = await db.update(users).set({ status }).where(eq(users.id, userParamId)).returning();
@@ -763,18 +769,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       dataAfter: { status },
     });
     res.json(user);
-  });
+  }));
 
   // ── Admin: Financials ─────────────────────────────────────────────────────
 
-  app.get("/api/admin/transactions", requireAdmin, async (req: Request, res: Response) => {
+  app.get("/api/admin/transactions", requireAdmin, ar(async (req, res) => {
     const list = await db.select().from(transactions).orderBy(desc(transactions.createdAt)).limit(100);
     res.json(list);
-  });
+  }));
 
   // ── Admin: Withdrawals ────────────────────────────────────────────────────
 
-  app.get("/api/admin/withdrawals", requireAdmin, async (_req: Request, res: Response) => {
+  app.get("/api/admin/withdrawals", requireAdmin, ar(async (_req, res) => {
     const pending = await db.select({
       id: transactions.id,
       userId: transactions.userId,
@@ -789,7 +795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .where(and(eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")))
       .orderBy(desc(transactions.createdAt));
     res.json(pending);
-  });
+  }));
 
   app.post("/api/admin/withdrawals/:id/approve", requireAdmin, async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
@@ -869,7 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/admin/stats", requireAdmin, async (req: Request, res: Response) => {
+  app.get("/api/admin/stats", requireAdmin, ar(async (_req, res) => {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
     const [drawCount] = await db.select({ count: sql<number>`count(*)` }).from(draws).where(eq(draws.status, "completed"));
     const [totalPrizes] = await db.select({ total: sql<number>`coalesce(sum(amount),0)` })
@@ -882,11 +888,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalPrizesPaid: totalPrizes.total,
       totalDeposits: totalDeposits.total,
     });
-  });
+  }));
 
   // ── Admin: Petition ───────────────────────────────────────────────────────
 
-  app.get("/api/admin/petition", requireAdmin, async (_req: Request, res: Response) => {
+  app.get("/api/admin/petition", requireAdmin, ar(async (_req, res) => {
     const signatures = await db.select({
       id: petitionSignatures.id,
       firstName: petitionSignatures.firstName,
@@ -908,22 +914,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       byCountry,
       signatures: active,
     });
-  });
+  }));
 
   // Public petition count (no auth needed — for landing page display)
-  app.get("/api/petition/count", async (_req: Request, res: Response) => {
+  app.get("/api/petition/count", ar(async (_req, res) => {
     const [row] = await db.select({ count: sql<number>`count(*)` })
       .from(petitionSignatures)
       .where(sql`revoked_at IS NULL`);
     res.json({ count: row.count });
-  });
+  }));
 
   // ── Admin: Audit Log ──────────────────────────────────────────────────────
 
-  app.get("/api/admin/audit-logs", requireAdmin, async (_req: Request, res: Response) => {
+  app.get("/api/admin/audit-logs", requireAdmin, ar(async (_req, res) => {
     const list = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(100);
     res.json(list);
-  });
+  }));
 
   // ── Web Push ─────────────────────────────────────────────────────────────
 

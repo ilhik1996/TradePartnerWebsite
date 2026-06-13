@@ -3,6 +3,11 @@ import { registerRoutes, getBroadcast } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startScheduler } from "./modules/scheduler";
 
+// Safety net: log unhandled rejections instead of crashing (Node 15+)
+process.on("unhandledRejection", (reason) => {
+  console.error("[UnhandledRejection]", reason);
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
