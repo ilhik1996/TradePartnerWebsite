@@ -669,6 +669,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(list);
   });
 
+  // Public platform stats for landing page
+  app.get("/api/stats", async (_req: Request, res: Response) => {
+    const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [drawCount] = await db.select({ count: sql<number>`count(*)` }).from(draws).where(eq(draws.status, "completed"));
+    const [totalPrizes] = await db.select({ total: sql<number>`coalesce(sum(amount),0)` })
+      .from(transactions).where(eq(transactions.type, "prize_payout"));
+    res.json({
+      totalUsers: userCount.count,
+      completedDraws: drawCount.count,
+      totalPrizesPaid: totalPrizes.total,
+    });
+  });
+
   app.get("/api/admin/stats", requireAdmin, async (req: Request, res: Response) => {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
     const [drawCount] = await db.select({ count: sql<number>`count(*)` }).from(draws).where(eq(draws.status, "completed"));

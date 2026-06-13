@@ -9,12 +9,9 @@ export default function Landing() {
   const [livePool, setLivePool] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch live data without auth
-    fetch("/api/admin/stats", { headers: { Authorization: "Bearer " + localStorage.getItem("viona_token") } })
-      .then(r => r.ok ? r.json() : null).then(s => s && setStats(s)).catch(() => {});
-    fetch("/api/draws/today/1")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setLivePool(d.totalPool)).catch(() => {});
+    // Public endpoints — no auth required
+    fetch("/api/stats").then(r => r.ok ? r.json() : null).then(s => s && setStats(s)).catch(() => {});
+    fetch("/api/draws/today/1").then(r => r.ok ? r.json() : null).then(d => d && setLivePool(d.totalPool)).catch(() => {});
   }, []);
 
   return (
@@ -88,12 +85,8 @@ export default function Landing() {
       <section className="py-12 px-6 border-y border-border">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
           {[
-            { label: "Registered users", value: stats?.totalUsers ? `${stats.totalUsers}+` : "5+", icon: Users },
-            {
-              label: "Today's pool (UA)",
-              value: livePool ? `₴${parseFloat(livePool).toFixed(0)}` : "—",
-              icon: Trophy
-            },
+            { label: "Registered users", value: stats?.totalUsers ? `${stats.totalUsers}+` : "—", icon: Users },
+            { label: "Completed draws", value: stats?.completedDraws ?? "—", icon: Trophy },
             { label: "Provably Fair", value: "100%", icon: Shield },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2">
