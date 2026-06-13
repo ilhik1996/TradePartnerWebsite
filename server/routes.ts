@@ -30,6 +30,9 @@ function broadcast(data: object) {
   });
 }
 
+// Exported so scheduler can reuse the same broadcast function
+export function getBroadcast() { return broadcast; }
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function uid(req: Request): number {
@@ -333,6 +336,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .set({ isRead: true })
       .where(and(eq(notifications.id, parseInt(req.params.id)), eq(notifications.userId, uid(req))));
     res.json({ ok: true });
+  });
+
+  // ── Referrals ──────────────────────────────────────────────────────────────
+
+  // Get my referral code + stats
+  app.get("/api/referrals/my", requireAuth, async (req: Request, res: Response) => {
+    const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
+    const myReferrals = await db.select().from(referrals)
+      .where(eq(referrals.referrerId, uid(req)))
+      .orderBy(desc(referrals.createdAt));
+    const totalBonus = myReferrals.reduce((s, r) => s + parseFloat(r.bonusAmount as string), 0);
+    res.json({
+      referralCode: user.referralCode,
+      referrals: myReferrals,
+      totalBonusEarned: totalBonus.toFixed(2),
+      referralCount: myReferrals.length,
+    });
+  });
+
+  // Apply referral code during / after registration
+  app.post("/api/referrals/apply", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { code } = z.object({ code: z.string().min(4) }).parse(req.body);
+      // Check if user already has a referrer
+      const [me] = await db.select().from(users).where(eq(users.id, uid(req)));
+      if (me.referredBy) { res.status(409).json({ message: "Referral already applied" }); return; }
+
+      const [referrer] = await db.select().from(users).where(eq(users.referralCode, code.toUpperCase()));
+      if (!referrer) { res.status(404).json({ message: "Invalid referral code" }); return; }
+      if (referrer.id === uid(req)) { res.status(400).json({ message: "Cannot use your own code" }); return; }
+
+      await db.update(users).set({ referredBy: referrer.id }).where(eq(users.id, uid(req)));
+
+      // Get country for bonus amount
+      const country = me.countryId
+        ? await db.select().from(countries).where(eq(countries.id, me.countryId)).then(r => r[0])
+        : null;
+      const bonusAmount = parseFloat(country?.entryAmountDaily as string ?? "5");
+      const currency = country?.currency ?? "UAH";
+
+      // Record referral (pending until new user makes first paid entry)
+      await db.insert(referrals).values({
+        referrerId: referrer.id,
+        refereeId: uid(req),
+        bonusAmount: bonusAmount.toFixed(2),
+        currency,
+        status: "pending",
+      });
+
+      res.json({ ok: true, referrerName: referrer.email ?? referrer.phone });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
   });
 
   // ── Petition ──────────────────────────────────────────────────────────────

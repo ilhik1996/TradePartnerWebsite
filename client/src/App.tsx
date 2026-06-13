@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,12 +10,14 @@ import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import WalletPage from "@/pages/wallet";
 import Cabinet from "@/pages/cabinet";
+import History from "@/pages/history";
+import Notifications from "@/pages/notifications";
+import Referrals from "@/pages/referrals";
 import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
 
   if (loading) {
     return (
@@ -25,11 +27,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
-
+  if (!user) return <Redirect to="/login" />;
   return <Component />;
 }
 
@@ -42,6 +40,9 @@ function Router() {
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/wallet" component={() => <ProtectedRoute component={WalletPage} />} />
       <Route path="/cabinet" component={() => <ProtectedRoute component={Cabinet} />} />
+      <Route path="/history" component={() => <ProtectedRoute component={History} />} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={Notifications} />} />
+      <Route path="/referrals" component={() => <ProtectedRoute component={Referrals} />} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>

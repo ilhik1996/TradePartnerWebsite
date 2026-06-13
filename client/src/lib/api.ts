@@ -73,6 +73,11 @@ export const api = {
     markRead: (id: number) => request<any>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
 
+  referrals: {
+    my: () => request<any>("/referrals/my"),
+    apply: (code: string) => request<any>("/referrals/apply", { method: "POST", body: JSON.stringify({ code }) }),
+  },
+
   petition: {
     sign: (body: { firstName: string; countryCode: string }) =>
       request<any>("/petition/sign", { method: "POST", body: JSON.stringify(body) }),

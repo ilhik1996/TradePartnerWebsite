@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Trophy, Wallet, Bell, User, LogOut, ChevronRight, Zap, Clock,
-  Gift, ToggleLeft, ToggleRight, History, Settings, Star
+  Gift, ToggleLeft, ToggleRight, History, Settings, Star, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import { api } from "@/lib/api";
 
 // ── Countdown timer ────────────────────────────────────────────────────────────
@@ -93,6 +94,16 @@ export default function Dashboard() {
 
   const countryId = user?.countryId ?? 1;
   const timer = useCountdown(country?.drawHourUtc ?? 21);
+
+  // Real-time updates from WebSocket
+  useRealtime(useCallback((msg) => {
+    if (msg.type === "draw_pool_update" && draw && msg.drawId === draw.id) {
+      setDraw((d: any) => d ? { ...d, totalPool: msg.totalPool, totalEntries: msg.totalEntries } : d);
+    }
+    if (msg.type === "draw_completed" && msg.countryId === countryId) {
+      loadData(); // Reload after draw completes
+    }
+  }, [draw, countryId]));
 
   const loadData = useCallback(async () => {
     try {
@@ -307,6 +318,24 @@ export default function Dashboard() {
             <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
               <History className="w-5 h-5 text-primary" />
               <span className="text-sm font-medium">Draw History</span>
+            </div>
+          </Link>
+          <Link href="/wallet">
+            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
+              <Wallet className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">Wallet</span>
+            </div>
+          </Link>
+          <Link href="/notifications">
+            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors">
+              <Bell className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">Notifications</span>
+            </div>
+          </Link>
+          <Link href="/referrals">
+            <div className="viona-card p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors col-span-2 sm:col-span-1">
+              <Users className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">Refer a Friend</span>
             </div>
           </Link>
         </div>
