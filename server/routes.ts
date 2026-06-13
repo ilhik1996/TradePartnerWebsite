@@ -21,7 +21,7 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, alias } from "drizzle-orm";
 import { z } from "zod";
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
@@ -476,8 +476,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get my referral code + stats
   app.get("/api/referrals/my", requireAuth, async (req: Request, res: Response) => {
+    const referee = alias(users, "referee");
     const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
-    const myReferrals = await db.select().from(referrals)
+    const myReferrals = await db
+      .select({
+        id: referrals.id,
+        refereeId: referrals.refereeId,
+        bonusAmount: referrals.bonusAmount,
+        currency: referrals.currency,
+        status: referrals.status,
+        paidAt: referrals.paidAt,
+        createdAt: referrals.createdAt,
+        email: referee.email,
+        joinedAt: referee.createdAt,
+      })
+      .from(referrals)
+      .leftJoin(referee, eq(referee.id, referrals.refereeId))
       .where(eq(referrals.referrerId, uid(req)))
       .orderBy(desc(referrals.createdAt));
     const totalBonus = myReferrals.reduce((s, r) => s + parseFloat(r.bonusAmount as string), 0);

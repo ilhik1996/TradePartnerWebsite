@@ -211,7 +211,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(r['email'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              Text(_maskEmail(r['email'] as String? ?? ''), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                               Text(r['joinedAt']?.toString().substring(0, 10) ?? '', style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
                             ],
                           ),
@@ -238,6 +238,13 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
         ),
       ),
     );
+  }
+
+  String _maskEmail(String email) {
+    if (email.isEmpty) return 'Friend';
+    final at = email.indexOf('@');
+    if (at <= 1) return email;
+    return '${email[0]}***${email.substring(at)}';
   }
 
   Widget _statBox(String value, String label) {
