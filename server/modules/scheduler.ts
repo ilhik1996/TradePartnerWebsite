@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
 import { awardXp, checkAndAwardBadges } from "./gamification";
+import { sendDrawResultEmail } from "./email";
 
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
@@ -61,6 +62,20 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
             if (result.winnerUserId) {
               awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
             }
+            // Send winner email non-blocking
+            db.select({ email: users.email, firstName: users.email }).from(users)
+              .where(eq(users.id, result.winnerUserId))
+              .then(([winner]) => {
+                if (winner?.email) {
+                  sendDrawResultEmail({
+                    to: winner.email,
+                    drawDate: openDraw.drawDate,
+                    isWinner: true,
+                    prizeAmount: result.prizeAmount,
+                    currencySymbol: country.currencySymbol ?? "",
+                  }).catch(() => {});
+                }
+              }).catch(() => {});
           }
         } catch (err) {
           console.error(`[Scheduler] Draw error:`, err);
@@ -110,6 +125,8 @@ async function autoEnterUsers() {
           if (!wallet || parseFloat(wallet.balance as string) < entryAmount) continue;
 
           await addPaidEntry(user.id, draw.id);
+          // Award XP for auto-entry non-blocking
+          awardXp(user.id, 'entry', db).then(() => checkAndAwardBadges(user.id, db)).catch(() => {});
         } catch {
           // Skip individual failures silently
         }

@@ -1096,6 +1096,43 @@ async function seedInitialData() {
       isActive: true,
     });
   }
+
+  // Seed demo partners
+  const partnersExist = await db.select().from(partners).limit(1);
+  if (!partnersExist.length) {
+    await db.insert(partners).values([
+      {
+        name: "ROZETKA", category: "electronics", cashbackPercent: "3.00",
+        description: "Ukraine's largest online electronics retailer. Pay with VIONA balance at checkout.",
+        isActive: true,
+      },
+      {
+        name: "Nova Poshta", category: "delivery", cashbackPercent: "2.00",
+        description: "Send packages across Ukraine and internationally. Pay shipping fees with your balance.",
+        isActive: true,
+      },
+      {
+        name: "Silpo", category: "food", cashbackPercent: "1.50",
+        description: "Premium supermarket chain. Earn cashback on every grocery purchase.",
+        isActive: true,
+      },
+      {
+        name: "OKKO Petrol", category: "fuel", cashbackPercent: "2.50",
+        description: "Fill up your tank at OKKO stations and earn cashback with every liter.",
+        isActive: true,
+      },
+      {
+        name: "EVA", category: "beauty", cashbackPercent: "4.00",
+        description: "Cosmetics and personal care. Earn 4% cashback on all beauty purchases.",
+        isActive: true,
+      },
+      {
+        name: "Comfy", category: "electronics", cashbackPercent: "2.00",
+        description: "Household appliances and gadgets. Use your VIONA balance online or in-store.",
+        isActive: true,
+      },
+    ]);
+  }
 }
 
 // ─── Sanitize user for client ─────────────────────────────────────────────────

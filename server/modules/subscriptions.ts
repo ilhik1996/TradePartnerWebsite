@@ -4,6 +4,7 @@ import { eq, and, lte } from "drizzle-orm";
 import { addPaidEntry, getOrCreateDraw, todayDateString } from "./lottery";
 import { processDeposit } from "./payments";
 import { nanoid } from "nanoid";
+import { awardXp, checkAndAwardBadges } from "./gamification";
 
 // ─── Create subscription ──────────────────────────────────────────────────────
 
@@ -129,6 +130,9 @@ export async function renewDueSubscriptions() {
         await db.update(subscriptions)
           .set({ nextBillingDate: next })
           .where(eq(subscriptions.id, sub.id));
+        // Award XP for renewal non-blocking
+        const xpReason = sub.type === "weekly" ? "weekly_sub" : "monthly_sub";
+        awardXp(sub.userId, xpReason, db).then(() => checkAndAwardBadges(sub.userId, db)).catch(() => {});
       } else {
         // Renewal failed — pause subscription, notify user
         await db.update(subscriptions)
