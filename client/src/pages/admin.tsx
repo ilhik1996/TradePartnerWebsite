@@ -269,7 +269,7 @@ function DrawsPanel() {
                 onChange={e => setNewCountryId(e.target.value)}
               >
                 <option value="">Select country…</option>
-                {countries.map(c => <option key={c.id} value={c.id}>{c.flag} {c.name}</option>)}
+                {countries.map(c => <option key={c.id} value={c.id}>{c.name} ({c.currencySymbol})</option>)}
               </select>
             </div>
             <div>
