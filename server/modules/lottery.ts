@@ -67,7 +67,17 @@ export async function addPaidEntry(userId: number, drawId: number) {
     metadata: { drawId },
   }).returning();
 
-  const ticketNumber = draw.totalEntries + 1;
+  // Atomically increment totalEntries and use the returned value as the ticket number
+  const newPool = parseFloat(draw.totalPool as string) + entryAmount;
+  const [updatedDraw] = await db.update(draws)
+    .set({
+      totalPool: newPool.toFixed(2),
+      totalEntries: sql`${draws.totalEntries} + 1`,
+    })
+    .where(eq(draws.id, drawId))
+    .returning({ totalEntries: draws.totalEntries });
+
+  const ticketNumber = updatedDraw.totalEntries;
 
   await db.insert(drawEntries).values({
     drawId,
@@ -77,15 +87,6 @@ export async function addPaidEntry(userId: number, drawId: number) {
     amountPaid: entryAmount.toFixed(2),
     transactionId: tx.id,
   });
-
-  // Update pool and entry count
-  const newPool = parseFloat(draw.totalPool as string) + entryAmount;
-  await db.update(draws)
-    .set({
-      totalPool: newPool.toFixed(2),
-      totalEntries: ticketNumber,
-    })
-    .where(eq(draws.id, drawId));
 
   return { ticketNumber, entryAmount, newBalance };
 }
@@ -101,7 +102,13 @@ export async function addFreeEntry(userId: number, drawId: number) {
     .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, userId)));
   if (existing) throw new Error("Already have an entry in this draw");
 
-  const ticketNumber = draw.totalEntries + 1;
+  // Atomically increment totalEntries to get a unique ticket number
+  const [updatedDraw] = await db.update(draws)
+    .set({ totalEntries: sql`${draws.totalEntries} + 1` })
+    .where(eq(draws.id, drawId))
+    .returning({ totalEntries: draws.totalEntries });
+
+  const ticketNumber = updatedDraw.totalEntries;
 
   await db.insert(drawEntries).values({
     drawId,
@@ -110,10 +117,6 @@ export async function addFreeEntry(userId: number, drawId: number) {
     ticketNumber,
     amountPaid: null,
   });
-
-  await db.update(draws)
-    .set({ totalEntries: ticketNumber })
-    .where(eq(draws.id, drawId));
 
   return { ticketNumber };
 }
