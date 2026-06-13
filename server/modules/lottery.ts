@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { draws, drawEntries, wallets, transactions, users, countries, notifications } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { draws, drawEntries, wallets, transactions, users, countries, notifications, responsibleGaming } from "@shared/schema";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { createHash, randomInt } from "crypto";
 
 export async function getOrCreateDraw(countryId: number, dateStr: string) {
@@ -29,6 +29,12 @@ export function todayDateString() {
 
 // Add a paid entry — deducts from wallet, records transaction, adds to draw pool
 export async function addPaidEntry(userId: number, drawId: number) {
+  // Enforce account status
+  const [user] = await db.select({ status: users.status }).from(users).where(eq(users.id, userId));
+  if (!user) throw new Error("User not found");
+  if (user.status === "self_excluded") throw new Error("Your account is self-excluded. You cannot enter draws.");
+  if (user.status === "suspended" || user.status === "banned") throw new Error("Your account is not active.");
+
   const draw = await db.select().from(draws).where(eq(draws.id, drawId)).then(r => r[0]);
   if (!draw || draw.status !== "open") throw new Error("Draw is not open");
 
@@ -43,6 +49,40 @@ export async function addPaidEntry(userId: number, drawId: number) {
   if (!country) throw new Error("Country not found");
 
   const entryAmount = parseFloat(country.entryAmountDaily as string);
+
+  // Enforce responsible gaming spending limits
+  const [rg] = await db.select().from(responsibleGaming).where(eq(responsibleGaming.userId, userId));
+  if (rg) {
+    const now = new Date();
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [spendRow] = await db
+      .select({
+        daily: sql<number>`coalesce(sum(case when created_at >= ${dayStart.toISOString()} then abs(amount) else 0 end), 0)`,
+        weekly: sql<number>`coalesce(sum(case when created_at >= ${weekStart.toISOString()} then abs(amount) else 0 end), 0)`,
+        monthly: sql<number>`coalesce(sum(case when created_at >= ${monthStart.toISOString()} then abs(amount) else 0 end), 0)`,
+      })
+      .from(transactions)
+      .where(and(eq(transactions.userId, userId), eq(transactions.type, "lottery_entry")));
+
+    if (rg.dailyLimitAmount && spendRow) {
+      const dailyLimit = parseFloat(rg.dailyLimitAmount as string);
+      if (Number(spendRow.daily) + entryAmount > dailyLimit)
+        throw new Error(`Daily spending limit of ${dailyLimit.toFixed(2)} reached`);
+    }
+    if (rg.weeklyLimitAmount && spendRow) {
+      const weeklyLimit = parseFloat(rg.weeklyLimitAmount as string);
+      if (Number(spendRow.weekly) + entryAmount > weeklyLimit)
+        throw new Error(`Weekly spending limit of ${weeklyLimit.toFixed(2)} reached`);
+    }
+    if (rg.monthlyLimitAmount && spendRow) {
+      const monthlyLimit = parseFloat(rg.monthlyLimitAmount as string);
+      if (Number(spendRow.monthly) + entryAmount > monthlyLimit)
+        throw new Error(`Monthly spending limit of ${monthlyLimit.toFixed(2)} reached`);
+    }
+  }
 
   // Deduct from wallet
   const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));

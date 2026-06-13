@@ -14,7 +14,9 @@ export async function createSubscription(
   paymentMethodToken: string,
 ) {
   const [user] = await db.select().from(users).where(eq(users.id, userId));
-  if (!user?.countryId) throw new Error("User has no country set");
+  if (!user) throw new Error("User not found");
+  if (user.status !== "active") throw new Error("Account is not active — subscriptions unavailable");
+  if (!user.countryId) throw new Error("User has no country set");
 
   const [country] = await db.select().from(countries).where(eq(countries.id, user.countryId));
   if (!country) throw new Error("Country not found");
