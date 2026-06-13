@@ -16,6 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late final TabController _tabs = TabController(length: 3, vsync: this);
 
   Map<String, dynamic>? _user;
+  Map<String, dynamic>? _profile;
   Map<String, dynamic>? _level;
   Map<String, dynamic>? _rg;
   bool _loading = true;
@@ -44,12 +45,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         _api.me(),
         _api.getUserLevel(),
         _api.getResponsibleGaming(),
+        _api.getProfile(),
       ]);
       _user = results[0] as Map<String, dynamic>?;
       _level = results[1] as Map<String, dynamic>?;
       _rg = results[2] as Map<String, dynamic>?;
-      _firstNameCtrl.text = _user?['firstName'] ?? '';
-      _lastNameCtrl.text = _user?['lastName'] ?? '';
+      _profile = results[3] as Map<String, dynamic>?;
+      _firstNameCtrl.text = _profile?['firstName'] ?? '';
+      _lastNameCtrl.text = _profile?['lastName'] ?? '';
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -285,14 +288,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                   child: Center(
                     child: Text(
-                      (_user?['firstName'] as String? ?? 'U').substring(0, 1).toUpperCase(),
+                      (_profile?['firstName'] as String? ?? 'U').substring(0, 1).toUpperCase(),
                       style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${_user?['firstName'] ?? ''} ${_user?['lastName'] ?? ''}'.trim(),
+                  '${_profile?['firstName'] ?? ''} ${_profile?['lastName'] ?? ''}'.trim(),
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 Text(_user?['email'] ?? '', style: const TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
