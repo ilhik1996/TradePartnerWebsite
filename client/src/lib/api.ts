@@ -93,6 +93,11 @@ export const api = {
     revoke: () => request<any>("/petition/sign", { method: "DELETE" }),
   },
 
+  kyc: {
+    start: (body: { level: "age" | "full"; dateOfBirth?: string; documentType?: string }) =>
+      request<any>("/kyc/start", { method: "POST", body: JSON.stringify(body) }),
+  },
+
   admin: {
     login: (email: string, password: string) =>
       request<{ token: string; admin: any }>("/admin/login", {

@@ -32,17 +32,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await _api.markNotificationRead(id);
       setState(() {
         final idx = _notifications.indexWhere((n) => n['id'] == id);
-        if (idx != -1) _notifications[idx] = {..._notifications[idx], 'read': true};
+        if (idx != -1) _notifications[idx] = {..._notifications[idx], 'isRead': true};
       });
     } catch (_) {}
   }
 
   Future<void> _markAllRead() async {
     try {
-      final unread = _notifications.where((n) => !(n['read'] as bool? ?? false)).toList();
+      final unread = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).toList();
       await Future.wait(unread.map((n) => _api.markNotificationRead(n['id'] as int)));
       setState(() {
-        _notifications = _notifications.map((n) => {...n, 'read': true}).toList();
+        _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList();
       });
     } catch (_) {}
   }
@@ -53,7 +53,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator(color: VionaColors.purple)));
     }
 
-    final unreadCount = _notifications.where((n) => !(n['read'] as bool? ?? false)).length;
+    final unreadCount = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -103,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 notif: _notifications[i],
                 onTap: () {
                   final n = _notifications[i];
-                  if (!(n['read'] as bool? ?? false)) _markRead(n['id'] as int);
+                  if (!(n['isRead'] as bool? ?? false)) _markRead(n['id'] as int);
                 },
               ),
             ),

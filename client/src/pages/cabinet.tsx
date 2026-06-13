@@ -48,6 +48,12 @@ export default function Cabinet() {
   // Self-exclusion
   const [exDays, setExDays] = useState(30);
   const [excluding, setExcluding] = useState(false);
+
+  // KYC modal
+  const [kycModal, setKycModal] = useState<null | "age" | "full">(null);
+  const [kycDob, setKycDob] = useState("");
+  const [kycDocType, setKycDocType] = useState("passport");
+  const [kycSubmitting, setKycSubmitting] = useState(false);
   const { supported: pushSupported, permission: pushPerm, subscribe: pushSubscribe } = usePush();
 
   useEffect(() => {
@@ -75,6 +81,32 @@ export default function Cabinet() {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStartKyc = async () => {
+    const level = kycModal!;
+    if (level === "age" && !kycDob) return;
+    setKycSubmitting(true);
+    try {
+      const result = await api.kyc.start({
+        level,
+        dateOfBirth: level === "age" ? kycDob : undefined,
+        documentType: level === "full" ? kycDocType : undefined,
+      });
+      setKycModal(null);
+      if (result.pending) {
+        toast({ title: "Documents submitted", description: "Review takes 1-3 business days." });
+      } else {
+        toast({ title: "Age verified ✓", description: "You can now make deposits." });
+        // Refresh user data
+        const p = await api.profile.get();
+        setProfile(p);
+      }
+    } catch (err: any) {
+      toast({ title: "Verification failed", description: err.message, variant: "destructive" });
+    } finally {
+      setKycSubmitting(false);
     }
   };
 
@@ -189,11 +221,26 @@ export default function Cabinet() {
                   </div>
                 ))}
               </div>
-              {user?.kycLevel !== "full" && (
-                <Button variant="outline" className="btn-viona-outline w-full h-10 text-sm mt-4">
-                  Start verification
-                </Button>
-              )}
+              <div className="mt-4 space-y-2">
+                {user?.kycLevel === "none" && (
+                  <Button
+                    variant="outline"
+                    className="btn-viona-outline w-full h-10 text-sm"
+                    onClick={() => setKycModal("age")}
+                  >
+                    Verify age (18+)
+                  </Button>
+                )}
+                {user?.kycLevel === "age_verified" && (
+                  <Button
+                    variant="outline"
+                    className="btn-viona-outline w-full h-10 text-sm"
+                    onClick={() => setKycModal("full")}
+                  >
+                    Complete full KYC
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Push notifications */}
@@ -407,6 +454,80 @@ export default function Cabinet() {
           </div>
         )}
       </div>
+
+      {/* KYC Modal */}
+      {kycModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="viona-card w-full max-w-sm rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base">
+                {kycModal === "age" ? "Age verification" : "Full KYC"}
+              </h3>
+              <button onClick={() => setKycModal(null)} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {kycModal === "age"
+                ? "Confirm your date of birth to verify you are 18 or older. Required before your first deposit."
+                : "Upload a government-issued ID to unlock withdrawals. Review takes 1-3 business days."}
+            </p>
+
+            {kycModal === "age" && (
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Date of birth</label>
+                <input
+                  type="date"
+                  className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={kycDob}
+                  onChange={e => setKycDob(e.target.value)}
+                  max={new Date(Date.now() - 18 * 365.25 * 86400000).toISOString().split("T")[0]}
+                />
+              </div>
+            )}
+
+            {kycModal === "full" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Document type</label>
+                  <select
+                    className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none"
+                    value={kycDocType}
+                    onChange={e => setKycDocType(e.target.value)}
+                  >
+                    <option value="passport">Passport</option>
+                    <option value="id_card">National ID card</option>
+                    <option value="driving_licence">Driving licence</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Front side", "Back side", "Selfie with document"].map(label => (
+                    <div
+                      key={label}
+                      className="h-20 rounded-xl bg-secondary border border-border flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground cursor-pointer hover:border-primary/50 col-span-1 last:col-span-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1 h-10 text-sm" onClick={() => setKycModal(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="btn-viona-primary flex-1 h-10 text-sm"
+                onClick={handleStartKyc}
+                disabled={kycSubmitting || (kycModal === "age" && !kycDob)}
+              >
+                {kycSubmitting ? "Submitting…" : "Submit"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -212,4 +212,47 @@ class ApiService {
     final r = await _dio.get('/partners');
     return r.data;
   }
+
+  // ── KYC ───────────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> startKyc({
+    required String level,
+    String? dateOfBirth,
+    String? documentType,
+  }) async {
+    final r = await _dio.post('/kyc/start', data: {
+      'level': level,
+      if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
+      if (documentType != null) 'documentType': documentType,
+    });
+    return r.data;
+  }
+
+  // ── Responsible gaming ────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getResponsibleGaming() async {
+    try {
+      final r = await _dio.get('/settings/responsible-gaming');
+      return r.data as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> updateResponsibleGaming({
+    double? dailyLimit,
+    double? weeklyLimit,
+    double? monthlyLimit,
+  }) async {
+    await _dio.patch('/settings/responsible-gaming', data: {
+      'dailyLimitAmount': dailyLimit,
+      'weeklyLimitAmount': weeklyLimit,
+      'monthlyLimitAmount': monthlyLimit,
+    });
+  }
+
+  Future<Map<String, dynamic>> selfExclude(int days) async {
+    final r = await _dio.post('/settings/self-exclude', data: {'days': days});
+    return r.data;
+  }
 }

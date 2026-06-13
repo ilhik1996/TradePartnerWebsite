@@ -695,6 +695,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
+  // ── KYC initiation ───────────────────────────────────────────────────────
+
+  app.post("/api/kyc/start", requireAuth, async (req: Request, res: Response) => {
+    const { level, dateOfBirth, documentType } = z.object({
+      level: z.enum(["age", "full"]),
+      dateOfBirth: z.string().optional(),
+      documentType: z.string().optional(),
+    }).parse(req.body);
+
+    const userId = uid(req);
+    const [user] = await db.select({ kycLevel: users.kycLevel }).from(users).where(eq(users.id, userId));
+    if (!user) { res.status(404).json({ message: "User not found" }); return; }
+
+    if (level === "age") {
+      if (user.kycLevel !== "none") { res.status(400).json({ message: "Already verified" }); return; }
+      // In production: create Sumsub/Onfido applicant and return redirect URL.
+      // For MVP: set age_verified immediately after form submission.
+      await db.update(users).set({ kycLevel: "age_verified" }).where(eq(users.id, userId));
+      await db.insert(notifications).values({
+        userId,
+        type: "kyc_approved",
+        title: "Age verified",
+        body: "Your age verification is complete. You can now make deposits.",
+      });
+      res.json({ ok: true, kycLevel: "age_verified" });
+    } else {
+      if (user.kycLevel !== "age_verified") { res.status(400).json({ message: "Complete age verification first" }); return; }
+      // In production: initiate full KYC document review.
+      // For MVP: mark as pending (stays age_verified, notification sent, webhook upgrades to full).
+      await db.insert(notifications).values({
+        userId,
+        type: "kyc_approved",
+        title: "KYC submitted",
+        body: "Your documents have been received. Review takes 1-3 business days.",
+      });
+      res.json({ ok: true, kycLevel: "age_verified", pending: true });
+    }
+  });
+
   // ── KYC Webhooks (Sumsub / Onfido) ───────────────────────────────────────
 
   app.post("/api/webhooks/kyc", async (req: Request, res: Response) => {

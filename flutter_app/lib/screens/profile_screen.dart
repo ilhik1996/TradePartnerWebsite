@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/viona_theme.dart';
 import '../services/api_service.dart';
@@ -16,6 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Map<String, dynamic>? _user;
   Map<String, dynamic>? _level;
+  Map<String, dynamic>? _rg;
   bool _loading = true;
 
   final _firstNameCtrl = TextEditingController();
@@ -38,8 +40,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _load() async {
     try {
-      _user = await _api.me();
-      _level = await _api.getUserLevel();
+      final results = await Future.wait([
+        _api.me(),
+        _api.getUserLevel(),
+        _api.getResponsibleGaming(),
+      ]);
+      _user = results[0] as Map<String, dynamic>?;
+      _level = results[1] as Map<String, dynamic>?;
+      _rg = results[2] as Map<String, dynamic>?;
       _firstNameCtrl.text = _user?['firstName'] ?? '';
       _lastNameCtrl.text = _user?['lastName'] ?? '';
     } catch (_) {}
@@ -70,7 +78,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         content: const Text('You will need to sign in again.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sign out', style: TextStyle(color: VionaColors.danger))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign out', style: TextStyle(color: VionaColors.danger)),
+          ),
         ],
       ),
     );
@@ -86,6 +97,137 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       content: Text(msg),
       backgroundColor: error ? VionaColors.danger : VionaColors.surface2,
     ));
+  }
+
+  // ── KYC ───────────────────────────────────────────────────────────────────
+
+  void _startKycAge() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VionaColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _KycAgeSheet(onDone: () {
+        Navigator.pop(context);
+        _showSnack('Age verification submitted — we\'ll notify you within 24 h');
+      }),
+    );
+  }
+
+  void _startKycFull() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VionaColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _KycFullSheet(onDone: () {
+        Navigator.pop(context);
+        _showSnack('Full KYC submitted — review takes 1-3 business days');
+      }),
+    );
+  }
+
+  // ── Spending limits ────────────────────────────────────────────────────────
+
+  void _showLimitDialog(String kind, String label) {
+    final ctrl = TextEditingController(
+      text: switch (kind) {
+        'daily'   => _rg?['dailyLimitAmount']?.toString() ?? '',
+        'weekly'  => _rg?['weeklyLimitAmount']?.toString() ?? '',
+        'monthly' => _rg?['monthlyLimitAmount']?.toString() ?? '',
+        _         => '',
+      },
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VionaColors.surface,
+        title: Text('Set $label limit'),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(hintText: 'Amount (leave blank to remove)'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final val = double.tryParse(ctrl.text.trim());
+              try {
+                await _api.updateResponsibleGaming(
+                  dailyLimit:   kind == 'daily'   ? val : double.tryParse(_rg?['dailyLimitAmount']?.toString() ?? ''),
+                  weeklyLimit:  kind == 'weekly'  ? val : double.tryParse(_rg?['weeklyLimitAmount']?.toString() ?? ''),
+                  monthlyLimit: kind == 'monthly' ? val : double.tryParse(_rg?['monthlyLimitAmount']?.toString() ?? ''),
+                );
+                final updated = await _api.getResponsibleGaming();
+                if (mounted) setState(() => _rg = updated);
+                _showSnack('$label limit ${val == null ? 'removed' : 'set to ${val.toStringAsFixed(2)}'}');
+              } catch (e) {
+                _showSnack('$e', error: true);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Self-exclusion ────────────────────────────────────────────────────────
+
+  void _showSelfExcludeDialog() {
+    int? selectedDays;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          backgroundColor: VionaColors.surface,
+          title: const Text('Self-exclusion', style: TextStyle(color: VionaColors.danger)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your account will be locked from entering draws for the selected period. This cannot be reversed.',
+                style: TextStyle(fontSize: 13, color: VionaColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ...for (final d in [30, 90, 180, 365])
+                RadioListTile<int>(
+                  value: d,
+                  groupValue: selectedDays,
+                  onChanged: (v) => setSt(() => selectedDays = v),
+                  title: Text('$d days'),
+                  activeColor: VionaColors.danger,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: VionaColors.danger),
+              onPressed: selectedDays == null
+                ? null
+                : () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await _api.selfExclude(selectedDays!);
+                      _showSnack('Self-exclusion activated for $selectedDays days');
+                      await _load();
+                    } catch (e) {
+                      _showSnack('$e', error: true);
+                    }
+                  },
+              child: const Text('Confirm exclusion'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -125,10 +267,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildAccount() {
     final kycLevel = _user?['kycLevel'] as String? ?? 'none';
-    final kycSteps = [
-      ('Age verification', kycLevel != 'none', 'Required before first deposit'),
-      ('Full KYC (ID + photo)', kycLevel == 'full', 'Required before withdrawal'),
-    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -186,42 +324,22 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           // KYC
           Text('Identity verification', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
-          ...kycSteps.map((step) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: VionaColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: step.$2 ? VionaColors.teal.withOpacity(0.4) : VionaColors.border),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  step.$2 ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: step.$2 ? VionaColors.teal : VionaColors.textSecondary,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(step.$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(step.$3, style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
-                    ],
-                  ),
-                ),
-                if (!step.$2)
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('Verify →', style: TextStyle(color: VionaColors.purple, fontSize: 12)),
-                  ),
-              ],
-            ),
-          )),
+          _KycRow(
+            title: 'Age verification',
+            subtitle: 'Required before first deposit',
+            done: kycLevel != 'none',
+            onTap: kycLevel == 'none' ? _startKycAge : null,
+          ),
+          const SizedBox(height: 8),
+          _KycRow(
+            title: 'Full KYC (ID + photo)',
+            subtitle: 'Required before withdrawal',
+            done: kycLevel == 'full',
+            onTap: kycLevel == 'age_verified' ? _startKycFull : null,
+          ),
 
           // Referral code
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -233,15 +351,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 const Icon(Icons.people_outline, color: VionaColors.purple),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Your referral code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text(
-                      _user?['referralCode'] ?? '—',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: VionaColors.purple),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Your referral code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text(
+                        _user?['referralCode'] ?? '—',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: VionaColors.purple),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy, color: VionaColors.textSecondary, size: 18),
+                  onPressed: () {
+                    final code = _user?['referralCode'];
+                    if (code != null) {
+                      Clipboard.setData(ClipboardData(text: code));
+                      _showSnack('Copied to clipboard');
+                    }
+                  },
                 ),
               ],
             ),
@@ -270,7 +400,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Level badge
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -310,7 +439,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 24),
 
-          // How to earn XP
           Align(
             alignment: Alignment.centerLeft,
             child: Text('How to earn XP', style: Theme.of(context).textTheme.bodyMedium),
@@ -321,6 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ('Win a draw', '+50 XP', Icons.emoji_events),
             ('Refer a friend', '+25 XP', Icons.people_outline),
             ('Subscribe weekly', '+15 XP', Icons.calendar_today_outlined),
+            ('Deposit funds', '+5 XP', Icons.account_balance_wallet_outlined),
           ].map((item) => Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
@@ -372,75 +501,376 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildSafety() {
+    final excluded = _rg?['selfExcludedUntil'];
+    final isExcluded = excluded != null && DateTime.tryParse(excluded)?.isAfter(DateTime.now()) == true;
+
+    String? _fmtLimit(String key) {
+      final v = _rg?[key];
+      if (v == null) return null;
+      final d = double.tryParse(v.toString());
+      return d != null ? d.toStringAsFixed(2) : null;
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Responsible gaming', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Spending limits', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
 
           _SafetyCard(
-            icon: Icons.attach_money,
+            icon: Icons.today,
             title: 'Daily spending limit',
-            subtitle: 'Cap how much you can spend per day',
-            onTap: () {},
+            subtitle: _fmtLimit('dailyLimitAmount') != null
+              ? 'Current limit: ${_fmtLimit('dailyLimitAmount')}'
+              : 'No limit set',
+            onTap: () => _showLimitDialog('daily', 'daily'),
           ),
           const SizedBox(height: 8),
           _SafetyCard(
-            icon: Icons.calendar_today_outlined,
+            icon: Icons.calendar_view_week,
             title: 'Weekly spending limit',
-            subtitle: 'Cap your weekly entry spending',
-            onTap: () {},
+            subtitle: _fmtLimit('weeklyLimitAmount') != null
+              ? 'Current limit: ${_fmtLimit('weeklyLimitAmount')}'
+              : 'No limit set',
+            onTap: () => _showLimitDialog('weekly', 'weekly'),
           ),
           const SizedBox(height: 8),
           _SafetyCard(
-            icon: Icons.date_range_outlined,
+            icon: Icons.calendar_month,
             title: 'Monthly spending limit',
-            subtitle: 'Hard ceiling for the month',
-            onTap: () {},
+            subtitle: _fmtLimit('monthlyLimitAmount') != null
+              ? 'Current limit: ${_fmtLimit('monthlyLimitAmount')}'
+              : 'No limit set',
+            onTap: () => _showLimitDialog('monthly', 'monthly'),
           ),
           const SizedBox(height: 24),
 
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: VionaColors.danger.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: VionaColors.danger.withOpacity(0.3)),
+          if (isExcluded)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: VionaColors.danger.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: VionaColors.danger.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.block, color: VionaColors.danger),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Self-exclusion active', style: TextStyle(fontWeight: FontWeight.w700, color: VionaColors.danger)),
+                        Text(
+                          'Until ${DateTime.parse(excluded).toLocal().toString().substring(0, 10)}',
+                          style: const TextStyle(fontSize: 12, color: VionaColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: VionaColors.danger.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: VionaColors.danger.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.block, color: VionaColors.danger, size: 18),
+                      SizedBox(width: 8),
+                      Text('Self-exclusion', style: TextStyle(fontWeight: FontWeight.w700, color: VionaColors.danger)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Lock your account from entering draws for a period of your choice. This cannot be reversed during the exclusion period.',
+                    style: TextStyle(fontSize: 12, color: VionaColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _showSelfExcludeDialog,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: VionaColors.danger),
+                      foregroundColor: VionaColors.danger,
+                    ),
+                    child: const Text('Self-exclude'),
+                  ),
+                ],
+              ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── KYC row widget ─────────────────────────────────────────────────────────
+
+class _KycRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool done;
+  final VoidCallback? onTap;
+
+  const _KycRow({required this.title, required this.subtitle, required this.done, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: VionaColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: done ? VionaColors.teal.withOpacity(0.4) : VionaColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: done ? VionaColors.teal : VionaColors.textSecondary,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.block, color: VionaColors.danger, size: 18),
-                    SizedBox(width: 8),
-                    Text('Self-exclusion', style: TextStyle(fontWeight: FontWeight.w700, color: VionaColors.danger)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Lock your account from entering draws for a period of your choice. This cannot be reversed during the exclusion period.',
-                  style: TextStyle(fontSize: 12, color: VionaColors.textSecondary),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: VionaColors.danger),
-                    foregroundColor: VionaColors.danger,
-                  ),
-                  child: const Text('Self-exclude'),
-                ),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
               ],
             ),
+          ),
+          if (!done && onTap != null)
+            TextButton(
+              onPressed: onTap,
+              child: const Text('Verify →', style: TextStyle(color: VionaColors.purple, fontSize: 12)),
+            ),
+          if (!done && onTap == null)
+            const Text('Complete step 1 first', style: TextStyle(fontSize: 10, color: VionaColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── KYC bottom sheets ──────────────────────────────────────────────────────
+
+class _KycAgeSheet extends StatefulWidget {
+  final VoidCallback onDone;
+  const _KycAgeSheet({required this.onDone});
+
+  @override
+  State<_KycAgeSheet> createState() => _KycAgeSheetState();
+}
+
+class _KycAgeSheetState extends State<_KycAgeSheet> {
+  final _dobCtrl = TextEditingController();
+  bool _submitting = false;
+  final _api = ApiService();
+
+  @override
+  void dispose() {
+    _dobCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_dobCtrl.text.isEmpty) return;
+    setState(() => _submitting = true);
+    try {
+      await _api.startKyc(level: 'age', dateOfBirth: _dobCtrl.text.trim());
+      if (mounted) widget.onDone();
+    } catch (_) {
+      if (mounted) widget.onDone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Age verification', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+            ],
+          ),
+          const Text('Confirm your date of birth to verify you are 18 or older.', style: TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _dobCtrl,
+            keyboardType: TextInputType.datetime,
+            decoration: const InputDecoration(
+              hintText: 'Date of birth (YYYY-MM-DD)',
+              prefixIcon: Icon(Icons.cake_outlined),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your information is encrypted and only used for age verification.',
+            style: TextStyle(fontSize: 11, color: VionaColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _submitting ? null : _submit,
+            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+            child: _submitting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Submit'),
           ),
         ],
       ),
     );
   }
 }
+
+class _KycFullSheet extends StatefulWidget {
+  final VoidCallback onDone;
+  const _KycFullSheet({required this.onDone});
+
+  @override
+  State<_KycFullSheet> createState() => _KycFullSheetState();
+}
+
+class _KycFullSheetState extends State<_KycFullSheet> {
+  String? _docType = 'passport';
+  bool _submitting = false;
+  final _api = ApiService();
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      await _api.startKyc(level: 'full', documentType: _docType);
+      if (mounted) widget.onDone();
+    } catch (_) {
+      if (mounted) widget.onDone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Full KYC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+            ],
+          ),
+          const Text('Upload a government-issued ID to unlock withdrawals.', style: TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 16),
+          const Text('Document type', style: TextStyle(fontSize: 12, color: VionaColors.textSecondary)),
+          const SizedBox(height: 6),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'passport', label: Text('Passport')),
+              ButtonSegment(value: 'id_card', label: Text('ID card')),
+              ButtonSegment(value: 'driving_licence', label: Text('Licence')),
+            ],
+            selected: {_docType!},
+            onSelectionChanged: (s) => setState(() => _docType = s.first),
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: VionaColors.purple.withOpacity(0.2),
+              selectedForegroundColor: VionaColors.purple,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Simulated upload zones
+          Row(
+            children: [
+              Expanded(child: _UploadBox(label: 'Front side')),
+              const SizedBox(width: 8),
+              Expanded(child: _UploadBox(label: 'Back side')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _UploadBox(label: 'Selfie with document'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _submitting ? null : _submit,
+            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+            child: _submitting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Submit documents'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UploadBox extends StatefulWidget {
+  final String label;
+  const _UploadBox({required this.label});
+
+  @override
+  State<_UploadBox> createState() => _UploadBoxState();
+}
+
+class _UploadBoxState extends State<_UploadBox> {
+  bool _uploaded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _uploaded = true),
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: _uploaded ? VionaColors.teal.withOpacity(0.08) : VionaColors.surface2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _uploaded ? VionaColors.teal.withOpacity(0.4) : VionaColors.border,
+            style: _uploaded ? BorderStyle.solid : BorderStyle.solid,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _uploaded ? Icons.check_circle : Icons.upload_file,
+                color: _uploaded ? VionaColors.teal : VionaColors.textSecondary,
+                size: 22,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _uploaded ? 'Uploaded' : widget.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _uploaded ? VionaColors.teal : VionaColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Safety card ────────────────────────────────────────────────────────────
 
 class _SafetyCard extends StatelessWidget {
   final IconData icon;

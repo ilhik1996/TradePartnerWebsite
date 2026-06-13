@@ -96,7 +96,7 @@ class _NavShellState extends ConsumerState<_NavShell> {
       final hasToken = await ApiService().hasToken();
       if (!hasToken) return;
       final notifs = await ApiService().getNotifications();
-      final count = notifs.where((n) => !(n['read'] as bool? ?? false)).length;
+      final count = notifs.where((n) => !(n['isRead'] as bool? ?? false)).length;
       if (mounted) setState(() => _unreadNotifs = count);
     } catch (_) {}
   }
