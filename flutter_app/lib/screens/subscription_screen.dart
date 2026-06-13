@@ -132,7 +132,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           const Icon(Icons.check_circle, color: VionaColors.teal, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            '${subType[0].toUpperCase()}${subType.substring(1)} subscription active',
+                            '${subType.isNotEmpty ? '${subType[0].toUpperCase()}${subType.substring(1)}' : 'Unknown'} subscription active',
                             style: const TextStyle(fontWeight: FontWeight.w700, color: VionaColors.teal),
                           ),
                         ],

@@ -82,9 +82,14 @@ class ApiService {
 
   // ── Draws ─────────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> getTodayDraw(int countryId) async {
-    final r = await _dio.get('/draws/today/$countryId');
-    return r.data;
+  Future<Map<String, dynamic>?> getTodayDraw(int countryId) async {
+    try {
+      final r = await _dio.get('/draws/today/$countryId');
+      return r.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   Future<List<dynamic>> getDrawHistory(int countryId) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/viona_theme.dart';
 import '../services/api_service.dart';
 
@@ -75,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
     if (confirmed == true) {
       await _api.logout();
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false);
+      if (mounted) context.go('/login');
     }
   }
 

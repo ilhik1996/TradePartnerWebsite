@@ -1,22 +1,5 @@
-import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { gamificationEvents, gamificationBadges, drawEntries, draws, referrals } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
-
-// ─── Local table definitions (not yet in shared schema) ──────────────────────
-
-export const gamificationEvents = pgTable("gamification_events", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  xp: integer("xp").notNull(),
-  reason: text("reason").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const gamificationBadges = pgTable("gamification_badges", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  badgeId: text("badge_id").notNull(),
-  awardedAt: timestamp("awarded_at").notNull().defaultNow(),
-});
 
 // ─── XP Constants ─────────────────────────────────────────────────────────────
 
@@ -36,16 +19,8 @@ export type XpReason = keyof typeof XP;
 export const LEVEL_THRESHOLDS: number[] = [0, 100, 250, 500, 1000, 2000, 3500, 5000, 7500, 10000];
 
 export const LEVEL_TITLES: string[] = [
-  "Newcomer",
-  "Contender",
-  "Regular",
-  "Enthusiast",
-  "Veteran",
-  "Champion",
-  "Elite",
-  "Master",
-  "Grandmaster",
-  "Legend",
+  "Newcomer", "Contender", "Regular", "Enthusiast", "Veteran",
+  "Champion", "Elite", "Master", "Grandmaster", "Legend",
 ];
 
 // ─── Badge Definitions ────────────────────────────────────────────────────────
@@ -53,14 +28,13 @@ export const LEVEL_TITLES: string[] = [
 export interface BadgeDefinition {
   id: string;
   name: string;
-  condition: string;
 }
 
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
-  { id: "first_entry", name: "First Entry", condition: "firstEntry" },
-  { id: "first_win",   name: "First Win",   condition: "firstWin"   },
-  { id: "streak_7",    name: "7-Day Streak", condition: "streak7"   },
-  { id: "referrer",    name: "Referrer",     condition: "referral"  },
+  { id: "first_entry", name: "First Entry" },
+  { id: "first_win",   name: "First Win"   },
+  { id: "streak_7",    name: "7-Day Streak" },
+  { id: "referrer",    name: "Referrer"     },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -76,41 +50,38 @@ export interface UserLevel {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function computeLevel(totalXp: number): { level: number; title: string; nextLevelXp: number | null } {
-  let level = 0;
+  let level = 1;
   for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalXp >= LEVEL_THRESHOLDS[i]) {
-      level = i + 1; // levels are 1-indexed
+      level = i + 1;
       break;
     }
   }
-  // Cap at max level
-  if (level > LEVEL_THRESHOLDS.length) level = LEVEL_THRESHOLDS.length;
-
+  level = Math.min(level, LEVEL_THRESHOLDS.length);
   const title = LEVEL_TITLES[level - 1] ?? LEVEL_TITLES[LEVEL_TITLES.length - 1];
   const nextLevelXp = level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level] : null;
-
   return { level, title, nextLevelXp };
+}
+
+// Checks whether an array of ISO date strings contains a consecutive run of ≥ n days.
+function hasConsecutiveDays(days: string[], n: number): boolean {
+  if (days.length < n) return false;
+  const sorted = [...new Set(days)].sort();
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1]);
+    const curr = new Date(sorted[i]);
+    const diffDays = (curr.getTime() - prev.getTime()) / 86_400_000;
+    run = diffDays === 1 ? run + 1 : 1;
+    if (run >= n) return true;
+  }
+  return run >= n;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Award XP to a user for a given reason. Inserts an event row and returns
- * the user's updated total XP.
- */
-export async function awardXp(
-  userId: number,
-  reason: XpReason,
-  db: any,
-): Promise<number> {
-  const xp = XP[reason];
-
-  await db.insert(gamificationEvents).values({
-    userId,
-    xp,
-    reason,
-    createdAt: new Date(),
-  });
+export async function awardXp(userId: number, reason: XpReason, db: any): Promise<number> {
+  await db.insert(gamificationEvents).values({ userId, xp: XP[reason], reason, createdAt: new Date() });
 
   const [row] = await db
     .select({ total: sql<number>`coalesce(sum(xp), 0)` })
@@ -120,9 +91,6 @@ export async function awardXp(
   return Number(row?.total ?? 0);
 }
 
-/**
- * Return the current level, title, XP and badges for a user.
- */
 export async function getUserLevel(userId: number, db: any): Promise<UserLevel> {
   const [xpRow] = await db
     .select({ total: sql<number>`coalesce(sum(xp), 0)` })
@@ -137,79 +105,59 @@ export async function getUserLevel(userId: number, db: any): Promise<UserLevel> 
     .from(gamificationBadges)
     .where(eq(gamificationBadges.userId, userId));
 
-  const badges = badgeRows.map((b) => b.badgeId);
-
-  return { xp: totalXp, level, title, nextLevelXp, badges };
+  return { xp: totalXp, level, title, nextLevelXp, badges: badgeRows.map(b => b.badgeId) };
 }
 
-/**
- * Check eligibility for each badge and insert any newly earned ones.
- * Skips badges the user already holds.
- */
 export async function checkAndAwardBadges(userId: number, db: any): Promise<string[]> {
-  // Fetch already-earned badges
   const existingRows: { badgeId: string }[] = await db
     .select({ badgeId: gamificationBadges.badgeId })
     .from(gamificationBadges)
     .where(eq(gamificationBadges.userId, userId));
 
-  const existing = new Set(existingRows.map((r) => r.badgeId));
-
-  // Import shared tables lazily to avoid circular-dep issues
-  const { drawEntries, draws, referrals } = await import("@shared/schema");
-
-  // Count draw entries for this user
-  const [entryRow] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(drawEntries)
-    .where(eq(drawEntries.userId, userId));
-  const entryCount = Number(entryRow?.count ?? 0);
-
-  // Count wins (draws where this user is the winner)
-  const [winRow] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(draws)
-    .where(eq(draws.winnerUserId, userId));
-  const winCount = Number(winRow?.count ?? 0);
-
-  // Count referrals made by this user
-  const [refRow] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(referrals)
-    .where(eq(referrals.referrerId, userId));
-  const referralCount = Number(refRow?.count ?? 0);
-
+  const existing = new Set(existingRows.map(r => r.badgeId));
   const toAward: string[] = [];
 
-  if (!existing.has("first_entry") && entryCount >= 1) {
-    toAward.push("first_entry");
+  // first_entry
+  if (!existing.has("first_entry")) {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drawEntries)
+      .where(eq(drawEntries.userId, userId));
+    if (Number(row?.count ?? 0) >= 1) toAward.push("first_entry");
   }
-  if (!existing.has("first_win") && winCount >= 1) {
-    toAward.push("first_win");
+
+  // first_win
+  if (!existing.has("first_win")) {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(draws)
+      .where(eq(draws.winnerUserId, userId));
+    if (Number(row?.count ?? 0) >= 1) toAward.push("first_win");
   }
-  if (!existing.has("referrer") && referralCount >= 1) {
-    toAward.push("referrer");
+
+  // referrer
+  if (!existing.has("referrer")) {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(referrals)
+      .where(eq(referrals.referrerId, userId));
+    if (Number(row?.count ?? 0) >= 1) toAward.push("referrer");
   }
-  // streak_7 requires external tracking; award if XP events span 7+ distinct days
+
+  // streak_7: 7 consecutive calendar days with at least one XP event
   if (!existing.has("streak_7")) {
-    const streakRows: { day: string }[] = await db
-      .select({ day: sql<string>`date_trunc('day', created_at)::text` })
+    const dayRows: { day: string }[] = await db
+      .select({ day: sql<string>`date_trunc('day', created_at)::date::text` })
       .from(gamificationEvents)
       .where(eq(gamificationEvents.userId, userId))
-      .groupBy(sql`date_trunc('day', created_at)`);
+      .groupBy(sql`date_trunc('day', created_at)::date`);
 
-    if (streakRows.length >= 7) {
-      toAward.push("streak_7");
-    }
+    if (hasConsecutiveDays(dayRows.map(r => r.day), 7)) toAward.push("streak_7");
   }
 
   if (toAward.length > 0) {
     await db.insert(gamificationBadges).values(
-      toAward.map((badgeId) => ({
-        userId,
-        badgeId,
-        awardedAt: new Date(),
-      })),
+      toAward.map(badgeId => ({ userId, badgeId, awardedAt: new Date() })),
     );
   }
 

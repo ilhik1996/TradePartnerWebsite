@@ -1,8 +1,6 @@
 import { db } from "../db";
-import {
-  subscriptions, wallets, transactions, users, countries, draws, drawEntries, notifications
-} from "@shared/schema";
-import { eq, and, lt, lte } from "drizzle-orm";
+import { subscriptions, users, countries, notifications } from "@shared/schema";
+import { eq, and, lte } from "drizzle-orm";
 import { addPaidEntry, getOrCreateDraw, todayDateString } from "./lottery";
 import { processDeposit } from "./payments";
 import { nanoid } from "nanoid";
@@ -24,7 +22,16 @@ export async function createSubscription(
     ? parseFloat(country.entryAmountWeekly as string)
     : parseFloat(country.entryAmountMonthly as string);
 
-  // Charge first period immediately
+  // Cancel any existing active subscription BEFORE charging (avoids double-active state)
+  await db.update(subscriptions)
+    .set({ status: "cancelled", cancelledAt: new Date() })
+    .where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.countryId, country.id),
+      eq(subscriptions.status, "active"),
+    ));
+
+  // Charge first period
   const result = await processDeposit(
     userId,
     amount,
@@ -42,15 +49,6 @@ export async function createSubscription(
   } else {
     nextBillingDate.setMonth(now.getMonth() + 1);
   }
-
-  // Cancel any existing active subscription for this country
-  await db.update(subscriptions)
-    .set({ status: "cancelled", cancelledAt: new Date() })
-    .where(and(
-      eq(subscriptions.userId, userId),
-      eq(subscriptions.countryId, country.id),
-      eq(subscriptions.status, "active"),
-    ));
 
   const [sub] = await db.insert(subscriptions).values({
     userId,

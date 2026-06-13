@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { countries, draws, users, wallets, drawEntries } from "@shared/schema";
-import { eq, and, lte } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
 

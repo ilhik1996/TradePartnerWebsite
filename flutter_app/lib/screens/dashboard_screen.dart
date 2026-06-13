@@ -91,7 +91,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } catch (e) {
       _showSnack('Could not enter: $e', error: true);
     } finally {
-      setState(() => _entering = false);
+      if (mounted) setState(() => _entering = false);
     }
   }
 
@@ -108,7 +108,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         email: email,
         countryId: _user?['countryId'] ?? 1,
       );
-      setState(() => _showFreeEntry = false);
+      if (mounted) setState(() => _showFreeEntry = false);
       _showSnack('Free entry submitted! 🎉 Ticket #${result['ticketNumber']}');
       await _loadData();
     } catch (e) {

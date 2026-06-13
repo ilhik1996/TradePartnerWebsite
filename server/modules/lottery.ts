@@ -123,13 +123,16 @@ export function generateProvablyFairWinner(
   drawId: number,
   totalEntries: number,
   serverSecret: string
-): { winnerTicket: number; seed: string; proof: string } {
+): { winnerTicket: number; seedHash: string; proof: string } {
+  // seed contains server secret — never stored in plaintext; only its hash is public
   const seed = `viona:draw:${drawId}:entries:${totalEntries}:secret:${serverSecret}`;
   const hash = createHash("sha256").update(seed).digest("hex");
-  // Use first 8 hex chars as number, mod total entries → 1-based ticket
   const winnerTicket = (parseInt(hash.slice(0, 8), 16) % totalEntries) + 1;
+  // proof is hash(hash + drawId) — can be verified publicly without revealing the secret
   const proof = createHash("sha256").update(hash + drawId).digest("hex");
-  return { winnerTicket, seed, proof };
+  // Store only the hash of the seed, not the plaintext (which contains the server secret)
+  const seedHash = createHash("sha256").update(seed).digest("hex");
+  return { winnerTicket, seedHash, proof };
 }
 
 // Close the draw and pick a winner — called by scheduler
@@ -144,7 +147,7 @@ export async function conductDraw(drawId: number) {
   await db.update(draws).set({ status: "closed", closedAt: new Date() }).where(eq(draws.id, drawId));
 
   const serverSecret = process.env.DRAW_SECRET || "viona-draw-secret";
-  const { winnerTicket, seed, proof } = generateProvablyFairWinner(drawId, draw.totalEntries, serverSecret);
+  const { winnerTicket, seedHash, proof } = generateProvablyFairWinner(drawId, draw.totalEntries, serverSecret);
 
   const [winnerEntry] = await db
     .select()
@@ -154,11 +157,13 @@ export async function conductDraw(drawId: number) {
   if (!winnerEntry) throw new Error("Winner entry not found");
 
   const country = await db.select().from(countries).where(eq(countries.id, draw.countryId)).then(r => r[0]);
+  if (!country) throw new Error("Country not found for draw");
   const prizePercent = parseFloat(country.prizePercentage as string) / 100;
   const prizeAmount = parseFloat(draw.totalPool as string) * prizePercent;
 
   // Credit winner wallet
   const [winnerWallet] = await db.select().from(wallets).where(eq(wallets.userId, winnerEntry.userId));
+  if (!winnerWallet) throw new Error("Winner wallet not found");
   const newBalance = parseFloat(winnerWallet.balance as string) + prizeAmount;
 
   await db.update(wallets)
@@ -181,7 +186,7 @@ export async function conductDraw(drawId: number) {
     winnerUserId: winnerEntry.userId,
     winnerTicketNumber: winnerTicket,
     prizeAmount: prizeAmount.toFixed(2),
-    rngSeed: seed,
+    rngSeed: seedHash,
     rngProof: proof,
     completedAt: new Date(),
   }).where(eq(draws.id, drawId));
@@ -203,12 +208,13 @@ export async function conductDraw(drawId: number) {
 
   for (const uid of loserIds) {
     const myTicket = allEntries.find(e => e.userId === uid)?.ticketNumber ?? 0;
-    const proximity = Math.round((myTicket / draw.totalEntries) * 100);
+    const distance = Math.abs(myTicket - winnerTicket);
+    const proximity = Math.round((1 - distance / draw.totalEntries) * 100);
     await db.insert(notifications).values({
       userId: uid,
       type: "draw_result",
       title: "Today's draw completed",
-      body: `Your ticket was in the top ${100 - proximity}%. Better luck tomorrow!`,
+      body: `Your ticket was ${proximity}% close to the winner. Better luck tomorrow!`,
       metadata: { drawId, winnerTicket, myTicket },
     });
   }

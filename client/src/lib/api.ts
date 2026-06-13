@@ -112,6 +112,16 @@ export const api = {
       request<any>(`/admin/countries/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   },
 
+  partners: {
+    list: (countryId?: number) =>
+      request<any[]>(`/partners${countryId !== undefined ? `?countryId=${countryId}` : ""}`),
+    get: (id: number) => request<any>(`/partners/${id}`),
+  },
+
+  gamification: {
+    me: () => request<any>("/gamification/me"),
+  },
+
   dev: {
     seed: () => request<any>("/dev/seed", { method: "POST" }),
   },

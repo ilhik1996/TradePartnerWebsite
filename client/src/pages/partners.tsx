@@ -17,7 +17,7 @@ export default function Partners() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    api.get('/partners').then(setPartners).catch(console.error).finally(() => setLoading(false));
+    api.partners.list().then(setPartners).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   const filtered = partners.filter(p =>
