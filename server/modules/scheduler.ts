@@ -1,18 +1,22 @@
 import { db } from "../db";
 import { countries, draws, users, wallets, drawEntries } from "@shared/schema";
-import { eq, and, gte, lt } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
+import { renewDueSubscriptions } from "./subscriptions";
 
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
   // Check every minute if any draw needs to be conducted
   setInterval(() => checkAndConductDraws(broadcastFn), 60_000);
-  // Also auto-enter users who have auto_participate=true and sufficient balance
+  // Auto-enter users with auto_participate=true and sufficient balance
   setInterval(() => autoEnterUsers(), 5 * 60_000);
+  // Renew due subscriptions every hour
+  setInterval(() => renewDueSubscriptions(), 60 * 60_000);
 
   // Run immediately on startup
   checkAndConductDraws(broadcastFn);
   autoEnterUsers();
+  renewDueSubscriptions();
 }
 
 async function checkAndConductDraws(broadcastFn: (data: object) => void) {

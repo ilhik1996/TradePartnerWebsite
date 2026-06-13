@@ -74,6 +74,14 @@ export const api = {
     markRead: (id: number) => request<any>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
 
+  subscription: {
+    get: () => request<any>("/subscription"),
+    history: () => request<any[]>("/subscription/history"),
+    create: (type: "weekly" | "monthly", paymentMethodToken = "mock_pm_token") =>
+      request<any>("/subscription", { method: "POST", body: JSON.stringify({ type, paymentMethodToken }) }),
+    cancel: (id: number) => request<any>(`/subscription/${id}`, { method: "DELETE" }),
+  },
+
   referrals: {
     my: () => request<any>("/referrals/my"),
     apply: (code: string) => request<any>("/referrals/apply", { method: "POST", body: JSON.stringify({ code }) }),
@@ -99,6 +107,7 @@ export const api = {
     stats: () => request<any>("/admin/stats"),
     transactions: () => request<any[]>("/admin/transactions"),
     auditLogs: () => request<any[]>("/admin/audit-logs"),
+    petition: () => request<any>("/admin/petition"),
     updateCountry: (id: number, body: object) =>
       request<any>(`/admin/countries/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   },

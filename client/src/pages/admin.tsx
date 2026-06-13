@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   Trophy, Users, Globe, DollarSign, Play, BarChart2,
   LogOut, AlertCircle, RefreshCw, CheckCircle, Clock,
-  XCircle, Shield, FileText, TrendingUp, Eye, Ban
+  XCircle, Shield, FileText, TrendingUp, Eye, Ban, Heart
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -521,6 +521,82 @@ function FinancePanel() {
 
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
 
+// ─── Petition panel ───────────────────────────────────────────────────────────
+
+function PetitionPanel() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.admin.petition().then(setData).finally(() => setLoading(false));
+  }, []);
+
+  const exportCsv = () => {
+    if (!data?.signatures) return;
+    const rows = [["ID", "First Name", "Country", "Date"]];
+    data.signatures.forEach((s: any) =>
+      rows.push([s.id, s.firstName, s.countryCode, new Date(s.agreedAt).toISOString()])
+    );
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `viona-petition-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="space-y-4 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold">Support Petition</h3>
+        {data?.total > 0 && (
+          <Button size="sm" variant="outline" className="h-8 px-3 text-xs border-border" onClick={exportCsv}>
+            Export CSV
+          </Button>
+        )}
+      </div>
+      {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
+      {data && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="viona-card p-4 text-center">
+              <p className="text-4xl font-black text-gradient-prize">{data.total}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total active signatures</p>
+            </div>
+            <div className="viona-card p-4">
+              <p className="font-semibold text-sm mb-2">By country</p>
+              <div className="space-y-1">
+                {Object.entries(data.byCountry as Record<string, number>).map(([code, count]) => (
+                  <div key={code} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{code}</span>
+                    <span className="font-bold">{count}</span>
+                  </div>
+                ))}
+                {Object.keys(data.byCountry).length === 0 && (
+                  <p className="text-xs text-muted-foreground">No signatures yet</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {data.signatures.map((s: any) => (
+              <div key={s.id} className="viona-card p-3 flex items-center gap-3">
+                <Heart className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex-1">
+                  <span className="font-medium text-sm">{s.firstName}</span>
+                  <span className="text-muted-foreground text-sm"> · {s.countryCode}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{new Date(s.agreedAt).toLocaleDateString()}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const SECTIONS = [
   { id: "overview", label: "Overview", icon: BarChart2 },
   { id: "draws", label: "Draws", icon: Trophy },
@@ -528,6 +604,7 @@ const SECTIONS = [
   { id: "markets", label: "Markets", icon: Globe },
   { id: "finance", label: "Finance", icon: DollarSign },
   { id: "audit", label: "Audit", icon: FileText },
+  { id: "petition", label: "Petition", icon: Heart },
 ] as const;
 
 type Section = typeof SECTIONS[number]["id"];
@@ -593,6 +670,7 @@ export default function Admin() {
         {active === "markets"  && <MarketsPanel />}
         {active === "finance"  && <FinancePanel />}
         {active === "audit"    && <AuditPanel />}
+        {active === "petition" && <PetitionPanel />}
       </main>
     </div>
   );

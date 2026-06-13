@@ -13,6 +13,7 @@ import Cabinet from "@/pages/cabinet";
 import History from "@/pages/history";
 import Notifications from "@/pages/notifications";
 import Referrals from "@/pages/referrals";
+import Subscription from "@/pages/subscription";
 import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/history" component={() => <ProtectedRoute component={History} />} />
       <Route path="/notifications" component={() => <ProtectedRoute component={Notifications} />} />
       <Route path="/referrals" component={() => <ProtectedRoute component={Referrals} />} />
+      <Route path="/subscription" component={() => <ProtectedRoute component={Subscription} />} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>

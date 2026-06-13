@@ -10,6 +10,8 @@ import {
   getOrCreateDraw, todayDateString, addPaidEntry, addFreeEntry, conductDraw
 } from "./modules/lottery";
 import { processDeposit, chargebackRiskScore } from "./modules/payments";
+import { createSubscription, cancelSubscription, getActiveSubscription } from "./modules/subscriptions";
+import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail } from "./modules/email";
 import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
@@ -100,6 +102,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = signToken({ userId: user.id });
+      // Welcome email (non-blocking)
+      if (user.email) sendWelcomeEmail(user.email).catch(() => {});
       res.status(201).json({ token, user: sanitizeUser(user) });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -303,6 +307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
         description: `Withdrawal request ${wallet.currency} ${amount.toFixed(2)}`,
       }).returning();
+
+      // Send confirmation email (non-blocking)
+      const [withdrawingUser] = await db.select().from(users).where(eq(users.id, uid(req)));
+      if (withdrawingUser.email) {
+        sendWithdrawalConfirmationEmail(withdrawingUser.email, amount.toFixed(2), wallet.currency).catch(() => {});
+      }
+
       res.json({ transaction: tx, newBalance });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -380,6 +391,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .set({ isRead: true })
       .where(and(eq(notifications.id, parseInt(req.params.id)), eq(notifications.userId, uid(req))));
     res.json({ ok: true });
+  });
+
+  // ── Subscriptions ─────────────────────────────────────────────────────────
+
+  app.get("/api/subscription", requireAuth, async (req: Request, res: Response) => {
+    const sub = await getActiveSubscription(uid(req));
+    res.json(sub);
+  });
+
+  app.post("/api/subscription", requireAuth, paymentRateLimit, async (req: Request, res: Response) => {
+    try {
+      const { type, paymentMethodToken } = z.object({
+        type: z.enum(["weekly", "monthly"]),
+        paymentMethodToken: z.string().default("mock_pm_token"),
+      }).parse(req.body);
+
+      const sub = await createSubscription(uid(req), type, paymentMethodToken);
+      res.status(201).json(sub);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/subscription/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const result = await cancelSubscription(uid(req), parseInt(req.params.id));
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // Subscription history
+  app.get("/api/subscription/history", requireAuth, async (req: Request, res: Response) => {
+    const list = await db.select().from(subscriptions)
+      .where(eq(subscriptions.userId, uid(req)))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(20);
+    res.json(list);
   });
 
   // ── Referrals ──────────────────────────────────────────────────────────────
@@ -574,6 +624,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalPrizesPaid: totalPrizes.total,
       totalDeposits: totalDeposits.total,
     });
+  });
+
+  // ── Admin: Petition ───────────────────────────────────────────────────────
+
+  app.get("/api/admin/petition", requireAdmin, async (_req: Request, res: Response) => {
+    const signatures = await db.select({
+      id: petitionSignatures.id,
+      firstName: petitionSignatures.firstName,
+      countryCode: petitionSignatures.countryCode,
+      agreedAt: petitionSignatures.agreedAt,
+      revokedAt: petitionSignatures.revokedAt,
+    }).from(petitionSignatures)
+      .orderBy(desc(petitionSignatures.agreedAt));
+
+    // Group by country
+    const byCountry: Record<string, number> = {};
+    const active = signatures.filter(s => !s.revokedAt);
+    active.forEach(s => {
+      byCountry[s.countryCode] = (byCountry[s.countryCode] ?? 0) + 1;
+    });
+
+    res.json({
+      total: active.length,
+      byCountry,
+      signatures: active,
+    });
+  });
+
+  // Public petition count (no auth needed — for landing page display)
+  app.get("/api/petition/count", async (_req: Request, res: Response) => {
+    const [row] = await db.select({ count: sql<number>`count(*)` })
+      .from(petitionSignatures)
+      .where(sql`revoked_at IS NULL`);
+    res.json({ count: row.count });
   });
 
   // ── Admin: Audit Log ──────────────────────────────────────────────────────

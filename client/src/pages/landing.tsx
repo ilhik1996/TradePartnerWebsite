@@ -1,8 +1,22 @@
 import { Link } from "wouter";
-import { Trophy, Zap, Shield, Globe, ArrowRight, Star, Users, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trophy, Zap, Shield, Globe, ArrowRight, Star, Users, Award, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 
 export default function Landing() {
+  const [stats, setStats] = useState<any>(null);
+  const [livePool, setLivePool] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch live data without auth
+    fetch("/api/admin/stats", { headers: { Authorization: "Bearer " + localStorage.getItem("viona_token") } })
+      .then(r => r.ok ? r.json() : null).then(s => s && setStats(s)).catch(() => {});
+    fetch("/api/draws/today/1")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setLivePool(d.totalPool)).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
@@ -70,12 +84,16 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Live stats */}
       <section className="py-12 px-6 border-y border-border">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
           {[
-            { label: "Countries", value: "5+", icon: Globe },
-            { label: "Daily Draws", value: "365/yr", icon: Trophy },
+            { label: "Registered users", value: stats?.totalUsers ? `${stats.totalUsers}+` : "5+", icon: Users },
+            {
+              label: "Today's pool (UA)",
+              value: livePool ? `₴${parseFloat(livePool).toFixed(0)}` : "—",
+              icon: Trophy
+            },
             { label: "Provably Fair", value: "100%", icon: Shield },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2">
