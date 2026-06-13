@@ -49,6 +49,12 @@ export default function Cabinet() {
   const [exDays, setExDays] = useState(30);
   const [excluding, setExcluding] = useState(false);
 
+  // Spending limits
+  const [limitDaily, setLimitDaily] = useState("");
+  const [limitWeekly, setLimitWeekly] = useState("");
+  const [limitMonthly, setLimitMonthly] = useState("");
+  const [savingLimits, setSavingLimits] = useState(false);
+
   // KYC modal
   const [kycModal, setKycModal] = useState<null | "age" | "full">(null);
   const [kycDob, setKycDob] = useState("");
@@ -69,6 +75,9 @@ export default function Cabinet() {
       setGamification(g);
       setFirstName(p?.firstName ?? "");
       setLastName(p?.lastName ?? "");
+      setLimitDaily(rg?.dailyLimitAmount ?? "");
+      setLimitWeekly(rg?.weeklyLimitAmount ?? "");
+      setLimitMonthly(rg?.monthlyLimitAmount ?? "");
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -81,6 +90,22 @@ export default function Cabinet() {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveLimits = async () => {
+    setSavingLimits(true);
+    try {
+      await api.profile.setResponsibleGaming({
+        dailyLimitAmount: limitDaily ? parseFloat(limitDaily) : null,
+        weeklyLimitAmount: limitWeekly ? parseFloat(limitWeekly) : null,
+        monthlyLimitAmount: limitMonthly ? parseFloat(limitMonthly) : null,
+      });
+      toast({ title: "Limits saved" });
+    } catch (err: any) {
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingLimits(false);
     }
   };
 
@@ -408,18 +433,31 @@ export default function Cabinet() {
               <p className="text-xs text-muted-foreground">
                 Set daily, weekly, or monthly spending limits. Once set, they take effect immediately.
               </p>
-              {["daily", "weekly", "monthly"].map(period => (
+              {[
+                { period: "daily",   label: "Daily",   value: limitDaily,   set: setLimitDaily },
+                { period: "weekly",  label: "Weekly",  value: limitWeekly,  set: setLimitWeekly },
+                { period: "monthly", label: "Monthly", value: limitMonthly, set: setLimitMonthly },
+              ].map(({ period, label, value, set }) => (
                 <div key={period} className="flex items-center gap-3">
-                  <span className="text-sm capitalize w-16 shrink-0">{period}</span>
+                  <span className="text-sm w-16 shrink-0">{label}</span>
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     className="flex-1 h-10 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     placeholder="No limit"
-                    defaultValue={rgSettings?.[`${period}LimitAmount`] ?? ""}
+                    value={value}
+                    onChange={e => set(e.target.value)}
                   />
                 </div>
               ))}
-              <Button className="btn-viona-primary w-full h-10 text-sm">Save limits</Button>
+              <Button
+                className="btn-viona-primary w-full h-10 text-sm"
+                onClick={handleSaveLimits}
+                disabled={savingLimits}
+              >
+                {savingLimits ? "Saving…" : "Save limits"}
+              </Button>
             </div>
 
             <div className="viona-card p-5 space-y-4 border-red-500/20">

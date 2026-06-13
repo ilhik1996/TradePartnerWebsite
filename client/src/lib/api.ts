@@ -65,6 +65,8 @@ export const api = {
     setAutoParticipate: (enabled: boolean) =>
       request<any>("/settings/auto-participate", { method: "PATCH", body: JSON.stringify({ enabled }) }),
     getResponsibleGaming: () => request<any>("/settings/responsible-gaming"),
+    setResponsibleGaming: (body: { dailyLimitAmount?: number | null; weeklyLimitAmount?: number | null; monthlyLimitAmount?: number | null }) =>
+      request<any>("/settings/responsible-gaming", { method: "PATCH", body: JSON.stringify(body) }),
     selfExclude: (days: number) =>
       request<any>("/settings/self-exclude", { method: "POST", body: JSON.stringify({ days }) }),
   },
