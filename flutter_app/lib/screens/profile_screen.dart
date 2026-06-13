@@ -384,9 +384,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildLevel() {
     final xp = (_level?['xp'] as int?) ?? 0;
     final lvl = (_level?['level'] as int?) ?? 1;
+    final curXp = (_level?['currentLevelXp'] as int?) ?? 0;
     final nextXp = (_level?['nextLevelXp'] as int?) ?? 100;
     final badges = (_level?['badges'] as List<dynamic>?) ?? [];
-    final progress = nextXp > 0 ? (xp / nextXp).clamp(0.0, 1.0) : 0.0;
+    final range = nextXp - curXp;
+    final progress = range > 0 ? ((xp - curXp) / range).clamp(0.0, 1.0) : 0.0;
     final title = (_level?['title'] as String?) ?? 'Newcomer';
 
     final levelColors = [
@@ -423,7 +425,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 const SizedBox(height: 12),
                 Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text('$xp / $nextXp XP', style: const TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
+                Text('${xp - curXp} / ${nextXp - curXp} XP this level', style: const TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),

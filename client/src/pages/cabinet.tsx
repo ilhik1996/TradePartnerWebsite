@@ -348,24 +348,31 @@ export default function Cabinet() {
                   Level {gamification?.level ?? 1} — {gamification?.title ?? "Newcomer"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {gamification?.xp ?? 0} / {gamification?.nextLevelXp ?? "—"} XP
+                  {(gamification?.xp ?? 0) - (gamification?.currentLevelXp ?? 0)} / {gamification?.nextLevelXp != null ? gamification.nextLevelXp - (gamification.currentLevelXp ?? 0) : "—"} XP this level
                 </p>
               </div>
               {/* Progress bar */}
               {gamification?.nextLevelXp != null && (
                 <div className="w-full">
-                  <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, Math.round((gamification.xp / gamification.nextLevelXp) * 100))}%`,
-                        background: "linear-gradient(90deg, #7c3aed, #a855f7)",
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
-                    {Math.min(100, Math.round((gamification.xp / gamification.nextLevelXp) * 100))}% to next level
-                  </p>
+                  {(() => {
+                    const cur = gamification.currentLevelXp ?? 0;
+                    const pct = Math.min(100, Math.round(
+                      ((gamification.xp - cur) / (gamification.nextLevelXp - cur)) * 100
+                    ));
+                    return (
+                      <>
+                        <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, background: "linear-gradient(90deg, #7c3aed, #a855f7)" }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5 text-right">
+                          {pct}% to next level
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

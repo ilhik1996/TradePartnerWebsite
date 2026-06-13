@@ -117,6 +117,8 @@ export const api = {
     transactions: () => request<any[]>("/admin/transactions"),
     auditLogs: () => request<any[]>("/admin/audit-logs"),
     petition: () => request<any>("/admin/petition"),
+    createCountry: (body: object) =>
+      request<any>("/admin/countries", { method: "POST", body: JSON.stringify(body) }),
     updateCountry: (id: number, body: object) =>
       request<any>(`/admin/countries/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     createPartner: (body: object) =>

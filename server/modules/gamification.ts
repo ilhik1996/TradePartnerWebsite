@@ -43,13 +43,14 @@ export interface UserLevel {
   xp: number;
   level: number;
   title: string;
+  currentLevelXp: number;
   nextLevelXp: number | null;
   badges: string[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function computeLevel(totalXp: number): { level: number; title: string; nextLevelXp: number | null } {
+function computeLevel(totalXp: number): { level: number; title: string; currentLevelXp: number; nextLevelXp: number | null } {
   let level = 1;
   for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalXp >= LEVEL_THRESHOLDS[i]) {
@@ -59,8 +60,9 @@ function computeLevel(totalXp: number): { level: number; title: string; nextLeve
   }
   level = Math.min(level, LEVEL_THRESHOLDS.length);
   const title = LEVEL_TITLES[level - 1] ?? LEVEL_TITLES[LEVEL_TITLES.length - 1];
+  const currentLevelXp = LEVEL_THRESHOLDS[level - 1] ?? 0;
   const nextLevelXp = level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level] : null;
-  return { level, title, nextLevelXp };
+  return { level, title, currentLevelXp, nextLevelXp };
 }
 
 // Checks whether an array of ISO date strings contains a consecutive run of ≥ n days.
@@ -98,14 +100,14 @@ export async function getUserLevel(userId: number, db: any): Promise<UserLevel> 
     .where(eq(gamificationEvents.userId, userId));
 
   const totalXp = Number(xpRow?.total ?? 0);
-  const { level, title, nextLevelXp } = computeLevel(totalXp);
+  const { level, title, currentLevelXp, nextLevelXp } = computeLevel(totalXp);
 
   const badgeRows: { badgeId: string }[] = await db
     .select({ badgeId: gamificationBadges.badgeId })
     .from(gamificationBadges)
     .where(eq(gamificationBadges.userId, userId));
 
-  return { xp: totalXp, level, title, nextLevelXp, badges: badgeRows.map(b => b.badgeId) };
+  return { xp: totalXp, level, title, currentLevelXp, nextLevelXp, badges: badgeRows.map(b => b.badgeId) };
 }
 
 export async function checkAndAwardBadges(userId: number, db: any): Promise<string[]> {

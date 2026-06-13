@@ -419,11 +419,20 @@ function UsersPanel() {
 
 // ─── Markets panel ────────────────────────────────────────────────────────────
 
+const BLANK_COUNTRY = {
+  code: "", name: "", currency: "", currencySymbol: "", locale: "",
+  entryAmountDaily: "5", entryAmountWeekly: "25", entryAmountMonthly: "100",
+  prizePercentage: "50", drawHourUtc: "21",
+};
+
 function MarketsPanel() {
   const [countries, setCountries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [creating, setCreating] = useState(false);
+  const [newData, setNewData] = useState({ ...BLANK_COUNTRY });
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => { api.admin.countries().then(setCountries).finally(() => setLoading(false)); }, []);
@@ -444,9 +453,68 @@ function MarketsPanel() {
     } catch (err: any) { toast({ title: err.message, variant: "destructive" }); }
   };
 
+  const createCountry = async () => {
+    setSaving(true);
+    try {
+      const created = await api.admin.createCountry({
+        ...newData,
+        drawHourUtc: parseInt(newData.drawHourUtc),
+      });
+      setCountries(cs => [created, ...cs]);
+      setCreating(false);
+      setNewData({ ...BLANK_COUNTRY });
+      toast({ title: "Market created" });
+    } catch (err: any) { toast({ title: err.message, variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className="space-y-3 max-w-3xl">
-      <h3 className="font-bold">Markets ({countries.length})</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold">Markets ({countries.length})</h3>
+        <button
+          onClick={() => setCreating(v => !v)}
+          className="text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20"
+        >
+          {creating ? "Cancel" : "+ Add Market"}
+        </button>
+      </div>
+
+      {creating && (
+        <div className="viona-card p-4 space-y-3 border-primary/30">
+          <p className="text-sm font-semibold text-primary">New market</p>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ["code", "Country code (e.g. UA)"],
+              ["name", "Name"],
+              ["currency", "Currency (e.g. UAH)"],
+              ["currencySymbol", "Symbol (e.g. ₴)"],
+              ["locale", "Locale (e.g. uk-UA)"],
+              ["entryAmountDaily", "Daily entry"],
+              ["entryAmountWeekly", "Weekly entry"],
+              ["entryAmountMonthly", "Monthly entry"],
+              ["prizePercentage", "Prize %"],
+              ["drawHourUtc", "Draw hour UTC"],
+            ] as [string, string][]).map(([k, label]) => (
+              <div key={k}>
+                <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+                <input
+                  className="w-full h-8 px-2 rounded-lg bg-secondary border border-border text-xs focus:outline-none"
+                  value={(newData as any)[k]}
+                  onChange={e => setNewData(d => ({ ...d, [k]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={createCountry}
+            disabled={saving || !newData.code || !newData.name}
+            className="w-full h-9 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {saving ? "Creating…" : "Create market"}
+          </button>
+        </div>
+      )}
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
       {countries.map(c => (
         <div key={c.id} className="viona-card p-4">
