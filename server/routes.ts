@@ -16,7 +16,8 @@ import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamifi
 import { getPartners, getPartner } from "./modules/partners";
 import { sendPushToUser, VAPID_PUBLIC_KEY } from "./modules/push";
 import { insertNotification } from "./modules/notifications";
-import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious, verifyStripeSignature, verifyKycSignature } from "./middleware/security";
+import { createApplicant, getSdkToken, sumsubConfigured } from "./modules/kyc";
+import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detectSuspicious, verifyStripeSignature, verifyKycSignature, securityHeaders } from "./middleware/security";
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
@@ -68,6 +69,9 @@ function adminUid(req: Request): number {
 // ─── Route registration ───────────────────────────────────────────────────────
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  // Security headers on every response
+  app.use(securityHeaders);
 
   // Apply device fingerprint to every request
   app.use(deviceFingerprint);
@@ -959,49 +963,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── KYC initiation ───────────────────────────────────────────────────────
 
-  app.post("/api/kyc/start", requireAuth, async (req: Request, res: Response) => {
-    const { level, dateOfBirth, documentType } = z.object({
+  app.post("/api/kyc/start", requireAuth, ar(async (req: Request, res: Response) => {
+    const { level, dateOfBirth } = z.object({
       level: z.enum(["age", "full"]),
       dateOfBirth: z.string().optional(),
-      documentType: z.string().optional(),
     }).parse(req.body);
 
     const userId = uid(req);
-    const [user] = await db.select({ kycLevel: users.kycLevel }).from(users).where(eq(users.id, userId));
+    const [user] = await db
+      .select({ kycLevel: users.kycLevel, email: users.email })
+      .from(users)
+      .where(eq(users.id, userId));
     if (!user) { res.status(404).json({ message: "User not found" }); return; }
 
     if (level === "age") {
       if (user.kycLevel !== "none") { res.status(400).json({ message: "Already verified" }); return; }
-      // Validate age — must be 18+
+
       if (dateOfBirth) {
         const dob = new Date(dateOfBirth);
         if (isNaN(dob.getTime())) { res.status(400).json({ message: "Invalid date of birth" }); return; }
-        const ageMsec = Date.now() - dob.getTime();
-        const ageYears = ageMsec / (1000 * 60 * 60 * 24 * 365.25);
+        const ageYears = (Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
         if (ageYears < 18) { res.status(400).json({ message: "You must be 18 or older to participate" }); return; }
       }
-      // In production: create Sumsub/Onfido applicant and return redirect URL.
-      // For MVP: set age_verified immediately after form submission.
-      await db.update(users).set({ kycLevel: "age_verified" }).where(eq(users.id, userId));
-      await insertNotification({
-        userId, type: "kyc_approved",
-        title: "Age verified",
-        body: "Your age verification is complete. You can now make deposits.",
-        pushUrl: "/wallet",
-      });
-      res.json({ ok: true, kycLevel: "age_verified" });
+
+      if (sumsubConfigured()) {
+        // Real flow: create applicant + return short-lived SDK token
+        const externalUserId = String(userId);
+        await createApplicant({ externalUserId, email: user.email ?? undefined, dateOfBirth, levelName: "age-kyc-level" });
+        const { token } = await getSdkToken({ externalUserId, levelName: "age-kyc-level" });
+        // kycLevel stays "none" until the webhook confirms approval
+        res.json({ ok: true, sdkToken: token, mode: "sumsub" });
+      } else {
+        // Dev/demo: auto-approve without real KYC provider
+        await db.update(users).set({ kycLevel: "age_verified" }).where(eq(users.id, userId));
+        await insertNotification({
+          userId, type: "kyc_approved",
+          title: "Age verified",
+          body: "Your age verification is complete. You can now make deposits.",
+          pushUrl: "/wallet",
+        });
+        res.json({ ok: true, kycLevel: "age_verified", mode: "mock" });
+      }
     } else {
       if (user.kycLevel !== "age_verified") { res.status(400).json({ message: "Complete age verification first" }); return; }
-      // In production: initiate full KYC document review.
-      // For MVP: mark as pending (stays age_verified, notification sent, webhook upgrades to full).
-      await insertNotification({
-        userId, type: "kyc_approved",
-        title: "KYC submitted",
-        body: "Your documents have been received. Review takes 1-3 business days.",
-      });
-      res.json({ ok: true, kycLevel: "age_verified", pending: true });
+
+      if (sumsubConfigured()) {
+        const externalUserId = String(userId);
+        // Applicant may already exist; getSdkToken works regardless
+        const { token } = await getSdkToken({ externalUserId, levelName: "basic-kyc-level" });
+        res.json({ ok: true, sdkToken: token, mode: "sumsub" });
+      } else {
+        await insertNotification({
+          userId, type: "kyc_approved",
+          title: "KYC submitted",
+          body: "Your documents have been received. Review takes 1-3 business days.",
+        });
+        res.json({ ok: true, kycLevel: "age_verified", pending: true, mode: "mock" });
+      }
     }
-  });
+  }));
 
   // ── KYC Webhooks (Sumsub / Onfido) ───────────────────────────────────────
 

@@ -119,10 +119,22 @@ export default function Cabinet() {
       const result = await api.kyc.start({
         level,
         dateOfBirth: level === "age" ? kycDob : undefined,
-        documentType: level === "full" ? kycDocType : undefined,
       });
       setKycModal(null);
-      if (result.pending) {
+
+      if (result.sdkToken) {
+        // Sumsub is configured — open the WebSDK in a new tab
+        // The webhook will update kycLevel once the review is complete
+        window.open(
+          `https://api.sumsub.com/idensic/l/#/${result.sdkToken}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+        toast({
+          title: "Verification started",
+          description: "Complete the steps in the new tab. We'll notify you when approved.",
+        });
+      } else if (result.pending) {
         toast({ title: "Documents submitted", description: "Review takes 1-3 business days." });
       } else {
         toast({ title: "Age verified ✓", description: "You can now make deposits." });
