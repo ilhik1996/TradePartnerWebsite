@@ -199,6 +199,11 @@ class ApiService {
     await _dio.delete('/subscription/$id');
   }
 
+  Future<List<dynamic>> getSubscriptionHistory() async {
+    final r = await _dio.get('/subscription/history');
+    return r.data;
+  }
+
   // ── Gamification ──────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> getUserLevel() async {

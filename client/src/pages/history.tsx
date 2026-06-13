@@ -50,10 +50,9 @@ function ProximityBar({ myTicket, totalEntries, winnerTicket }: {
   );
 }
 
-function DrawCard({ draw, userId }: { draw: any; userId: number }) {
+function DrawCard({ draw, userId, symbol }: { draw: any; userId: number; symbol: string }) {
   const [expanded, setExpanded] = useState(false);
   const isWinner = draw.winnerUserId === userId;
-  const symbol = draw.currencySymbol ?? "₴";
 
   return (
     <div className={`viona-card p-5 ${isWinner ? "border-amber-500/30" : ""}`}>
@@ -126,13 +125,19 @@ function DrawCard({ draw, userId }: { draw: any; userId: number }) {
 export default function History() {
   const { user } = useAuth();
   const [draws, setDraws] = useState<any[]>([]);
+  const [symbol, setSymbol] = useState("₴");
   const [loading, setLoading] = useState(true);
 
   const countryId = user?.countryId ?? 1;
 
   useEffect(() => {
-    // Server enriches history with myEntry + isWinner when authenticated
-    api.draws.history(countryId).then(setDraws).finally(() => setLoading(false));
+    Promise.all([
+      api.draws.history(countryId),
+      api.countries.get(countryId),
+    ]).then(([d, c]) => {
+      setDraws(d);
+      setSymbol(c?.currencySymbol ?? "₴");
+    }).finally(() => setLoading(false));
   }, [countryId]);
 
   const enriched = draws.map(d => ({
@@ -187,7 +192,7 @@ export default function History() {
         ) : (
           <div className="space-y-3">
             {enriched.map(draw => (
-              <DrawCard key={draw.id} draw={draw} userId={user?.id ?? 0} />
+              <DrawCard key={draw.id} draw={draw} userId={user?.id ?? 0} symbol={symbol} />
             ))}
           </div>
         )}

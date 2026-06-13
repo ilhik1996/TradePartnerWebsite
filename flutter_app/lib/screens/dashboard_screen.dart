@@ -187,7 +187,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       subtitle: Column(
                         children: [
                           Text(
-                            '50% of $symbol${pool.toStringAsFixed(2)} · ${_draw?['totalEntries'] ?? 0} entries',
+                            '${_country?['prizePercentage'] ?? '50'}% of $symbol${pool.toStringAsFixed(2)} · ${_draw?['totalEntries'] ?? 0} entries',
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),

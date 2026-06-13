@@ -13,6 +13,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final _api = ApiService();
   dynamic _subscription;
   Map<String, dynamic>? _country;
+  List<dynamic> _history = [];
   bool _loading = true;
   bool _processing = false;
 
@@ -24,9 +25,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Future<void> _load() async {
     try {
-      final results = await Future.wait([_api.getSubscription(), _api.me()]);
+      final results = await Future.wait([
+        _api.getSubscription(),
+        _api.me(),
+        _api.getSubscriptionHistory(),
+      ]);
       _subscription = results[0];
       final user = results[1] as Map<String, dynamic>;
+      _history = results[2] as List<dynamic>;
       _country = await _api.getCountry(user['countryId'] ?? 1);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
@@ -209,6 +215,70 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
+
+              if (_history.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text('History', style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 10),
+                ..._history.map((s) {
+                  final status = s['status'] as String? ?? '';
+                  final type = s['type'] as String? ?? '';
+                  final amt = double.tryParse(s['amount']?.toString() ?? '0') ?? 0;
+                  final symbol = _country?['currencySymbol'] ?? '₴';
+                  Color statusColor;
+                  if (status == 'active') statusColor = VionaColors.teal;
+                  else if (status == 'cancelled') statusColor = VionaColors.textSecondary;
+                  else statusColor = VionaColors.gold;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: VionaColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: VionaColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${type.isEmpty ? 'Subscription' : '${type[0].toUpperCase()}${type.substring(1)}'} subscription',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              Text(
+                                s['startDate']?.toString().substring(0, 10) ?? '',
+                                style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '$symbol${amt.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),

@@ -65,6 +65,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   Future<void> _deposit() async {
     final amount = double.tryParse(_amountCtrl.text);
     if (amount == null || amount <= 0) return;
+    if (_wallet == null) { _showSnack('Wallet not loaded', error: true); return; }
     setState(() => _processing = true);
     try {
       await _api.deposit(amount, _wallet?['currency'] ?? 'USD');

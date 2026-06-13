@@ -212,7 +212,7 @@ export default function Dashboard() {
             {fmt(prizePool, symbol)}
           </div>
           <p className="text-xs text-muted-foreground">
-            50% of {fmt(pool, symbol)} collected today · {draw?.totalEntries ?? 0} entries
+            {country?.prizePercentage ?? "50"}% of {fmt(pool, symbol)} collected today · {draw?.totalEntries ?? 0} entries
           </p>
 
           {/* Countdown */}
