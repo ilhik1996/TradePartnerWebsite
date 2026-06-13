@@ -27,6 +27,14 @@ import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseIntParam(value: string, res: Response): number | null {
+  const n = parseInt(value, 10);
+  if (isNaN(n)) { res.status(400).json({ message: "Invalid numeric parameter" }); return null; }
+  return n;
+}
+
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
 
 let wss: WebSocketServer;
@@ -157,7 +165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/countries/:id", async (req: Request, res: Response) => {
-    const [country] = await db.select().from(countries).where(eq(countries.id, parseInt(req.params.id)));
+    const id = parseIntParam(req.params.id, res); if (id === null) return;
+    const [country] = await db.select().from(countries).where(eq(countries.id, id));
     if (!country) { res.status(404).json({ message: "Country not found" }); return; }
     res.json(country);
   });
@@ -167,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Today's draw for a country
   app.get("/api/draws/today/:countryId", async (req: Request, res: Response) => {
     try {
-      const countryId = parseInt(req.params.countryId);
+      const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
       const draw = await getOrCreateDraw(countryId, todayDateString());
       const entries = await db.select().from(drawEntries).where(eq(drawEntries.drawId, draw.id));
       res.json({ ...draw, entriesCount: entries.length });
@@ -178,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // List past draws for a country
   app.get("/api/draws/history/:countryId", async (req: Request, res: Response) => {
-    const countryId = parseInt(req.params.countryId);
+    const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
     const list = await db.select().from(draws)
       .where(and(eq(draws.countryId, countryId), eq(draws.status, "completed")))
       .orderBy(desc(draws.completedAt))
@@ -210,8 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Paid entry
   app.post("/api/draws/:drawId/enter", requireAuth, async (req: Request, res: Response) => {
     try {
-      const result = await addPaidEntry(uid(req), parseInt(req.params.drawId));
-      const draw = await db.select().from(draws).where(eq(draws.id, parseInt(req.params.drawId))).then(r => r[0]);
+      const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
+      const result = await addPaidEntry(uid(req), drawId);
+      const draw = await db.select().from(draws).where(eq(draws.id, drawId)).then(r => r[0]);
       broadcast({ type: "draw_pool_update", drawId: draw.id, totalPool: draw.totalPool, totalEntries: draw.totalEntries });
       // Award XP non-blocking
       awardXp(uid(req), 'entry', db).then(() => checkAndAwardBadges(uid(req), db)).catch(() => {});
@@ -224,7 +234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Free entry (AMOE) — for users without account or without funds
   app.post("/api/draws/:drawId/enter-free", async (req: Request, res: Response) => {
     try {
-      const body = freeEntrySchema.parse({ ...req.body, drawId: parseInt(req.params.drawId) });
+      const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
+      const body = freeEntrySchema.parse({ ...req.body, drawId });
       // Find or create a free-entry guest user by email
       let [user] = await db.select().from(users).where(eq(users.email, body.email));
       if (!user) {
@@ -251,8 +262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Check my entry for today's draw
   app.get("/api/draws/:drawId/my-entry", requireAuth, async (req: Request, res: Response) => {
+    const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
     const [entry] = await db.select().from(drawEntries)
-      .where(and(eq(drawEntries.drawId, parseInt(req.params.drawId)), eq(drawEntries.userId, uid(req))));
+      .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, uid(req))));
     res.json(entry ?? null);
   });
 
@@ -433,9 +445,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/notifications/:id/read", requireAuth, async (req: Request, res: Response) => {
+    const id = parseIntParam(req.params.id, res); if (id === null) return;
     await db.update(notifications)
       .set({ isRead: true })
-      .where(and(eq(notifications.id, parseInt(req.params.id)), eq(notifications.userId, uid(req))));
+      .where(and(eq(notifications.id, id), eq(notifications.userId, uid(req))));
     res.json({ ok: true });
   });
 
@@ -465,7 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/subscription/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const result = await cancelSubscription(uid(req), parseInt(req.params.id));
+      const id = parseIntParam(req.params.id, res); if (id === null) return;
+      const result = await cancelSubscription(uid(req), id);
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -584,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin Auth ─────────────────────────────────────────────────────────────
 
-  app.post("/api/admin/login", async (req: Request, res: Response) => {
+  app.post("/api/admin/login", authRateLimit, async (req: Request, res: Response) => {
     try {
       const { email, password } = z.object({ email: z.string(), password: z.string() }).parse(req.body);
       const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
@@ -657,7 +671,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (body.entryAmountWeekly !== undefined) updateData.entryAmountWeekly = body.entryAmountWeekly.toFixed(2);
       if (body.entryAmountMonthly !== undefined) updateData.entryAmountMonthly = body.entryAmountMonthly.toFixed(2);
       if (body.prizePercentage !== undefined) updateData.prizePercentage = body.prizePercentage.toFixed(2);
-      const [country] = await db.update(countries).set(updateData).where(eq(countries.id, parseInt(req.params.id))).returning();
+      const countryParamId = parseIntParam(req.params.id, res); if (countryParamId === null) return;
+      const [country] = await db.update(countries).set(updateData).where(eq(countries.id, countryParamId)).returning();
       if (!country) { res.status(404).json({ message: "Country not found" }); return; }
       res.json(country);
     } catch (err: any) {
@@ -694,12 +709,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/draws/:id/conduct", requireAdmin, async (req: Request, res: Response) => {
     try {
-      const result = await conductDraw(parseInt(req.params.id));
+      const drawParamId = parseIntParam(req.params.id, res); if (drawParamId === null) return;
+      const result = await conductDraw(drawParamId);
       await db.insert(auditLogs).values({
         adminUserId: adminUid(req),
         action: "conduct_draw",
         entityType: "draw",
-        entityId: parseInt(req.params.id),
+        entityId: drawParamId,
         dataAfter: result,
       });
       broadcast({ type: "draw_completed", ...result });
@@ -726,8 +742,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/admin/users/:id/status", requireAdmin, async (req: Request, res: Response) => {
+    const userParamId = parseIntParam(req.params.id, res); if (userParamId === null) return;
     const { status } = z.object({ status: z.enum(["active", "suspended", "banned"]) }).parse(req.body);
-    const [user] = await db.update(users).set({ status }).where(eq(users.id, parseInt(req.params.id))).returning();
+    const [user] = await db.update(users).set({ status }).where(eq(users.id, userParamId)).returning();
     await db.insert(auditLogs).values({
       adminUserId: adminUid(req),
       action: "update_user_status",
@@ -765,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/admin/withdrawals/:id/approve", requireAdmin, async (req: Request, res: Response) => {
-    const txId = parseInt(req.params.id);
+    const txId = parseIntParam(req.params.id, res); if (txId === null) return;
     const [tx] = await db.select().from(transactions)
       .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
     if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
@@ -788,7 +805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/admin/withdrawals/:id/reject", requireAdmin, async (req: Request, res: Response) => {
-    const txId = parseInt(req.params.id);
+    const txId = parseIntParam(req.params.id, res); if (txId === null) return;
     const { reason } = z.object({ reason: z.string().optional() }).parse(req.body);
     const [tx] = await db.select().from(transactions)
       .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));

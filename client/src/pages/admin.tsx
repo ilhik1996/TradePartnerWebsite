@@ -102,9 +102,12 @@ function Overview() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { toast } = useToast();
+
   useEffect(() => {
     Promise.all([api.admin.stats(), api.admin.transactions()])
       .then(([s, txs]) => { setStats(s); setTransactions(txs); })
+      .catch((err: any) => toast({ title: "Failed to load stats", description: err.message, variant: "destructive" }))
       .finally(() => setLoading(false));
   }, []);
 

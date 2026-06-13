@@ -129,8 +129,8 @@ export default function Dashboard() {
         const e = await api.draws.myEntry(d.id);
         setMyEntry(e);
       }
-    } catch {
-      // handled below
+    } catch (err: any) {
+      toast({ title: "Failed to load dashboard", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
