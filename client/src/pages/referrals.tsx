@@ -15,7 +15,7 @@ export default function Referrals() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.referrals.my().then(setData).finally(() => setLoading(false));
+    api.referrals.my().then(setData).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const copyCode = () => {

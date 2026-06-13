@@ -31,7 +31,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.notifications.list().then(setNotifs).finally(() => setLoading(false));
+    api.notifications.list().then(setNotifs).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const markAllRead = async () => {

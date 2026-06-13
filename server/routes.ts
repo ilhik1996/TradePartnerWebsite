@@ -152,23 +152,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
-    const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
-    if (!user) { res.status(404).json({ message: "User not found" }); return; }
-    res.json(sanitizeUser(user));
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
+      if (!user) { res.status(404).json({ message: "User not found" }); return; }
+      res.json(sanitizeUser(user));
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   // ── Countries ─────────────────────────────────────────────────────────────
 
   app.get("/api/countries", async (_req: Request, res: Response) => {
-    const list = await db.select().from(countries).where(eq(countries.isActive, true));
-    res.json(list);
+    try {
+      const list = await db.select().from(countries).where(eq(countries.isActive, true));
+      res.json(list);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   app.get("/api/countries/:id", async (req: Request, res: Response) => {
-    const id = parseIntParam(req.params.id, res); if (id === null) return;
-    const [country] = await db.select().from(countries).where(eq(countries.id, id));
-    if (!country) { res.status(404).json({ message: "Country not found" }); return; }
-    res.json(country);
+    try {
+      const id = parseIntParam(req.params.id, res); if (id === null) return;
+      const [country] = await db.select().from(countries).where(eq(countries.id, id));
+      if (!country) { res.status(404).json({ message: "Country not found" }); return; }
+      res.json(country);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   // ── Draws ─────────────────────────────────────────────────────────────────
@@ -271,15 +277,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Wallet ────────────────────────────────────────────────────────────────
 
   app.get("/api/wallet", requireAuth, async (req: Request, res: Response) => {
-    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, uid(req)));
-    res.json(wallet ?? null);
+    try {
+      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, uid(req)));
+      res.json(wallet ?? null);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   app.get("/api/wallet/transactions", requireAuth, async (req: Request, res: Response) => {
-    const limit = parseInt((req.query.limit as string) || "20");
-    const offset = parseInt((req.query.offset as string) || "0");
-    const txs = await getTransactionHistory(uid(req), limit, offset);
-    res.json(txs);
+    try {
+      const limit = parseInt((req.query.limit as string) || "20");
+      const offset = parseInt((req.query.offset as string) || "0");
+      const txs = await getTransactionHistory(uid(req), limit, offset);
+      res.json(txs);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   // Deposit via payment provider (Stripe / mock in dev)
