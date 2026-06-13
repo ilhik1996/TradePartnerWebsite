@@ -1,0 +1,27 @@
+{
+  "name": "VIONA — Daily Lottery",
+  "short_name": "VIONA",
+  "description": "Win every day with VIONA daily lottery platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1117",
+  "theme_color": "#8B5CF6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "games"],
+  "screenshots": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.viona.app",
+      "id": "com.viona.app"
+    }
+  ]
+}

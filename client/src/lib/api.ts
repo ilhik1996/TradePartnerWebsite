@@ -110,6 +110,12 @@ export const api = {
     petition: () => request<any>("/admin/petition"),
     updateCountry: (id: number, body: object) =>
       request<any>(`/admin/countries/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    createPartner: (body: object) =>
+      request<any>("/admin/partners", { method: "POST", body: JSON.stringify(body) }),
+    updatePartner: (id: number, body: object) =>
+      request<any>(`/admin/partners/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    deletePartner: (id: number) =>
+      request<any>(`/admin/partners/${id}`, { method: "DELETE" }),
   },
 
   partners: {

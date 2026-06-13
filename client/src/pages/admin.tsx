@@ -599,16 +599,78 @@ function PetitionPanel() {
 
 // ─── Partners panel ────────────────────────────────────────────────────────────
 
+const PARTNER_CATEGORIES = ["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"] as const;
+type PartnerCategory = typeof PARTNER_CATEGORIES[number];
+
+interface PartnerFormData {
+  name: string;
+  category: PartnerCategory;
+  description: string;
+  cashbackPercent: number;
+  countryId: string;
+  isActive: boolean;
+}
+
+const DEFAULT_FORM: PartnerFormData = {
+  name: "",
+  category: "retail",
+  description: "",
+  cashbackPercent: 0,
+  countryId: "",
+  isActive: true,
+};
+
 function PartnersPanel() {
+  const { toast } = useToast();
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<PartnerFormData>(DEFAULT_FORM);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const loadPartners = () => {
+    setLoading(true);
     api.partners.list().then(setPartners).finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadPartners(); }, []);
 
   const categoryIcon: Record<string, string> = {
     food: '🍔', retail: '🛍️', pharmacy: '💊', telecom: '📱', fuel: '⛽', entertainment: '🎬',
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const body: Record<string, any> = {
+        name: form.name,
+        category: form.category,
+        cashbackPercent: Number(form.cashbackPercent),
+        isActive: form.isActive,
+      };
+      if (form.description.trim()) body.description = form.description.trim();
+      if (form.countryId.trim()) body.countryId = parseInt(form.countryId);
+      await api.admin.createPartner(body);
+      toast({ title: "Partner created", description: `${form.name} has been added.` });
+      setForm(DEFAULT_FORM);
+      setShowForm(false);
+      loadPartners();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeactivate = async (id: number, name: string) => {
+    try {
+      await api.admin.deletePartner(id);
+      toast({ title: "Partner deactivated", description: `${name} has been deactivated.` });
+      setPartners(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -618,7 +680,93 @@ function PartnersPanel() {
           <h3 className="font-bold">Partner Network</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{partners.length} active partners · cashback paid from platform revenue</p>
         </div>
+        <Button size="sm" onClick={() => { setShowForm(v => !v); setForm(DEFAULT_FORM); }}>
+          {showForm ? "Cancel" : "Add Partner"}
+        </Button>
       </div>
+
+      {showForm && (
+        <div className="viona-card p-4">
+          <p className="text-sm font-semibold mb-3">New Partner</p>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Name *</label>
+                <input
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Category *</label>
+                <select
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={form.category}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value as PartnerCategory }))}
+                >
+                  {PARTNER_CATEGORIES.map(c => (
+                    <option key={c} value={c}>{categoryIcon[c]} {c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Cashback % (0–50) *</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={0.1}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={form.cashbackPercent}
+                  onChange={e => setForm(f => ({ ...f, cashbackPercent: parseFloat(e.target.value) || 0 }))}
+                  required
+                />
+              </div>
+              <div className="col-span-2 flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Description</label>
+                <textarea
+                  rows={2}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Country ID (leave blank for global)</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={form.countryId}
+                  onChange={e => setForm(f => ({ ...f, countryId: e.target.value }))}
+                  placeholder="optional"
+                />
+              </div>
+              <div className="flex flex-col gap-1 justify-end">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                    className="accent-primary w-4 h-4"
+                  />
+                  Active
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? "Creating…" : "Create Partner"}
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => { setShowForm(false); setForm(DEFAULT_FORM); }}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
 
@@ -653,12 +801,20 @@ function PartnersPanel() {
               </p>
               <p className="text-xs text-muted-foreground">cashback</p>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex flex-col items-end gap-2">
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${p.isActive
                 ? 'bg-green-500/15 text-green-400'
                 : 'bg-red-500/15 text-red-400'}`}>
                 {p.isActive ? 'Active' : 'Inactive'}
               </span>
+              {p.isActive && (
+                <button
+                  onClick={() => handleDeactivate(p.id, p.name)}
+                  className="text-xs text-red-400 hover:text-red-300 hover:underline"
+                >
+                  Deactivate
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -675,7 +831,7 @@ function PartnersPanel() {
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• Partners are paid from 50% platform revenue (not from prize pool)</li>
           <li>• Cashback is credited to user wallet within 24 hours of purchase</li>
-          <li>• Add partners via API: POST /api/admin/partners (coming soon)</li>
+          <li>• Use the Add Partner button above to create partners via the admin UI</li>
           <li>• Country-specific partners only appear in their market</li>
         </ul>
       </div>

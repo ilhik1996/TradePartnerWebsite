@@ -152,6 +152,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // App bar
               SliverAppBar(
                 floating: true,
+                automaticallyImplyLeading: false,
                 backgroundColor: VionaColors.background,
                 title: Row(
                   children: [
@@ -165,18 +166,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     const Text('VIONA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                    const Spacer(),
+                    if (_user?['firstName'] != null)
+                      Text(
+                        'Hi, ${_user!['firstName']}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                   ],
                 ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () => context.push('/notifications'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.person_outline),
-                    onPressed: () => context.push('/profile'),
-                  ),
-                ],
               ),
 
               SliverPadding(

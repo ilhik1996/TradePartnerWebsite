@@ -18,7 +18,7 @@ import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detec
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
-  subscriptions, referrals,
+  subscriptions, referrals, partners,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -839,8 +839,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const partners = await getPartners(countryId);
-      res.json(partners);
+      // Try DB first; fall back to mock data when table is empty
+      let dbPartners = await db.select().from(partners).where(eq(partners.isActive, true));
+      if (dbPartners.length > 0) {
+        if (countryId !== undefined) {
+          dbPartners = dbPartners.filter(
+            (p) => p.countryId === null || p.countryId === countryId,
+          );
+        }
+        res.json(dbPartners);
+      } else {
+        const mockPartners = await getPartners(countryId);
+        res.json(mockPartners);
+      }
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -858,6 +869,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(partner);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
+    }
+  });
+
+  // POST /api/admin/partners — create a partner
+  app.post("/api/admin/partners", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1),
+        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"]),
+        description: z.string().optional(),
+        logoUrl: z.string().optional(),
+        cashbackPercent: z.number().min(0).max(50),
+        countryId: z.number().int().positive().optional(),
+        isActive: z.boolean().optional(),
+      });
+      const body = schema.parse(req.body);
+
+      const [created] = await db.insert(partners).values({
+        name: body.name,
+        category: body.category,
+        description: body.description ?? null,
+        logoUrl: body.logoUrl ?? null,
+        cashbackPercent: String(body.cashbackPercent),
+        countryId: body.countryId ?? null,
+        isActive: body.isActive ?? true,
+      }).returning();
+
+      await db.insert(auditLogs).values({
+        adminUserId: adminUid(req),
+        action: "create_partner",
+        entityType: "partner",
+        entityId: created.id,
+        dataAfter: created,
+      });
+
+      res.status(201).json(created);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // PATCH /api/admin/partners/:id — update partner fields
+  app.patch("/api/admin/partners/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
+
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        category: z.enum(["food", "retail", "pharmacy", "telecom", "fuel", "entertainment"]).optional(),
+        description: z.string().optional(),
+        logoUrl: z.string().optional(),
+        cashbackPercent: z.number().min(0).max(50).optional(),
+        countryId: z.number().int().positive().nullable().optional(),
+        isActive: z.boolean().optional(),
+      });
+      const body = schema.parse(req.body);
+
+      const updateData: Record<string, any> = { ...body };
+      if (body.cashbackPercent !== undefined) {
+        updateData.cashbackPercent = String(body.cashbackPercent);
+      }
+
+      const [updated] = await db.update(partners)
+        .set(updateData)
+        .where(eq(partners.id, id))
+        .returning();
+
+      if (!updated) { res.status(404).json({ message: "Partner not found" }); return; }
+
+      await db.insert(auditLogs).values({
+        adminUserId: adminUid(req),
+        action: "update_partner",
+        entityType: "partner",
+        entityId: id,
+        dataAfter: updated,
+      });
+
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // DELETE /api/admin/partners/:id — soft-delete (set isActive=false)
+  app.delete("/api/admin/partners/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
+
+      const [deactivated] = await db.update(partners)
+        .set({ isActive: false })
+        .where(eq(partners.id, id))
+        .returning();
+
+      if (!deactivated) { res.status(404).json({ message: "Partner not found" }); return; }
+
+      await db.insert(auditLogs).values({
+        adminUserId: adminUid(req),
+        action: "deactivate_partner",
+        entityType: "partner",
+        entityId: id,
+        dataAfter: { isActive: false },
+      });
+
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
     }
   });
 
