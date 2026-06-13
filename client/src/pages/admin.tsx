@@ -201,10 +201,16 @@ function DrawsPanel() {
   const [draws, setDraws] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [conducting, setConducting] = useState<number | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [newCountryId, setNewCountryId] = useState("");
+  const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [creating, setCreating] = useState(false);
   const { toast } = useToast();
 
   const load = () => { setLoading(true); api.admin.draws().then(setDraws).finally(() => setLoading(false)); };
   useEffect(load, []);
+  useEffect(() => { if (showCreate && countries.length === 0) api.admin.countries().then(setCountries); }, [showCreate]);
 
   const conduct = async (id: number) => {
     setConducting(id);
@@ -215,6 +221,19 @@ function DrawsPanel() {
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setConducting(null); }
+  };
+
+  const createDraw = async () => {
+    if (!newCountryId) { toast({ title: "Select a country", variant: "destructive" }); return; }
+    setCreating(true);
+    try {
+      const r = await api.admin.createDraw({ countryId: parseInt(newCountryId), drawDate: newDate });
+      toast({ title: "Draw created", description: `Draw #${r.id} for ${newDate} is now open.` });
+      setShowCreate(false);
+      load();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setCreating(false); }
   };
 
   const STATUS = {
@@ -228,10 +247,50 @@ function DrawsPanel() {
     <div className="space-y-3 max-w-3xl">
       <div className="flex justify-between items-center">
         <h3 className="font-bold">Draws</h3>
-        <Button size="sm" variant="outline" onClick={load} className="h-8 px-3 text-xs border-border">
-          <RefreshCw className="w-3.5 h-3.5 mr-1" />Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowCreate(v => !v)} className="h-8 px-3 text-xs border-border">
+            + Create Draw
+          </Button>
+          <Button size="sm" variant="outline" onClick={load} className="h-8 px-3 text-xs border-border">
+            <RefreshCw className="w-3.5 h-3.5 mr-1" />Refresh
+          </Button>
+        </div>
       </div>
+
+      {showCreate && (
+        <div className="viona-card p-4 space-y-3">
+          <p className="text-sm font-semibold">Create new draw</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Market</p>
+              <select
+                className="w-full h-9 px-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none"
+                value={newCountryId}
+                onChange={e => setNewCountryId(e.target.value)}
+              >
+                <option value="">Select country…</option>
+                {countries.map(c => <option key={c.id} value={c.id}>{c.flag} {c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Draw Date</p>
+              <input
+                type="date"
+                className="w-full h-9 px-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none"
+                value={newDate}
+                onChange={e => setNewDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowCreate(false)} className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground">Cancel</button>
+            <button onClick={createDraw} disabled={creating} className="text-xs px-4 py-1.5 rounded-lg bg-primary text-white disabled:opacity-50">
+              {creating ? "Creating…" : "Create"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
       {draws.map(d => (
         <div key={d.id} className="viona-card p-4">
@@ -284,6 +343,16 @@ function UsersPanel() {
     } catch (err: any) { toast({ title: err.message, variant: "destructive" }); }
   };
 
+  const exportCsv = () => {
+    const rows = [["ID", "Email", "Phone", "Status", "KYC Level", "Country ID", "Created"]];
+    users.forEach(u => rows.push([u.id, u.email ?? "", u.phone ?? "", u.status, u.kycLevel, u.countryId ?? "", new Date(u.createdAt).toISOString()]));
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `viona-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
   const filtered = users.filter(u =>
     !search || (u.email ?? u.phone ?? "").toLowerCase().includes(search.toLowerCase())
   );
@@ -298,6 +367,11 @@ function UsersPanel() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        {users.length > 0 && (
+          <Button size="sm" variant="outline" onClick={exportCsv} className="h-8 px-3 text-xs border-border shrink-0">
+            Export CSV
+          </Button>
+        )}
       </div>
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
       <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -484,6 +558,16 @@ function FinancePanel() {
 
   useEffect(() => { api.admin.transactions().then(setTxs).finally(() => setLoading(false)); }, []);
 
+  const exportCsv = () => {
+    const rows = [["ID", "User ID", "Type", "Amount", "Balance After", "Status", "Description", "Created"]];
+    txs.forEach(tx => rows.push([tx.id, tx.userId, tx.type, tx.amount, tx.balanceAfter, tx.status, tx.description ?? "", new Date(tx.createdAt).toISOString()]));
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `viona-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
   const TYPE_COLORS: Record<string, string> = {
     deposit: "text-green-400",
     withdrawal: "text-red-400",
@@ -494,7 +578,14 @@ function FinancePanel() {
 
   return (
     <div className="space-y-3 max-w-3xl">
-      <h3 className="font-bold">Transactions ({txs.length})</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold">Transactions ({txs.length})</h3>
+        {txs.length > 0 && (
+          <Button size="sm" variant="outline" onClick={exportCsv} className="h-8 px-3 text-xs border-border">
+            Export CSV
+          </Button>
+        )}
+      </div>
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
       <div className="space-y-2 max-h-[500px] overflow-y-auto">
         {txs.map(tx => (
@@ -637,6 +728,7 @@ function PartnersPanel() {
 
   const categoryIcon: Record<string, string> = {
     food: '🍔', retail: '🛍️', pharmacy: '💊', telecom: '📱', fuel: '⛽', entertainment: '🎬',
+    electronics: '🖥️', delivery: '📦', beauty: '💄', fitness: '💪', travel: '✈️', finance: '💳',
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

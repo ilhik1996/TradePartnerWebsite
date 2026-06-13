@@ -107,6 +107,8 @@ export const api = {
       }),
     countries: () => request<any[]>("/admin/countries"),
     draws: () => request<any[]>("/admin/draws"),
+    createDraw: (body: { countryId: number; drawDate?: string }) =>
+      request<any>("/admin/draws", { method: "POST", body: JSON.stringify(body) }),
     conductDraw: (id: number) => request<any>(`/admin/draws/${id}/conduct`, { method: "POST" }),
     users: (limit = 50, offset = 0) => request<any[]>(`/admin/users?limit=${limit}&offset=${offset}`),
     updateUserStatus: (id: number, status: string) =>

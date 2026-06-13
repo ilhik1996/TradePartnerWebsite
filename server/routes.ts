@@ -596,6 +596,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(list);
   });
 
+  app.post("/api/admin/draws", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { countryId, drawDate } = z.object({
+        countryId: z.number(),
+        drawDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      }).parse(req.body);
+      const date = drawDate ?? new Date().toISOString().slice(0, 10);
+      const [existing] = await db.select({ id: draws.id }).from(draws)
+        .where(and(eq(draws.countryId, countryId), eq(draws.drawDate, date)));
+      if (existing) { res.status(409).json({ message: `Draw for ${date} already exists (ID #${existing.id})` }); return; }
+      const [draw] = await db.insert(draws).values({ countryId, drawDate: date, status: "open", totalPool: "0" }).returning();
+      await db.insert(auditLogs).values({
+        adminUserId: adminUid(req), action: "create_draw", entityType: "draw", entityId: draw.id, dataAfter: draw,
+      });
+      res.status(201).json(draw);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   app.post("/api/admin/draws/:id/conduct", requireAdmin, async (req: Request, res: Response) => {
     try {
       const result = await conductDraw(parseInt(req.params.id));
