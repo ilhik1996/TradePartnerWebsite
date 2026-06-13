@@ -143,3 +143,47 @@ describe("POST /api/kyc/start — age validation (requires auth, tested via Zod 
     expect(res.status).toBe(401);
   });
 });
+
+// ── Health endpoint ────────────────────────────────────────────────────────────
+
+describe("GET /api/health — detailed assertions", () => {
+  it("ts is a valid ISO date string", async () => {
+    const res = await request(app).get("/api/health");
+    expect(new Date(res.body.ts).getTime()).toBeGreaterThan(0);
+  });
+
+  it("responds quickly (under 500ms)", async () => {
+    const start = Date.now();
+    await request(app).get("/api/health");
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+});
+
+// ── Admin withdrawal endpoints ────────────────────────────────────────────────
+
+describe("Admin withdrawal endpoints — require auth", () => {
+  it("GET /api/admin/withdrawals without token → 401", async () => {
+    const res = await request(app).get("/api/admin/withdrawals");
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /api/admin/withdrawals/1/approve without token → 401", async () => {
+    const res = await request(app).post("/api/admin/withdrawals/1/approve");
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /api/admin/withdrawals/1/reject without token → 401", async () => {
+    const res = await request(app).post("/api/admin/withdrawals/1/reject").send({});
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── Wallet withdraw validation ─────────────────────────────────────────────────
+
+describe("POST /api/wallet/withdraw — validation", () => {
+  it("returns 401 without token", async () => {
+    const res = await request(app).post("/api/wallet/withdraw").send({ amount: 10 });
+    expect(res.status).toBe(401);
+  });
+});
+

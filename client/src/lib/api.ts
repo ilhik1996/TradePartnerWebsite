@@ -127,6 +127,11 @@ export const api = {
       request<any>(`/admin/partners/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     deletePartner: (id: number) =>
       request<any>(`/admin/partners/${id}`, { method: "DELETE" }),
+    withdrawals: () => request<any[]>("/admin/withdrawals"),
+    approveWithdrawal: (id: number) =>
+      request<any>(`/admin/withdrawals/${id}/approve`, { method: "POST" }),
+    rejectWithdrawal: (id: number, reason?: string) =>
+      request<any>(`/admin/withdrawals/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   },
 
   partners: {

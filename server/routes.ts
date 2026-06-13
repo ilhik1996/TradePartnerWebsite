@@ -745,6 +745,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(list);
   });
 
+  // ── Admin: Withdrawals ────────────────────────────────────────────────────
+
+  app.get("/api/admin/withdrawals", requireAdmin, async (_req: Request, res: Response) => {
+    const pending = await db.select({
+      id: transactions.id,
+      userId: transactions.userId,
+      amount: transactions.amount,
+      status: transactions.status,
+      description: transactions.description,
+      createdAt: transactions.createdAt,
+      email: users.email,
+    })
+      .from(transactions)
+      .leftJoin(users, eq(users.id, transactions.userId))
+      .where(and(eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")))
+      .orderBy(desc(transactions.createdAt));
+    res.json(pending);
+  });
+
+  app.post("/api/admin/withdrawals/:id/approve", requireAdmin, async (req: Request, res: Response) => {
+    const txId = parseInt(req.params.id);
+    const [tx] = await db.select().from(transactions)
+      .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
+    if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
+
+    await db.update(transactions).set({ status: "completed" }).where(eq(transactions.id, txId));
+    await db.insert(auditLogs).values({
+      action: "withdrawal_approved",
+      entityType: "transaction",
+      entityId: txId,
+      dataAfter: { approvedBy: "admin", amount: tx.amount },
+    });
+    await insertNotification({
+      userId: tx.userId!,
+      type: "payment_failed",  // reuse closest type — shows wallet icon
+      title: "Withdrawal processed",
+      body: `Your withdrawal of ${Math.abs(parseFloat(tx.amount as string)).toFixed(2)} has been sent to your bank account.`,
+      pushUrl: "/wallet",
+    }).catch(() => {});
+    res.json({ ok: true });
+  });
+
+  app.post("/api/admin/withdrawals/:id/reject", requireAdmin, async (req: Request, res: Response) => {
+    const txId = parseInt(req.params.id);
+    const { reason } = z.object({ reason: z.string().optional() }).parse(req.body);
+    const [tx] = await db.select().from(transactions)
+      .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
+    if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
+
+    // Refund balance
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, tx.userId!));
+    if (wallet) {
+      const refundAmount = Math.abs(parseFloat(tx.amount as string));
+      const newBalance = parseFloat(wallet.balance as string) + refundAmount;
+      await db.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
+      await db.insert(transactions).values({
+        walletId: wallet.id,
+        userId: tx.userId!,
+        type: "refund",
+        amount: refundAmount.toFixed(2),
+        balanceAfter: newBalance.toFixed(2),
+        status: "completed",
+        description: `Withdrawal refund: ${reason ?? "rejected by admin"}`,
+        metadata: { originalTxId: txId },
+      });
+    }
+
+    await db.update(transactions).set({ status: "failed" }).where(eq(transactions.id, txId));
+    await db.insert(auditLogs).values({
+      action: "withdrawal_rejected",
+      entityType: "transaction",
+      entityId: txId,
+      dataAfter: { reason: reason ?? "no reason given" },
+    });
+    await insertNotification({
+      userId: tx.userId!,
+      type: "payment_failed",
+      title: "Withdrawal rejected",
+      body: `Your withdrawal could not be processed${reason ? `: ${reason}` : ". Your balance has been refunded."}`,
+      pushUrl: "/wallet",
+    }).catch(() => {});
+    res.json({ ok: true });
+  });
+
   // Public platform stats for landing page
   app.get("/api/stats", async (_req: Request, res: Response) => {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);

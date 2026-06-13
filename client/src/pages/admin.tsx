@@ -999,15 +999,110 @@ function PartnersPanel() {
   );
 }
 
+// ─── Withdrawals panel ────────────────────────────────────────────────────────
+
+function WithdrawalsPanel() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const load = () => {
+    setLoading(true);
+    api.admin.withdrawals().then(setItems).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const approve = async (id: number) => {
+    try {
+      await api.admin.approveWithdrawal(id);
+      toast({ title: "Withdrawal approved", description: "User has been notified." });
+      load();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const reject = async (id: number) => {
+    const reason = window.prompt("Rejection reason (optional):");
+    if (reason === null) return; // cancelled
+    try {
+      await api.admin.rejectWithdrawal(id, reason || undefined);
+      toast({ title: "Withdrawal rejected", description: "Balance refunded to user." });
+      load();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-3 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold">Pending Withdrawals ({items.length})</h3>
+        <Button size="sm" variant="outline" onClick={load} className="h-8 px-3 text-xs border-border">
+          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+        </Button>
+      </div>
+
+      {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
+
+      {!loading && items.length === 0 && (
+        <div className="viona-card p-10 text-center text-muted-foreground text-sm">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400/60" />
+          No pending withdrawals
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {items.map((w: any) => (
+          <div key={w.id} className="viona-card p-4 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">
+                  {Math.abs(parseFloat(w.amount)).toFixed(2)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  user #{w.userId} · {w.email ?? "no email"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {new Date(w.createdAt).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => approve(w.id)}
+              >
+                <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs text-red-400 border-red-500/30 hover:bg-red-500/10"
+                onClick={() => reject(w.id)}
+              >
+                <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const SECTIONS = [
-  { id: "overview", label: "Overview", icon: BarChart2 },
-  { id: "draws", label: "Draws", icon: Trophy },
-  { id: "users", label: "Users", icon: Users },
-  { id: "markets", label: "Markets", icon: Globe },
-  { id: "finance", label: "Finance", icon: DollarSign },
-  { id: "partners", label: "Partners", icon: Store },
-  { id: "audit", label: "Audit", icon: FileText },
-  { id: "petition", label: "Petition", icon: Heart },
+  { id: "overview",     label: "Overview",    icon: BarChart2 },
+  { id: "draws",        label: "Draws",       icon: Trophy },
+  { id: "users",        label: "Users",       icon: Users },
+  { id: "markets",      label: "Markets",     icon: Globe },
+  { id: "finance",      label: "Finance",     icon: DollarSign },
+  { id: "withdrawals",  label: "Withdrawals", icon: AlertCircle },
+  { id: "partners",     label: "Partners",    icon: Store },
+  { id: "audit",        label: "Audit",       icon: FileText },
+  { id: "petition",     label: "Petition",    icon: Heart },
 ] as const;
 
 type Section = typeof SECTIONS[number]["id"];
@@ -1067,14 +1162,15 @@ export default function Admin() {
       {/* Main content */}
       <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-y-auto">
         <h2 className="text-xl font-black mb-5 capitalize">{active}</h2>
-        {active === "overview" && <Overview />}
-        {active === "draws"    && <DrawsPanel />}
-        {active === "users"    && <UsersPanel />}
-        {active === "markets"  && <MarketsPanel />}
-        {active === "finance"  && <FinancePanel />}
-        {active === "partners" && <PartnersPanel />}
-        {active === "audit"    && <AuditPanel />}
-        {active === "petition" && <PetitionPanel />}
+        {active === "overview"     && <Overview />}
+        {active === "draws"        && <DrawsPanel />}
+        {active === "users"        && <UsersPanel />}
+        {active === "markets"      && <MarketsPanel />}
+        {active === "finance"      && <FinancePanel />}
+        {active === "withdrawals"  && <WithdrawalsPanel />}
+        {active === "partners"     && <PartnersPanel />}
+        {active === "audit"        && <AuditPanel />}
+        {active === "petition"     && <PetitionPanel />}
       </main>
     </div>
   );

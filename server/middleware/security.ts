@@ -46,7 +46,6 @@ export const authRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many attempts, please try again in 15 minutes" },
-  keyGenerator: (req) => req.ip ?? "unknown",
 });
 
 // General API limit
