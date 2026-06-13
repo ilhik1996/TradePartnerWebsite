@@ -68,7 +68,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
 
     final myCode = _data?['referralCode'] as String? ?? '';
     final referrals = (_data?['referrals'] as List<dynamic>?) ?? [];
-    final totalBonus = double.tryParse(_data?['totalBonus']?.toString() ?? '0') ?? 0;
+    final totalBonus = double.tryParse(_data?['totalBonusEarned']?.toString() ?? '0') ?? 0;
 
     return Scaffold(
       appBar: AppBar(

@@ -30,7 +30,7 @@ function StatusBadge({ level }: { level: string }) {
 
 export default function Cabinet() {
   const [, navigate] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, refresh: refreshUser } = useAuth();
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<any>(null);
@@ -99,9 +99,7 @@ export default function Cabinet() {
         toast({ title: "Documents submitted", description: "Review takes 1-3 business days." });
       } else {
         toast({ title: "Age verified ✓", description: "You can now make deposits." });
-        // Refresh user data
-        const p = await api.profile.get();
-        setProfile(p);
+        await refreshUser();
       }
     } catch (err: any) {
       toast({ title: "Verification failed", description: err.message, variant: "destructive" });

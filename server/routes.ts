@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { signToken, requireAuth, requireAdmin } from "./auth";
+import { signToken, verifyToken, requireAuth, requireAdmin } from "./auth";
 import { getOrCreateWallet, depositFunds, getBalance, getTransactionHistory } from "./modules/wallet";
 import {
   getOrCreateDraw, todayDateString, addPaidEntry, addFreeEntry, conductDraw
@@ -21,7 +21,7 @@ import {
   subscriptions, referrals, partners,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
@@ -174,6 +174,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .where(and(eq(draws.countryId, countryId), eq(draws.status, "completed")))
       .orderBy(desc(draws.completedAt))
       .limit(30);
+
+    // Enrich with authenticated user's entry data if token present
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const payload = verifyToken(authHeader.slice(7));
+        const userId = (payload as any).userId as number;
+        const drawIds = list.map(d => d.id);
+        if (drawIds.length > 0) {
+          const entries = await db.select().from(drawEntries)
+            .where(and(eq(drawEntries.userId, userId), inArray(drawEntries.drawId, drawIds)));
+          const entryMap = Object.fromEntries(entries.map(e => [e.drawId, e]));
+          return res.json(list.map(d => ({
+            ...d,
+            myEntry: entryMap[d.id] ?? null,
+            isWinner: d.winnerUserId === userId,
+          })));
+        }
+      } catch {}
+    }
+
     res.json(list);
   });
 
