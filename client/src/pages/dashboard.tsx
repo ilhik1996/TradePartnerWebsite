@@ -82,6 +82,7 @@ export default function Dashboard() {
   const [draw, setDraw] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [myEntry, setMyEntry] = useState<any>(null);
+  const [gamification, setGamification] = useState<any>(null);
   const [autoParticipate, setAutoParticipate] = useState(user?.autoParticipate ?? true);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState(false);
@@ -107,12 +108,14 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     try {
-      const [c, w] = await Promise.all([
+      const [c, w, g] = await Promise.all([
         api.countries.get(countryId),
         api.wallet.get(),
+        api.gamification.me(),
       ]);
       setCountry(c);
       setWallet(w);
+      setGamification(g);
       const d = await api.draws.today(countryId);
       setDraw(d);
       if (d) {
@@ -273,11 +276,23 @@ export default function Dashboard() {
         <div className="viona-card p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground font-medium">My Balance</p>
-            <Link href="/wallet">
-              <Button variant="ghost" size="sm" className="text-primary h-7 px-2 text-xs">
-                Manage <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              {gamification && (
+                <Link href="/cabinet">
+                  <span
+                    className="px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "#fff" }}
+                  >
+                    Lv.{gamification.level} {gamification.title}
+                  </span>
+                </Link>
+              )}
+              <Link href="/wallet">
+                <Button variant="ghost" size="sm" className="text-primary h-7 px-2 text-xs">
+                  Manage <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                </Button>
+              </Link>
+            </div>
           </div>
           <div className="text-4xl font-black mb-3">{fmt(balance, symbol)}</div>
           <Link href="/wallet">

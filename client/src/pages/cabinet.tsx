@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, User, Trophy, Shield, Bell, LogOut,
-  ChevronRight, AlertTriangle, CheckCircle, Clock, BellRing
+  ChevronRight, AlertTriangle, CheckCircle, Clock, BellRing, Star
 } from "lucide-react";
 import { usePush } from "@/hooks/use-push";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,9 @@ export default function Cabinet() {
   const [profile, setProfile] = useState<any>(null);
   const [rgSettings, setRgSettings] = useState<any>(null);
   const [draws, setDraws] = useState<any[]>([]);
+  const [gamification, setGamification] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState<"account" | "draws" | "responsible">("account");
+  const [section, setSection] = useState<"account" | "draws" | "responsible" | "level">("account");
 
   // Edit fields
   const [firstName, setFirstName] = useState("");
@@ -54,10 +55,12 @@ export default function Cabinet() {
       api.profile.get(),
       api.profile.getResponsibleGaming(),
       api.draws.history(user?.countryId ?? 1),
-    ]).then(([p, rg, d]) => {
+      api.gamification.me(),
+    ]).then(([p, rg, d, g]) => {
       setProfile(p);
       setRgSettings(rg);
       setDraws(d);
+      setGamification(g);
       setFirstName(p?.firstName ?? "");
       setLastName(p?.lastName ?? "");
     }).finally(() => setLoading(false));
@@ -128,7 +131,7 @@ export default function Cabinet() {
 
         {/* Section tabs */}
         <div className="flex gap-2">
-          {(["account", "draws", "responsible"] as const).map(s => (
+          {(["account", "draws", "level", "responsible"] as const).map(s => (
             <button
               key={s}
               onClick={() => setSection(s)}
@@ -136,7 +139,7 @@ export default function Cabinet() {
                 section === s ? "btn-viona-primary text-white" : "viona-card text-muted-foreground"
               }`}
             >
-              {s === "account" ? "Account" : s === "draws" ? "Draws" : "Safety"}
+              {s === "account" ? "Account" : s === "draws" ? "Draws" : s === "level" ? "Level" : "Safety"}
             </button>
           ))}
         </div>
@@ -256,6 +259,97 @@ export default function Cabinet() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Level / Gamification */}
+        {section === "level" && (
+          <div className="space-y-4">
+            {/* Level badge + heading */}
+            <div className="viona-card p-6 flex flex-col items-center gap-4 text-center">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-white shadow-lg"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
+              >
+                {gamification?.level ?? 1}
+              </div>
+              <div>
+                <p className="text-xl font-bold">
+                  Level {gamification?.level ?? 1} — {gamification?.title ?? "Newcomer"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {gamification?.xp ?? 0} / {gamification?.nextLevelXp ?? "—"} XP
+                </p>
+              </div>
+              {/* Progress bar */}
+              {gamification?.nextLevelXp != null && (
+                <div className="w-full">
+                  <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.round((gamification.xp / gamification.nextLevelXp) * 100))}%`,
+                        background: "linear-gradient(90deg, #7c3aed, #a855f7)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
+                    {Math.min(100, Math.round((gamification.xp / gamification.nextLevelXp) * 100))}% to next level
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Badges */}
+            <div className="viona-card p-5">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-primary" /> Badges earned
+              </h3>
+              {gamification?.badges?.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {(gamification.badges as string[]).map(badge => {
+                    const BADGE_LABELS: Record<string, string> = {
+                      first_entry: "🎟️ First Entry",
+                      first_win:   "🏆 First Win",
+                      streak_7:    "🔥 7-Day Streak",
+                      referrer:    "🤝 Referrer",
+                    };
+                    return (
+                      <span
+                        key={badge}
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/20"
+                      >
+                        {BADGE_LABELS[badge] ?? badge}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No badges yet — start earning XP!</p>
+              )}
+            </div>
+
+            {/* How to earn XP */}
+            <div className="viona-card p-5">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Star className="w-4 h-4 text-primary" /> How to earn XP
+              </h3>
+              <div className="space-y-2">
+                {([
+                  { action: "Enter a draw",          reason: "entry",       xp: "+10 XP" },
+                  { action: "Win a draw",             reason: "win",         xp: "+50 XP" },
+                  { action: "Refer a friend",         reason: "referral",    xp: "+25 XP" },
+                  { action: "Deposit funds",          reason: "deposit",     xp: "+5 XP"  },
+                  { action: "Weekly subscription",    reason: "weekly_sub",  xp: "+15 XP" },
+                  { action: "Monthly subscription",   reason: "monthly_sub", xp: "+30 XP" },
+                ] as { action: string; reason: string; xp: string }[]).map(row => (
+                  <div key={row.reason} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{row.action}</span>
+                    <span className="font-semibold text-purple-400">{row.xp}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

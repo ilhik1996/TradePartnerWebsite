@@ -183,6 +183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await addPaidEntry(uid(req), parseInt(req.params.drawId));
       const draw = await db.select().from(draws).where(eq(draws.id, parseInt(req.params.drawId))).then(r => r[0]);
       broadcast({ type: "draw_pool_update", drawId: draw.id, totalPool: draw.totalPool, totalEntries: draw.totalEntries });
+      // Award XP non-blocking
+      awardXp(uid(req), 'entry', db).then(() => checkAndAwardBadges(uid(req), db)).catch(() => {});
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -279,6 +281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Award XP non-blocking
+      awardXp(uid(req), 'deposit', db).then(() => checkAndAwardBadges(uid(req), db)).catch(() => {});
       res.json({ ok: true, transactionId: result.transactionId });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -410,6 +414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).parse(req.body);
 
       const sub = await createSubscription(uid(req), type, paymentMethodToken);
+      // Award XP non-blocking
+      const xpReason = type === 'weekly' ? 'weekly_sub' : 'monthly_sub';
+      awardXp(uid(req), xpReason, db).then(() => checkAndAwardBadges(uid(req), db)).catch(() => {});
       res.status(201).json(sub);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -480,6 +487,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency,
         status: "pending",
       });
+
+      // Award XP to the referrer non-blocking
+      const referrerId = referrer.id;
+      awardXp(referrerId, 'referral', db).then(() => checkAndAwardBadges(referrerId, db)).catch(() => {});
 
       res.json({ ok: true, referrerName: referrer.email ?? referrer.phone });
     } catch (err: any) {
@@ -575,6 +586,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dataAfter: result,
       });
       broadcast({ type: "draw_completed", ...result });
+      // Award win XP non-blocking
+      if (result?.winnerUserId) {
+        awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
+      }
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ message: err.message });

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   Trophy, Users, Globe, DollarSign, Play, BarChart2,
   LogOut, AlertCircle, RefreshCw, CheckCircle, Clock,
-  XCircle, Shield, FileText, TrendingUp, Eye, Ban, Heart
+  XCircle, Shield, FileText, TrendingUp, Eye, Ban, Heart, Store
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -597,12 +597,99 @@ function PetitionPanel() {
   );
 }
 
+// ─── Partners panel ────────────────────────────────────────────────────────────
+
+function PartnersPanel() {
+  const [partners, setPartners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.partners.list().then(setPartners).finally(() => setLoading(false));
+  }, []);
+
+  const categoryIcon: Record<string, string> = {
+    food: '🍔', retail: '🛍️', pharmacy: '💊', telecom: '📱', fuel: '⛽', entertainment: '🎬',
+  };
+
+  return (
+    <div className="space-y-4 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold">Partner Network</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{partners.length} active partners · cashback paid from platform revenue</p>
+        </div>
+      </div>
+
+      {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
+
+      <div className="space-y-2">
+        {partners.map(p => (
+          <div key={p.id} className="viona-card p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center text-xl shrink-0">
+              {categoryIcon[p.category] ?? '🏪'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">{p.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.description}</p>
+              <div className="flex gap-2 mt-1">
+                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                  {categoryIcon[p.category]} {p.category}
+                </span>
+                {p.countryId && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                    Country #{p.countryId}
+                  </span>
+                )}
+                {!p.countryId && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                    🌍 Global
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-lg font-black" style={{ color: 'var(--viona-teal)' }}>
+                {p.cashbackPercent}%
+              </p>
+              <p className="text-xs text-muted-foreground">cashback</p>
+            </div>
+            <div className="shrink-0">
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${p.isActive
+                ? 'bg-green-500/15 text-green-400'
+                : 'bg-red-500/15 text-red-400'}`}>
+                {p.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+        ))}
+        {!loading && partners.length === 0 && (
+          <div className="text-center py-10 text-muted-foreground text-sm">
+            <Store className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            No partners configured
+          </div>
+        )}
+      </div>
+
+      <div className="viona-card p-4">
+        <p className="text-xs font-semibold mb-2">Partner integration notes</p>
+        <ul className="text-xs text-muted-foreground space-y-1">
+          <li>• Partners are paid from 50% platform revenue (not from prize pool)</li>
+          <li>• Cashback is credited to user wallet within 24 hours of purchase</li>
+          <li>• Add partners via API: POST /api/admin/partners (coming soon)</li>
+          <li>• Country-specific partners only appear in their market</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 const SECTIONS = [
   { id: "overview", label: "Overview", icon: BarChart2 },
   { id: "draws", label: "Draws", icon: Trophy },
   { id: "users", label: "Users", icon: Users },
   { id: "markets", label: "Markets", icon: Globe },
   { id: "finance", label: "Finance", icon: DollarSign },
+  { id: "partners", label: "Partners", icon: Store },
   { id: "audit", label: "Audit", icon: FileText },
   { id: "petition", label: "Petition", icon: Heart },
 ] as const;
@@ -669,6 +756,7 @@ export default function Admin() {
         {active === "users"    && <UsersPanel />}
         {active === "markets"  && <MarketsPanel />}
         {active === "finance"  && <FinancePanel />}
+        {active === "partners" && <PartnersPanel />}
         {active === "audit"    && <AuditPanel />}
         {active === "petition" && <PetitionPanel />}
       </main>

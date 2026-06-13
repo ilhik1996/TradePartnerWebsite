@@ -3,6 +3,7 @@ import { countries, draws, users, wallets, drawEntries } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrCreateDraw, todayDateString, addPaidEntry, conductDraw } from "./lottery";
 import { renewDueSubscriptions } from "./subscriptions";
+import { awardXp, checkAndAwardBadges } from "./gamification";
 
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
@@ -54,7 +55,13 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
         console.log(`[Scheduler] Conducting draw #${openDraw.id} for ${country.name}`);
         try {
           const result = await conductDraw(openDraw.id);
-          if (result) broadcastFn({ type: "draw_completed", countryId: country.id, ...result });
+          if (result) {
+            broadcastFn({ type: "draw_completed", countryId: country.id, ...result });
+            // Award win XP non-blocking
+            if (result.winnerUserId) {
+              awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
+            }
+          }
         } catch (err) {
           console.error(`[Scheduler] Draw error:`, err);
         }
