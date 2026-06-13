@@ -3,7 +3,7 @@
 export interface Partner {
   id: number;
   name: string;
-  category: "food" | "retail" | "pharmacy" | "telecom" | "fuel" | "entertainment";
+  category: "food" | "retail" | "pharmacy" | "telecom" | "fuel" | "entertainment" | "electronics" | "delivery" | "beauty" | "fitness" | "travel" | "finance";
   description: string;
   logoUrl: string;
   cashbackPercent: number;
@@ -71,7 +71,67 @@ const MOCK_PARTNERS: Partner[] = [
     description: "Movie theatre network with IMAX screens, streaming bundles and live events.",
     logoUrl: "/assets/partners/cinemaworld.svg",
     cashbackPercent: 5.0,
-    countryId: 2,   // United States
+    countryId: 2,
+    isActive: true,
+  },
+  {
+    id: 7,
+    name: "TechMart",
+    category: "electronics",
+    description: "Consumer electronics retailer with the latest smartphones, laptops and smart home devices.",
+    logoUrl: "/assets/partners/techmart.svg",
+    cashbackPercent: 2.0,
+    countryId: null,
+    isActive: true,
+  },
+  {
+    id: 8,
+    name: "SwiftDrop",
+    category: "delivery",
+    description: "Same-day courier and parcel service operating in major cities across the platform.",
+    logoUrl: "/assets/partners/swiftdrop.svg",
+    cashbackPercent: 3.0,
+    countryId: null,
+    isActive: true,
+  },
+  {
+    id: 9,
+    name: "GlowSpa",
+    category: "beauty",
+    description: "Premium beauty salon chain offering haircare, skincare treatments and cosmetics.",
+    logoUrl: "/assets/partners/glowspa.svg",
+    cashbackPercent: 6.0,
+    countryId: null,
+    isActive: true,
+  },
+  {
+    id: 10,
+    name: "IronFit",
+    category: "fitness",
+    description: "Gym and wellness club network with 24/7 access, personal trainers and group classes.",
+    logoUrl: "/assets/partners/ironfit.svg",
+    cashbackPercent: 4.5,
+    countryId: null,
+    isActive: true,
+  },
+  {
+    id: 11,
+    name: "SkyRoute",
+    category: "travel",
+    description: "Online travel agency for flights, hotels and package holidays at competitive rates.",
+    logoUrl: "/assets/partners/skyroute.svg",
+    cashbackPercent: 3.5,
+    countryId: null,
+    isActive: true,
+  },
+  {
+    id: 12,
+    name: "MoneyBridge",
+    category: "finance",
+    description: "Digital banking and money transfer service with low fees and instant international transfers.",
+    logoUrl: "/assets/partners/moneybridge.svg",
+    cashbackPercent: 1.5,
+    countryId: null,
     isActive: true,
   },
 ];
