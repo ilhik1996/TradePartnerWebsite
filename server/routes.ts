@@ -24,7 +24,7 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray, count } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, count, gte, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -241,16 +241,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", authRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { identifier, password } = loginSchema.parse(req.body);
-      const [user] = await db.select().from(users).where(
+      let [user] = await db.select().from(users).where(
         identifier.includes("@") ? eq(users.email, identifier) : eq(users.phone, identifier)
       );
       if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
         res.status(401).json({ message: "Invalid credentials" });
         return;
       }
-      if (user.status === "banned" || user.status === "suspended") {
+      if (user.status === "banned") {
+        res.status(403).json({ message: "Account permanently suspended" });
+        return;
+      }
+      if (user.status === "suspended") {
         res.status(403).json({ message: "Account suspended" });
         return;
+      }
+      if (user.status === "self_excluded") {
+        // Check whether the exclusion period has expired
+        const [rg] = await db.select({ selfExcludedUntil: responsibleGaming.selfExcludedUntil })
+          .from(responsibleGaming).where(eq(responsibleGaming.userId, user.id));
+        const until = rg?.selfExcludedUntil ? new Date(rg.selfExcludedUntil) : null;
+        if (!until || until > new Date()) {
+          const untilStr = until ? until.toLocaleDateString() : "an indefinite period";
+          res.status(403).json({ message: `You have self-excluded until ${untilStr}. Contact support to appeal.` });
+          return;
+        }
+        // Exclusion has expired — automatically reinstate the account
+        await db.update(users).set({ status: "active" }).where(eq(users.id, user.id));
+        user = { ...user, status: "active" as const };
       }
       await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
       const token = signToken({ userId: user.id });
@@ -472,6 +490,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(403).json({ message: "Age verification required before depositing. Please verify your age in account settings." }); return;
       }
 
+      // Responsible gaming: enforce deposit limits
+      const [rg] = await db.select({
+        dailyLimit: responsibleGaming.dailyLimitAmount,
+        weeklyLimit: responsibleGaming.weeklyLimitAmount,
+        monthlyLimit: responsibleGaming.monthlyLimitAmount,
+      }).from(responsibleGaming).where(eq(responsibleGaming.userId, uid(req)));
+
+      if (rg) {
+        const now = new Date();
+
+        const startOfDay = new Date(now); startOfDay.setUTCHours(0, 0, 0, 0);
+        const startOfWeek = new Date(now);
+        startOfWeek.setUTCDate(now.getUTCDate() - now.getUTCDay()); startOfWeek.setUTCHours(0, 0, 0, 0);
+        const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+        const periodChecks: Array<{ limit: string | null; since: Date; label: string }> = [
+          { limit: rg.dailyLimit as string | null, since: startOfDay, label: "daily" },
+          { limit: rg.weeklyLimit as string | null, since: startOfWeek, label: "weekly" },
+          { limit: rg.monthlyLimit as string | null, since: startOfMonth, label: "monthly" },
+        ];
+
+        for (const { limit, since, label } of periodChecks) {
+          if (!limit) continue;
+          const maxAmt = parseFloat(limit);
+          const [{ spent }] = await db
+            .select({ spent: sum(transactions.amount) })
+            .from(transactions)
+            .where(and(
+              eq(transactions.userId, uid(req)),
+              eq(transactions.type, "deposit"),
+              eq(transactions.status, "completed"),
+              gte(transactions.createdAt, since),
+            ));
+          const spentSoFar = parseFloat(spent ?? "0");
+          if (spentSoFar + amount > maxAmt) {
+            res.status(403).json({
+              message: `This deposit would exceed your ${label} spending limit of ${maxAmt.toFixed(2)}. Spent so far: ${spentSoFar.toFixed(2)}.`,
+              code: "RG_LIMIT_EXCEEDED",
+            });
+            return;
+          }
+        }
+      }
+
       // Anti-fraud: chargeback risk check
       const riskScore = chargebackRiskScore({
         userId: uid(req),
@@ -575,10 +637,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ autoParticipate: enabled });
   }));
 
-  // Responsible gaming settings
+  // Responsible gaming settings — includes current period spending totals
   app.get("/api/settings/responsible-gaming", requireAuth, ar(async (req, res) => {
     const [rg] = await db.select().from(responsibleGaming).where(eq(responsibleGaming.userId, uid(req)));
-    res.json(rg ?? null);
+    if (!rg) { res.json(null); return; }
+
+    const now = new Date();
+    const startOfDay = new Date(now); startOfDay.setUTCHours(0, 0, 0, 0);
+    const startOfWeek = new Date(now);
+    startOfWeek.setUTCDate(now.getUTCDate() - now.getUTCDay()); startOfWeek.setUTCHours(0, 0, 0, 0);
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    const [daily, weekly, monthly] = await Promise.all([
+      db.select({ spent: sum(transactions.amount) }).from(transactions)
+        .where(and(eq(transactions.userId, uid(req)), eq(transactions.type, "deposit"), eq(transactions.status, "completed"), gte(transactions.createdAt, startOfDay))),
+      db.select({ spent: sum(transactions.amount) }).from(transactions)
+        .where(and(eq(transactions.userId, uid(req)), eq(transactions.type, "deposit"), eq(transactions.status, "completed"), gte(transactions.createdAt, startOfWeek))),
+      db.select({ spent: sum(transactions.amount) }).from(transactions)
+        .where(and(eq(transactions.userId, uid(req)), eq(transactions.type, "deposit"), eq(transactions.status, "completed"), gte(transactions.createdAt, startOfMonth))),
+    ]);
+
+    res.json({
+      ...rg,
+      spentToday: parseFloat(daily[0]?.spent ?? "0"),
+      spentThisWeek: parseFloat(weekly[0]?.spent ?? "0"),
+      spentThisMonth: parseFloat(monthly[0]?.spent ?? "0"),
+    });
   }));
 
   app.patch("/api/settings/responsible-gaming", requireAuth, ar(async (req, res) => {
