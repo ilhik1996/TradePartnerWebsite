@@ -384,7 +384,11 @@ function UsersPanel() {
               #{u.id}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{u.email ?? u.phone ?? "—"}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium text-sm truncate">{u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : (u.email ?? u.phone ?? "—")}</p>
+                {u.isGuest && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 shrink-0">Guest</span>}
+              </div>
+              {(u.firstName || u.lastName) && <p className="text-xs text-muted-foreground truncate">{u.email ?? u.phone ?? ""}</p>}
               <div className="flex gap-2 mt-0.5 flex-wrap">
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                   u.status === "active" ? "bg-green-500/15 text-green-400"
@@ -393,6 +397,7 @@ function UsersPanel() {
                   : "bg-muted text-muted-foreground"
                 }`}>{u.status}</span>
                 <span className="text-xs text-muted-foreground">KYC: {u.kycLevel}</span>
+                {u.balance != null && <span className="text-xs text-muted-foreground">{u.currency} {parseFloat(u.balance).toFixed(2)}</span>}
                 <span className="text-xs text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</span>
               </div>
             </div>

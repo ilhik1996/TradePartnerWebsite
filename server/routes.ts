@@ -976,10 +976,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityId: drawParamId,
         dataAfter: result,
       });
-      broadcast({ type: "draw_completed", ...result });
-      // Award win XP non-blocking
-      if (result?.winnerUserId) {
-        awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
+      if (result) {
+        broadcast({ type: "draw_completed", drawId: result.drawId, prizeAmount: result.prizeAmount });
+        if (result.winnerUserId) {
+          awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});
+        }
       }
       res.json(result);
     } catch (err: any) {
@@ -1007,6 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: users.phone,
         status: users.status,
         kycLevel: users.kycLevel,
+        isGuest: users.isGuest,
         createdAt: users.createdAt,
         countryId: users.countryId,
         referralCode: users.referralCode,
