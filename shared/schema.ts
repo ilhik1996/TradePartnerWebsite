@@ -1,5 +1,5 @@
 import {
-  pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, pgEnum, uuid
+  pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, pgEnum, uuid, index, uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -103,7 +103,10 @@ export const transactions = pgTable("transactions", {
   description: text("description"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  index("tx_user_id_idx").on(t.userId),
+  index("tx_user_type_status_created_idx").on(t.userId, t.type, t.status, t.createdAt),
+]);
 
 // ─── Subscriptions ────────────────────────────────────────────────────────────
 
@@ -120,7 +123,10 @@ export const subscriptions = pgTable("subscriptions", {
   cancelledAt: timestamp("cancelled_at"),
   paymentMethodToken: text("payment_method_token"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  index("sub_user_status_idx").on(t.userId, t.status),
+  index("sub_status_next_billing_idx").on(t.status, t.nextBillingDate),  // for renewal scheduler
+]);
 
 // ─── Draws (Lottery Engine) ───────────────────────────────────────────────────
 
@@ -140,7 +146,10 @@ export const draws = pgTable("draws", {
   closedAt: timestamp("closed_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("draw_country_date_idx").on(t.countryId, t.drawDate),  // one draw per country per day
+  index("draw_status_idx").on(t.status),
+]);
 
 export const drawEntries = pgTable("draw_entries", {
   id: serial("id").primaryKey(),
@@ -151,7 +160,10 @@ export const drawEntries = pgTable("draw_entries", {
   amountPaid: numeric("amount_paid", { precision: 10, scale: 2 }),   // null for free entries
   transactionId: integer("transaction_id").references(() => transactions.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("draw_entry_unique_idx").on(t.drawId, t.userId),  // one entry per user per draw
+  index("draw_entry_draw_id_idx").on(t.drawId),
+]);
 
 // ─── Referrals ────────────────────────────────────────────────────────────────
 
@@ -164,7 +176,10 @@ export const referrals = pgTable("referrals", {
   status: text("status").notNull().default("pending"),   // "pending" | "paid" | "revoked"
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  index("referral_referee_status_idx").on(t.refereeId, t.status),
+  index("referral_referrer_idx").on(t.referrerId),
+]);
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
@@ -203,7 +218,10 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").notNull().default(false),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  index("notif_user_id_idx").on(t.userId),
+  index("notif_user_unread_idx").on(t.userId, t.isRead),
+]);
 
 // ─── Petition (optional support program) ─────────────────────────────────────
 
