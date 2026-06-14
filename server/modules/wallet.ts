@@ -3,22 +3,22 @@ import { wallets, transactions, users } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function getOrCreateWallet(userId: number, currency: string) {
-  const [existing] = await db.select().from(wallets).where(eq(wallets.userId, userId));
-  if (existing) return existing;
-
-  const [newWallet] = await db.insert(wallets).values({
+  await db.insert(wallets).values({
     userId,
     balance: "0",
     currency,
-  }).returning();
-  return newWallet;
+  }).onConflictDoNothing();
+
+  const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+  if (!wallet) throw new Error(`Wallet not found for user ${userId}`);
+  return wallet;
 }
 
 export async function depositFunds(userId: number, amount: number, reference?: string) {
   if (amount <= 0) throw new Error("Amount must be positive");
 
   return db.transaction(async (tx) => {
-    const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
+    const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
     if (!wallet) throw new Error("Wallet not found");
 
     const newBalance = parseFloat(wallet.balance as string) + amount;
