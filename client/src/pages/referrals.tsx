@@ -145,7 +145,7 @@ export default function Referrals() {
                   <Users className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Friend #{r.refereeId}</p>
+                  <p className="text-sm font-medium">{r.email ?? `Friend #${r.refereeId}`}</p>
                   <p className="text-xs text-muted-foreground">
                     Joined {new Date(r.joinedAt).toLocaleDateString()} · Bonus: {r.bonusAmount} {r.currency}
                   </p>

@@ -51,9 +51,9 @@ function ProximityBar({ myTicket, totalEntries, winnerTicket }: {
   );
 }
 
-function DrawCard({ draw, userId, symbol }: { draw: any; userId: number; symbol: string }) {
+function DrawCard({ draw, symbol }: { draw: any; symbol: string }) {
   const [expanded, setExpanded] = useState(false);
-  const isWinner = draw.winnerUserId === userId;
+  const isWinner = draw.isWinner === true;
 
   return (
     <div className={`viona-card p-5 ${isWinner ? "border-amber-500/30" : ""}`}>
@@ -208,7 +208,7 @@ export default function History() {
         ) : (
           <div className="space-y-3">
             {enriched.map(draw => (
-              <DrawCard key={draw.id} draw={draw} userId={user?.id ?? 0} symbol={symbol} />
+              <DrawCard key={draw.id} draw={draw} symbol={symbol} />
             ))}
           </div>
         )}
