@@ -581,31 +581,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/wallet/withdraw", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
-      const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
+
+      const [user] = await db.select({ kycLevel: users.kycLevel, email: users.email })
+        .from(users).where(eq(users.id, uid(req)));
+      if (!user) { res.status(404).json({ message: "User not found" }); return; }
       if (user.kycLevel !== "full") {
         res.status(403).json({ message: "Full KYC required to withdraw funds" });
         return;
       }
-      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, uid(req)));
-      const balance = parseFloat(wallet.balance as string);
-      if (balance < amount) { res.status(400).json({ message: "Insufficient balance" }); return; }
 
-      const newBalance = balance - amount;
-      await db.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.userId, uid(req)));
-      const [tx] = await db.insert(transactions).values({
-        walletId: wallet.id,
-        userId: uid(req),
-        type: "withdrawal",
-        amount: (-amount).toFixed(2),
-        balanceAfter: newBalance.toFixed(2),
-        status: "pending",
-        description: `Withdrawal request ${wallet.currency} ${amount.toFixed(2)}`,
-      }).returning();
+      const { tx, newBalance, currency } = await db.transaction(async (txn) => {
+        const [wallet] = await txn.select().from(wallets).where(eq(wallets.userId, uid(req))).for("update");
+        if (!wallet) throw new Error("Wallet not found");
 
-      // Send confirmation email (non-blocking)
-      const [withdrawingUser] = await db.select().from(users).where(eq(users.id, uid(req)));
-      if (withdrawingUser.email) {
-        sendWithdrawalConfirmationEmail(withdrawingUser.email, amount.toFixed(2), wallet.currency).catch(() => {});
+        const balance = parseFloat(wallet.balance as string);
+        if (balance < amount) throw new Error("Insufficient balance");
+
+        const newBalance = balance - amount;
+        await txn.update(wallets)
+          .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
+          .where(eq(wallets.userId, uid(req)));
+
+        const [tx] = await txn.insert(transactions).values({
+          walletId: wallet.id,
+          userId: uid(req),
+          type: "withdrawal",
+          amount: (-amount).toFixed(2),
+          balanceAfter: newBalance.toFixed(2),
+          status: "pending",
+          description: `Withdrawal request ${wallet.currency} ${amount.toFixed(2)}`,
+        }).returning();
+
+        return { tx, newBalance, currency: wallet.currency };
+      });
+
+      if (user.email) {
+        sendWithdrawalConfirmationEmail(user.email, amount.toFixed(2), currency).catch(() => {});
       }
 
       res.json({ transaction: tx, newBalance });
