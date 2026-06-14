@@ -1350,24 +1350,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    const { applicantId, reviewResult, externalUserId } = req.body;
+    const { applicantId, reviewResult, externalUserId, levelName, type: eventType } = req.body;
     const userId = parseInt(externalUserId ?? "0");
 
     if (!userId) { res.status(400).json({ message: "Missing externalUserId" }); return; }
 
+    // Only process applicantReviewed events; ignore others (applicantCreated, etc.)
+    if (eventType && eventType !== "applicantReviewed") { res.json({ ok: true }); return; }
+
     const reviewAnswer = reviewResult?.reviewAnswer;  // "GREEN" | "RED"
 
     if (reviewAnswer === "GREEN") {
-      await db.update(users).set({ kycLevel: "full" }).where(eq(users.id, userId));
-      await db.update(userProfiles)
-        .set({ kycVerifiedAt: new Date(), kycProviderToken: applicantId })
-        .where(eq(userProfiles.userId, userId));
-      await insertNotification({
-        userId, type: "kyc_approved",
-        title: "Identity verified",
-        body: "Your KYC verification was approved. You can now withdraw funds.",
-        pushUrl: "/wallet",
-      });
+      // Map Sumsub level name → our kycLevel enum
+      // age-kyc-level → age_verified; basic-kyc-level (or any other) → full
+      const isAgeLevel = typeof levelName === "string" && levelName.toLowerCase().includes("age");
+      const newKycLevel = isAgeLevel ? "age_verified" : "full";
+
+      const [currentUser] = await db.select({ kycLevel: users.kycLevel }).from(users).where(eq(users.id, userId));
+
+      // Only upgrade, never downgrade (e.g. ignore a second age webhook if user is already full)
+      const shouldUpgrade = (
+        (newKycLevel === "age_verified" && currentUser?.kycLevel === "none") ||
+        (newKycLevel === "full" && (currentUser?.kycLevel === "none" || currentUser?.kycLevel === "age_verified"))
+      );
+
+      if (shouldUpgrade) {
+        await db.update(users).set({ kycLevel: newKycLevel }).where(eq(users.id, userId));
+        await db.update(userProfiles)
+          .set({ kycVerifiedAt: new Date(), kycProviderToken: applicantId })
+          .where(eq(userProfiles.userId, userId));
+        await insertNotification({
+          userId, type: "kyc_approved",
+          title: isAgeLevel ? "Age verified" : "Identity verified",
+          body: isAgeLevel
+            ? "Your age verification is complete. You can now make deposits."
+            : "Your KYC verification was approved. You can now withdraw funds.",
+          pushUrl: isAgeLevel ? "/wallet" : "/wallet",
+        });
+      }
     } else if (reviewAnswer === "RED") {
       await insertNotification({
         userId, type: "kyc_rejected",
