@@ -318,7 +318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
       const draw = await getOrCreateDraw(countryId, todayDateString());
       const entries = await db.select().from(drawEntries).where(eq(drawEntries.drawId, draw.id));
-      res.json({ ...draw, entriesCount: entries.length });
+      // winnerUserId must never be sent to clients — only expose the ticket number
+      const { winnerUserId: _omit, ...publicDraw } = draw;
+      res.json({ ...publicDraw, entriesCount: entries.length });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
