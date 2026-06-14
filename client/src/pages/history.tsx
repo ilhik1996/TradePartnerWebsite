@@ -119,6 +119,18 @@ function DrawCard({ draw, userId, symbol }: { draw: any; userId: number; symbol:
           Your winning ticket: #{draw.myTicket}
         </div>
       )}
+
+      {draw.status === "completed" && draw.rngProof && (
+        <a
+          href={`/api/draws/${draw.id}/verify`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-primary transition-colors w-fit"
+        >
+          <CheckCircle className="w-3 h-3" />
+          Verify fairness
+        </a>
+      )}
     </div>
   );
 }

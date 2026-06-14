@@ -109,6 +109,9 @@ async function creditReferralBonus(refereeId: number): Promise<void> {
     body: `${referee.currencySymbol ?? ""}${bonus.toFixed(2)} added to your balance — your friend made their first deposit.`,
     pushUrl: "/wallet",
   }).catch(() => {});
+
+  // Broadcast so the referrer's wallet page refreshes in real-time if open
+  broadcast({ type: "referral_bonus", userId: ref.referrerId, amount: bonus.toFixed(2) });
 }
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
@@ -155,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  app.post("/api/auth/register", authRateLimit, async (req: Request, res: Response) => {
+  app.post("/api/auth/register", authRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const data = insertUserSchema.parse(req.body);
       const { password, email, phone, countryId } = data;
@@ -206,9 +209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post("/api/auth/login", authRateLimit, async (req: Request, res: Response) => {
+  app.post("/api/auth/login", authRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { identifier, password } = loginSchema.parse(req.body);
       const [user] = await db.select().from(users).where(
@@ -228,38 +231,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
-  app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/auth/me", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
       if (!user) { res.status(404).json({ message: "User not found" }); return; }
       res.json(sanitizeUser(user));
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   // ── Countries ─────────────────────────────────────────────────────────────
 
-  app.get("/api/countries", async (_req: Request, res: Response) => {
+  app.get("/api/countries", ar(async (_req: Request, res: Response) => {
     try {
       const list = await db.select().from(countries).where(eq(countries.isActive, true));
       res.json(list);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.get("/api/countries/:id", async (req: Request, res: Response) => {
+  app.get("/api/countries/:id", ar(async (req: Request, res: Response) => {
     try {
       const id = parseIntParam(req.params.id, res); if (id === null) return;
       const [country] = await db.select().from(countries).where(eq(countries.id, id));
       if (!country) { res.status(404).json({ message: "Country not found" }); return; }
       res.json(country);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   // ── Draws ─────────────────────────────────────────────────────────────────
 
   // Today's draw for a country
-  app.get("/api/draws/today/:countryId", async (req: Request, res: Response) => {
+  app.get("/api/draws/today/:countryId", ar(async (req: Request, res: Response) => {
     try {
       const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
       const draw = await getOrCreateDraw(countryId, todayDateString());
@@ -268,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // List past draws for a country
   app.get("/api/draws/history/:countryId", ar(async (req: Request, res: Response) => {
@@ -353,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Paid entry
-  app.post("/api/draws/:drawId/enter", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/draws/:drawId/enter", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
       const result = await addPaidEntry(uid(req), drawId);
@@ -365,10 +368,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // Free entry (AMOE) — for users without account or without funds
-  app.post("/api/draws/:drawId/enter-free", async (req: Request, res: Response) => {
+  app.post("/api/draws/:drawId/enter-free", ar(async (req: Request, res: Response) => {
     try {
       const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
       const body = freeEntrySchema.parse({ ...req.body, drawId });
@@ -394,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // Check my entry for today's draw
   app.get("/api/draws/:drawId/my-entry", requireAuth, ar(async (req: Request, res: Response) => {
@@ -406,24 +409,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Wallet ────────────────────────────────────────────────────────────────
 
-  app.get("/api/wallet", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/wallet", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, uid(req)));
       res.json(wallet ?? null);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.get("/api/wallet/transactions", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/wallet/transactions", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const limit = parseInt((req.query.limit as string) || "20");
       const offset = parseInt((req.query.offset as string) || "0");
       const txs = await getTransactionHistory(uid(req), limit, offset);
       res.json(txs);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   // Deposit via payment provider (Stripe / mock in dev)
-  app.post("/api/wallet/deposit", requireAuth, paymentRateLimit, async (req: Request, res: Response) => {
+  app.post("/api/wallet/deposit", requireAuth, paymentRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { amount, paymentMethodToken, currency } = z.object({
         amount: z.number().positive().max(10000),
@@ -482,10 +485,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // Withdrawal request
-  app.post("/api/wallet/withdraw", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/wallet/withdraw", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
       const [user] = await db.select().from(users).where(eq(users.id, uid(req)));
@@ -519,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── User Profile & Settings ───────────────────────────────────────────────
 
@@ -602,7 +605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sub);
   }));
 
-  app.post("/api/subscription", requireAuth, paymentRateLimit, async (req: Request, res: Response) => {
+  app.post("/api/subscription", requireAuth, paymentRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { type, paymentMethodToken } = z.object({
         type: z.enum(["weekly", "monthly"]),
@@ -617,9 +620,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
-  app.delete("/api/subscription/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/subscription/:id", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const id = parseIntParam(req.params.id, res); if (id === null) return;
       const result = await cancelSubscription(uid(req), id);
@@ -627,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // Subscription history
   app.get("/api/subscription/history", requireAuth, ar(async (req, res) => {
@@ -670,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Apply referral code during / after registration
-  app.post("/api/referrals/apply", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/referrals/apply", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { code } = z.object({ code: z.string().min(4) }).parse(req.body);
       // Check if user already has a referrer
@@ -707,11 +710,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Petition ──────────────────────────────────────────────────────────────
 
-  app.post("/api/petition/sign", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/petition/sign", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { firstName, countryCode } = z.object({
         firstName: z.string().min(1),
@@ -730,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: err.message });
       }
     }
-  });
+  }));
 
   app.delete("/api/petition/sign", requireAuth, ar(async (req: Request, res: Response) => {
     await db.update(petitionSignatures)
@@ -741,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin Auth ─────────────────────────────────────────────────────────────
 
-  app.post("/api/admin/login", authRateLimit, async (req: Request, res: Response) => {
+  app.post("/api/admin/login", authRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { email, password } = z.object({ email: z.string(), password: z.string() }).parse(req.body);
       const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
@@ -756,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Admin: Countries ──────────────────────────────────────────────────────
 
@@ -765,7 +768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(list);
   }));
 
-  app.post("/api/admin/countries", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/countries", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const schema = z.object({
         code: z.string().length(2).toUpperCase(),
@@ -792,9 +795,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch("/api/admin/countries/:id", requireAdmin, async (req: Request, res: Response) => {
+  app.patch("/api/admin/countries/:id", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const schema = z.object({
         name: z.string().min(1).optional(),
@@ -821,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Admin: Draws ──────────────────────────────────────────────────────────
 
@@ -830,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(list);
   }));
 
-  app.post("/api/admin/draws", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/draws", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const { countryId, drawDate } = z.object({
         countryId: z.number(),
@@ -848,9 +851,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post("/api/admin/draws/:id/conduct", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/draws/:id/conduct", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const drawParamId = parseIntParam(req.params.id, res); if (drawParamId === null) return;
       const result = await conductDraw(drawParamId);
@@ -870,17 +873,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Admin: Users ──────────────────────────────────────────────────────────
 
   app.get("/api/admin/users", requireAdmin, ar(async (req, res) => {
-    const limit = parseInt((req.query.limit as string) || "50");
+    const limit = Math.min(parseInt((req.query.limit as string) || "50"), 200);
     const offset = parseInt((req.query.offset as string) || "0");
-    const list = await db.select({
-      id: users.id, email: users.email, phone: users.phone, status: users.status,
-      kycLevel: users.kycLevel, createdAt: users.createdAt, countryId: users.countryId,
-    }).from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+    const search = (req.query.search as string)?.trim() ?? "";
+    const kycFilter = req.query.kyc as string | undefined;
+    const statusFilter = req.query.status as string | undefined;
+
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (kycFilter) conditions.push(eq(users.kycLevel, kycFilter as any));
+    if (statusFilter) conditions.push(eq(users.status, statusFilter as any));
+
+    const base = db
+      .select({
+        id: users.id,
+        email: users.email,
+        phone: users.phone,
+        status: users.status,
+        kycLevel: users.kycLevel,
+        createdAt: users.createdAt,
+        countryId: users.countryId,
+        referralCode: users.referralCode,
+        balance: wallets.balance,
+        currency: wallets.currency,
+        firstName: userProfiles.firstName,
+        lastName: userProfiles.lastName,
+      })
+      .from(users)
+      .leftJoin(wallets, eq(wallets.userId, users.id))
+      .leftJoin(userProfiles, eq(userProfiles.userId, users.id));
+
+    const filtered = conditions.length
+      ? base.where(and(...conditions))
+      : base;
+
+    let list = await filtered.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+
+    // Client-side search filter on email / phone / name (avoids complex SQL LIKE across providers)
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(u =>
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.toLowerCase().includes(q) ||
+        u.firstName?.toLowerCase().includes(q) ||
+        u.lastName?.toLowerCase().includes(q)
+      );
+    }
+
     res.json(list);
   }));
 
@@ -990,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Public platform stats for landing page
-  app.get("/api/stats", async (_req: Request, res: Response) => {
+  app.get("/api/stats", ar(async (_req: Request, res: Response) => {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
     const [drawCount] = await db.select({ count: sql<number>`count(*)` }).from(draws).where(eq(draws.status, "completed"));
     const [totalPrizes] = await db.select({ total: sql<number>`coalesce(sum(amount),0)` })
@@ -1000,7 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       completedDraws: drawCount.count,
       totalPrizesPaid: totalPrizes.total,
     });
-  });
+  }));
 
   app.get("/api/admin/stats", requireAdmin, ar(async (_req, res) => {
     const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
@@ -1067,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Store push subscription
-  app.post("/api/push/subscribe", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/push/subscribe", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { endpoint, keys } = z.object({
         endpoint: z.string().url(),
@@ -1082,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── KYC initiation ───────────────────────────────────────────────────────
 
@@ -1245,7 +1288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Seed initial data (dev only) ──────────────────────────────────────────
 
-  app.post("/api/dev/seed", async (_req: Request, res: Response) => {
+  app.post("/api/dev/seed", ar(async (_req: Request, res: Response) => {
     if (process.env.NODE_ENV === "production") { res.status(403).json({ message: "Not in production" }); return; }
     try {
       await seedInitialData();
@@ -1253,22 +1296,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Gamification ──────────────────────────────────────────────────────────
 
   // GET /api/gamification/me — current user's level, XP and badges
-  app.get("/api/gamification/me", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/gamification/me", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const data = await getUserLevel(uid(req), db);
       res.json(data);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // POST /api/gamification/award — admin-only: manually award XP to a user
-  app.post("/api/gamification/award", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/gamification/award", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const { userId, reason } = z.object({
         userId: z.number().int().positive(),
@@ -1290,12 +1333,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Partners ──────────────────────────────────────────────────────────────
 
   // GET /api/partners — list active partners, optionally filtered by ?countryId
-  app.get("/api/partners", async (req: Request, res: Response) => {
+  app.get("/api/partners", ar(async (req: Request, res: Response) => {
     try {
       const countryId = req.query.countryId !== undefined
         ? parseInt(req.query.countryId as string)
@@ -1322,10 +1365,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // GET /api/partners/:id — single partner by id
-  app.get("/api/partners/:id", async (req: Request, res: Response) => {
+  app.get("/api/partners/:id", ar(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
@@ -1337,10 +1380,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // POST /api/admin/partners — create a partner
-  app.post("/api/admin/partners", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/partners", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const schema = z.object({
         name: z.string().min(1),
@@ -1375,10 +1418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // PATCH /api/admin/partners/:id — update partner fields
-  app.patch("/api/admin/partners/:id", requireAdmin, async (req: Request, res: Response) => {
+  app.patch("/api/admin/partners/:id", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
@@ -1418,10 +1461,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // DELETE /api/admin/partners/:id — soft-delete (set isActive=false)
-  app.delete("/api/admin/partners/:id", requireAdmin, async (req: Request, res: Response) => {
+  app.delete("/api/admin/partners/:id", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
@@ -1445,7 +1488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
-  });
+  }));
 
   // ── HTTP + WebSocket server ───────────────────────────────────────────────
 

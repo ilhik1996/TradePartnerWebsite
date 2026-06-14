@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, ArrowDownLeft, ArrowUpRight, Trophy,
@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import { api } from "@/lib/api";
 
 const TX_ICONS: Record<string, any> = {
@@ -48,6 +49,19 @@ export default function WalletPage() {
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
 
   const countryId = user?.countryId ?? 1;
+
+  const reloadWallet = useCallback(async () => {
+    const [w, txs] = await Promise.all([api.wallet.get(), api.wallet.transactions(30)]);
+    setWallet(w);
+    setTransactions(txs);
+  }, []);
+
+  // Refresh balance when a draw is completed (prize credited) or referral bonus arrives
+  useRealtime(useCallback((msg) => {
+    if (msg.type === "draw_completed" || msg.type === "referral_bonus") {
+      reloadWallet().catch(() => {});
+    }
+  }, [reloadWallet]));
 
   useEffect(() => {
     Promise.all([
