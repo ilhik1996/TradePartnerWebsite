@@ -170,7 +170,7 @@ export async function processDeposit(
   // Credit wallet atomically
   try {
     await db.transaction(async (tx) => {
-      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
       if (!wallet) throw new Error("Wallet not found");
 
       const newBalance = parseFloat(wallet.balance as string) + amountDecimal;
