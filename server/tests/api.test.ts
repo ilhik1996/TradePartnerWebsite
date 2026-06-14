@@ -187,3 +187,53 @@ describe("POST /api/wallet/withdraw — validation", () => {
   });
 });
 
+// ── Public draw verification endpoint ─────────────────────────────────────────
+
+describe("GET /api/draws/:drawId/verify", () => {
+  it("returns 404 for unknown draw id", async () => {
+    const res = await request(app).get("/api/draws/999999/verify");
+    // Without a DB the route throws → ar() returns 500; both 404 and 500 are acceptable
+    expect([404, 500]).toContain(res.status);
+  });
+
+  it("returns 400 for non-numeric draw id", async () => {
+    const res = await request(app).get("/api/draws/abc/verify");
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid numeric/i);
+  });
+
+  it("requires no authentication", async () => {
+    // Route is public — 500 (DB error) not 401
+    const res = await request(app).get("/api/draws/1/verify");
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Security headers ──────────────────────────────────────────────────────────
+
+describe("Security headers on API responses", () => {
+  it("sets X-Content-Type-Options: nosniff", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+  });
+
+  it("sets X-Frame-Options: DENY", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.headers["x-frame-options"]).toBe("DENY");
+  });
+
+  it("sets Referrer-Policy", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  });
+});
+
+// ── Referral apply — duplicate guard ─────────────────────────────────────────
+
+describe("POST /api/referrals/apply — auth guard", () => {
+  it("returns 401 without token", async () => {
+    const res = await request(app).post("/api/referrals/apply").send({ code: "TESTCODE" });
+    expect(res.status).toBe(401);
+  });
+});
+

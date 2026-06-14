@@ -24,7 +24,7 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, count } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -40,6 +40,75 @@ function parseIntParam(value: string, res: Response): number | null {
 function ar(fn: (req: Request, res: Response) => Promise<any>) {
   return (req: Request, res: Response) =>
     fn(req, res).catch((err: any) => { if (!res.headersSent) res.status(500).json({ message: err.message }); });
+}
+
+// Credit the referrer's wallet on the referee's first successful deposit.
+// Safe to call multiple times — the referral row's status guards against double-payment.
+async function creditReferralBonus(refereeId: number): Promise<void> {
+  const [referee] = await db
+    .select({ referredBy: users.referredBy, currency: countries.currency, currencySymbol: countries.currencySymbol })
+    .from(users)
+    .leftJoin(countries, eq(countries.id, users.countryId))
+    .where(eq(users.id, refereeId));
+  if (!referee?.referredBy) return;
+
+  // Find the pending referral record for this referee
+  const [ref] = await db
+    .select()
+    .from(referrals)
+    .where(and(eq(referrals.refereeId, refereeId), eq(referrals.status, "pending")));
+  if (!ref) return;
+
+  // Check this is the referee's FIRST completed deposit
+  const [{ cnt }] = await db
+    .select({ cnt: count() })
+    .from(transactions)
+    .where(and(eq(transactions.userId, refereeId), eq(transactions.type, "deposit"), eq(transactions.status, "completed")));
+  if (Number(cnt) !== 1) return;   // not the first deposit
+
+  const bonus = parseFloat(ref.bonusAmount as string);
+
+  await db.transaction(async (tx) => {
+    // Mark referral as paid first (idempotency guard)
+    const [claimed] = await tx
+      .update(referrals)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(and(eq(referrals.id, ref.id), eq(referrals.status, "pending")))
+      .returning({ id: referrals.id });
+    if (!claimed) return;   // already processed by a concurrent call
+
+    // Credit referrer wallet
+    const [wallet] = await tx
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, ref.referrerId))
+      .for("update");
+    if (!wallet) return;
+
+    const newBalance = parseFloat(wallet.balance as string) + bonus;
+    await tx.update(wallets)
+      .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
+      .where(eq(wallets.userId, ref.referrerId));
+
+    await tx.insert(transactions).values({
+      walletId: wallet.id,
+      userId: ref.referrerId,
+      type: "referral_bonus",
+      amount: bonus.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description: `Referral bonus for inviting user #${refereeId}`,
+      status: "completed",
+      metadata: { referralId: ref.id, refereeId },
+    });
+  });
+
+  insertNotification({
+    userId: ref.referrerId,
+    type: "referral_bonus",
+    title: "Referral bonus credited!",
+    body: `${referee.currencySymbol ?? ""}${bonus.toFixed(2)} added to your balance — your friend made their first deposit.`,
+    pushUrl: "/wallet",
+  }).catch(() => {});
 }
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────
@@ -202,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // List past draws for a country
-  app.get("/api/draws/history/:countryId", async (req: Request, res: Response) => {
+  app.get("/api/draws/history/:countryId", ar(async (req: Request, res: Response) => {
     const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
     const list = await db.select().from(draws)
       .where(and(eq(draws.countryId, countryId), eq(draws.status, "completed")))
@@ -230,7 +299,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json(list);
-  });
+  }));
+
+  // Public provably-fair RNG verification — no auth required
+  // Anyone can re-compute the winner from the published proof without knowing the server secret.
+  app.get("/api/draws/:drawId/verify", ar(async (req: Request, res: Response) => {
+    const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
+    const [draw] = await db
+      .select({
+        id: draws.id,
+        drawDate: draws.drawDate,
+        status: draws.status,
+        totalEntries: draws.totalEntries,
+        totalPool: draws.totalPool,
+        prizeAmount: draws.prizeAmount,
+        winnerTicketNumber: draws.winnerTicketNumber,
+        rngSeed: draws.rngSeed,
+        rngProof: draws.rngProof,
+        completedAt: draws.completedAt,
+        countryId: draws.countryId,
+      })
+      .from(draws)
+      .where(eq(draws.id, drawId));
+
+    if (!draw) { res.status(404).json({ message: "Draw not found" }); return; }
+    if (draw.status !== "completed") {
+      res.json({ drawId, status: draw.status, message: "Draw not yet completed — no proof available" });
+      return;
+    }
+
+    // Explain how to independently verify:
+    // 1. Compute SHA-256( "viona:draw:{id}:entries:{total}:secret:{DRAW_SECRET}" ) → seedHash
+    // 2. Verify seedHash === rngSeed
+    // 3. winnerTicket = (parseInt(seedHash.slice(0,8), 16) % totalEntries) + 1
+    // 4. Compute SHA-256( seedHash + drawId ) → should equal rngProof
+    res.json({
+      drawId: draw.id,
+      drawDate: draw.drawDate,
+      totalEntries: draw.totalEntries,
+      totalPool: draw.totalPool,
+      prizeAmount: draw.prizeAmount,
+      winnerTicket: draw.winnerTicketNumber,
+      rngSeed: draw.rngSeed,
+      rngProof: draw.rngProof,
+      completedAt: draw.completedAt,
+      verificationInstructions: {
+        step1: "Compute SHA-256('viona:draw:{id}:entries:{totalEntries}:secret:{DRAW_SECRET}') — the result must equal rngSeed",
+        step2: "Compute SHA-256(rngSeed + drawId) — the result must equal rngProof (verifiable without the server secret)",
+        step3: "winnerTicket = (parseInt(rngSeed.slice(0,8), 16) % totalEntries) + 1",
+        note: "rngProof can be verified publicly. rngSeed verification requires DRAW_SECRET which is published after each draw period ends.",
+      },
+    });
+  }));
 
   // Paid entry
   app.post("/api/draws/:drawId/enter", requireAuth, async (req: Request, res: Response) => {
@@ -277,12 +397,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check my entry for today's draw
-  app.get("/api/draws/:drawId/my-entry", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/draws/:drawId/my-entry", requireAuth, ar(async (req: Request, res: Response) => {
     const drawId = parseIntParam(req.params.drawId, res); if (drawId === null) return;
     const [entry] = await db.select().from(drawEntries)
       .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, uid(req))));
     res.json(entry ?? null);
-  });
+  }));
 
   // ── Wallet ────────────────────────────────────────────────────────────────
 
@@ -353,15 +473,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Award XP non-blocking
-      awardXp(uid(req), 'deposit', db).then(() => checkAndAwardBadges(uid(req), db)).catch(() => {});
+      // Non-blocking post-deposit side-effects
+      const depositUserId = uid(req);
+      awardXp(depositUserId, 'deposit', db).then(() => checkAndAwardBadges(depositUserId, db)).catch(() => {});
+      creditReferralBonus(depositUserId).catch(() => {});
+
       res.json({ ok: true, transactionId: result.transactionId });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
   });
 
-  // Mock withdrawal request
+  // Withdrawal request
   app.post("/api/wallet/withdraw", requireAuth, async (req: Request, res: Response) => {
     try {
       const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
@@ -609,12 +732,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/petition/sign", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/petition/sign", requireAuth, ar(async (req: Request, res: Response) => {
     await db.update(petitionSignatures)
       .set({ revokedAt: new Date() })
       .where(eq(petitionSignatures.userId, uid(req)));
     res.json({ ok: true });
-  });
+  }));
 
   // ── Admin Auth ─────────────────────────────────────────────────────────────
 
@@ -702,10 +825,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin: Draws ──────────────────────────────────────────────────────────
 
-  app.get("/api/admin/draws", requireAdmin, async (req: Request, res: Response) => {
+  app.get("/api/admin/draws", requireAdmin, ar(async (req: Request, res: Response) => {
     const list = await db.select().from(draws).orderBy(desc(draws.createdAt)).limit(50);
     res.json(list);
-  });
+  }));
 
   app.post("/api/admin/draws", requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -801,7 +924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(pending);
   }));
 
-  app.post("/api/admin/withdrawals/:id/approve", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/withdrawals/:id/approve", requireAdmin, ar(async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
     const [tx] = await db.select().from(transactions)
       .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
@@ -822,9 +945,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       pushUrl: "/wallet",
     }).catch(() => {});
     res.json({ ok: true });
-  });
+  }));
 
-  app.post("/api/admin/withdrawals/:id/reject", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/withdrawals/:id/reject", requireAdmin, ar(async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
     const { reason } = z.object({ reason: z.string().optional() }).parse(req.body);
     const [tx] = await db.select().from(transactions)
@@ -864,7 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       pushUrl: "/wallet",
     }).catch(() => {});
     res.json({ ok: true });
-  });
+  }));
 
   // Public platform stats for landing page
   app.get("/api/stats", async (_req: Request, res: Response) => {

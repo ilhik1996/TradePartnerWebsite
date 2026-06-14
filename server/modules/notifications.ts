@@ -5,7 +5,8 @@ import { sendPushToUser } from "./push";
 type NotificationType =
   | "winner" | "draw_result" | "kyc_approved" | "kyc_rejected"
   | "payment_failed" | "subscription_created" | "subscription_renewal_failed"
-  | "balance_low" | "withdrawal_processed" | "withdrawal_rejected";
+  | "balance_low" | "withdrawal_processed" | "withdrawal_rejected"
+  | "referral_bonus";
 
 export async function insertNotification(opts: {
   userId: number;
