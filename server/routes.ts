@@ -658,8 +658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/profile", requireAuth, ar(async (req, res) => {
     const { firstName, lastName } = z.object({
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
+      firstName: z.string().max(100).optional(),
+      lastName: z.string().max(100).optional(),
     }).parse(req.body);
     await db.update(userProfiles).set({ firstName, lastName }).where(eq(userProfiles.userId, uid(req)));
     res.json({ ok: true });
@@ -702,9 +702,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/settings/responsible-gaming", requireAuth, ar(async (req, res) => {
     const data = z.object({
-      dailyLimitAmount: z.number().nullable().optional(),
-      weeklyLimitAmount: z.number().nullable().optional(),
-      monthlyLimitAmount: z.number().nullable().optional(),
+      dailyLimitAmount: z.number().positive().nullable().optional(),
+      weeklyLimitAmount: z.number().positive().nullable().optional(),
+      monthlyLimitAmount: z.number().positive().nullable().optional(),
     }).parse(req.body);
     await db.update(responsibleGaming).set({
       dailyLimitAmount: data.dailyLimitAmount?.toFixed(2) ?? null,
@@ -864,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/petition/sign", requireAuth, ar(async (req: Request, res: Response) => {
     try {
       const { firstName, countryCode } = z.object({
-        firstName: z.string().min(1),
+        firstName: z.string().min(1).max(100),
         countryCode: z.string().length(2),
       }).parse(req.body);
       await db.insert(petitionSignatures).values({
