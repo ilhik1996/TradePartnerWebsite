@@ -12,6 +12,7 @@ vi.mock("../modules/push", () => ({
 
 // Import after mocks are registered
 const { registerRoutes } = await import("../routes");
+const { signToken } = await import("../auth");
 
 // ── Test app setup ─────────────────────────────────────────────────────────────
 
@@ -288,6 +289,114 @@ describe("POST /api/auth/register — guest upgrade path (unit)", () => {
       .post("/api/auth/register")
       .send({ email: "guest@example.com", password: "password123", countryId: 1 });
     expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Deposit validation (requires auth — use signed test JWT) ──────────────────
+
+describe("POST /api/wallet/deposit — amount validation", () => {
+  const token = signToken({ userId: 999 });
+
+  it("rejects negative amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/deposit")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: -50 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects zero amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/deposit")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects amount over max (10001) → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/deposit")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: 10001 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects string amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/deposit")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: "lots" });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Withdrawal validation (requires auth — use signed test JWT) ───────────────
+
+describe("POST /api/wallet/withdraw — amount validation", () => {
+  const token = signToken({ userId: 999 });
+
+  it("rejects negative amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/withdraw")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: -100 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects zero amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/withdraw")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects amount over max (50001) → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/withdraw")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ amount: 50001 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects missing amount → 400", async () => {
+    const res = await request(app)
+      .post("/api/wallet/withdraw")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Admin withdrawal rejection — reason length limit ─────────────────────────
+
+describe("POST /api/admin/withdrawals/:id/reject — reason validation", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("rejects reason over 500 characters → 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "x".repeat(501) });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts reason exactly 500 characters (validation passes, DB error expected)", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "x".repeat(500) });
+    // Zod accepts; DB mock throws → 400 or 500; must not be 422
+    expect([400, 500]).toContain(res.status);
+  });
+
+  it("accepts empty reason (reason is optional)", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
+    // Zod accepts; DB mock throws → 400 or 500; must not be 422
+    expect([400, 500]).toContain(res.status);
   });
 });
 

@@ -4,8 +4,19 @@ import { db } from "./db";
 import { users, adminUsers } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "viona-dev-secret-change-in-production";
+const WEAK_JWT_SECRET = "viona-dev-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || WEAK_JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
+
+// Fail fast in production if JWT secret is missing or insecure
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === WEAK_JWT_SECRET) {
+    console.error("[FATAL] JWT_SECRET is missing or uses the insecure dev default. Set a strong random secret before deploying.");
+    process.exit(1);
+  }
+} else if (!process.env.JWT_SECRET) {
+  console.warn("[Security] JWT_SECRET not set — using dev fallback. Never deploy this to production.");
+}
 
 export function signToken(payload: { userId: number; role?: string }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });

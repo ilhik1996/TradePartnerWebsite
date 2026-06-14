@@ -4,6 +4,13 @@ import { eq, and, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { insertNotification } from "./notifications";
 
+if (process.env.NODE_ENV === "production" && !process.env.DRAW_SECRET) {
+  console.error("[FATAL] DRAW_SECRET is not set. The provably fair RNG will use an insecure default. Set this env var before deploying.");
+  process.exit(1);
+} else if (process.env.NODE_ENV !== "production" && !process.env.DRAW_SECRET) {
+  console.warn("[Security] DRAW_SECRET not set — using dev fallback. Never deploy this to production.");
+}
+
 export async function getOrCreateDraw(countryId: number, dateStr: string) {
   // Use ON CONFLICT DO NOTHING to handle concurrent creation gracefully
   await db.insert(draws).values({

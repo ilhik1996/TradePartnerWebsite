@@ -36,10 +36,16 @@ function parseIntParam(value: string, res: Response): number | null {
   return n;
 }
 
-// Wrap async route handlers so unhandled rejections return 500 instead of crashing
+// Wrap async route handlers so unhandled rejections return 500 instead of crashing.
+// ZodError (validation failure) maps to 400; all other errors map to 500.
 function ar(fn: (req: Request, res: Response) => Promise<any>) {
   return (req: Request, res: Response) =>
-    fn(req, res).catch((err: any) => { if (!res.headersSent) res.status(500).json({ message: err.message }); });
+    fn(req, res).catch((err: any) => {
+      if (!res.headersSent) {
+        const isZod = err?.name === "ZodError";
+        res.status(isZod ? 400 : 500).json({ message: isZod ? (err.errors?.[0]?.message ?? err.message) : err.message });
+      }
+    });
 }
 
 // Credit the referrer's wallet on the referee's first successful deposit.
