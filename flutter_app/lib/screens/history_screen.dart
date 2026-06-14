@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/viona_theme.dart';
 import '../services/api_service.dart';
 
@@ -261,6 +262,23 @@ class _DrawCardState extends State<_DrawCard> {
                       style: TextStyle(
                         fontSize: 11,
                         color: proximity > 80 ? VionaColors.gold : VionaColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                  if (draw['status'] == 'completed' && draw['rngProof'] != null) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () async {
+                        final drawId = draw['id'];
+                        final uri = Uri.parse('https://viona.app/api/draws/$drawId/verify');
+                        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                      child: const Row(
+                        children: [
+                          Icon(Icons.verified_outlined, size: 14, color: VionaColors.teal),
+                          SizedBox(width: 4),
+                          Text('Verify fairness', style: TextStyle(fontSize: 12, color: VionaColors.teal, decoration: TextDecoration.underline, decorationColor: VionaColors.teal)),
+                        ],
                       ),
                     ),
                   ],
