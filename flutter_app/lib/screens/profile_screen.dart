@@ -513,11 +513,66 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final excluded = _rg?['selfExcludedUntil'];
     final isExcluded = excluded != null && DateTime.tryParse(excluded)?.isAfter(DateTime.now()) == true;
 
-    String? _fmtLimit(String key) {
+    double? _getDouble(String key) {
       final v = _rg?[key];
       if (v == null) return null;
-      final d = double.tryParse(v.toString());
-      return d != null ? d.toStringAsFixed(2) : null;
+      return v is num ? v.toDouble() : double.tryParse(v.toString());
+    }
+
+    Widget _limitCard({
+      required IconData icon,
+      required String title,
+      required String limitKey,
+      required String spentKey,
+      required String dialogKind,
+    }) {
+      final limit = _getDouble(limitKey);
+      final spent = _getDouble(spentKey) ?? 0.0;
+      final pct = (limit != null && limit > 0) ? (spent / limit).clamp(0.0, 1.0) : 0.0;
+      final color = pct >= 0.9 ? VionaColors.danger : pct >= 0.7 ? VionaColors.gold : VionaColors.purple;
+
+      return InkWell(
+        onTap: () => _showLimitDialog(dialogKind, dialogKind),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: VionaColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: VionaColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 16, color: VionaColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                  Text(limit != null ? limit.toStringAsFixed(2) : 'No limit', style: const TextStyle(fontSize: 12, color: VionaColors.textSecondary)),
+                ],
+              ),
+              if (limit != null) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    backgroundColor: VionaColors.background,
+                    color: color,
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${spent.toStringAsFixed(2)} / ${limit.toStringAsFixed(2)} (${(pct * 100).toStringAsFixed(0)}%)',
+                  style: TextStyle(fontSize: 11, color: color),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
     }
 
     return SingleChildScrollView(
@@ -528,32 +583,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Text('Spending limits', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
 
-          _SafetyCard(
-            icon: Icons.today,
-            title: 'Daily spending limit',
-            subtitle: _fmtLimit('dailyLimitAmount') != null
-              ? 'Current limit: ${_fmtLimit('dailyLimitAmount')}'
-              : 'No limit set',
-            onTap: () => _showLimitDialog('daily', 'daily'),
-          ),
+          _limitCard(icon: Icons.today, title: 'Daily spending limit',
+            limitKey: 'dailyLimitAmount', spentKey: 'spentToday', dialogKind: 'daily'),
           const SizedBox(height: 8),
-          _SafetyCard(
-            icon: Icons.calendar_view_week,
-            title: 'Weekly spending limit',
-            subtitle: _fmtLimit('weeklyLimitAmount') != null
-              ? 'Current limit: ${_fmtLimit('weeklyLimitAmount')}'
-              : 'No limit set',
-            onTap: () => _showLimitDialog('weekly', 'weekly'),
-          ),
+          _limitCard(icon: Icons.calendar_view_week, title: 'Weekly spending limit',
+            limitKey: 'weeklyLimitAmount', spentKey: 'spentThisWeek', dialogKind: 'weekly'),
           const SizedBox(height: 8),
-          _SafetyCard(
-            icon: Icons.calendar_month,
-            title: 'Monthly spending limit',
-            subtitle: _fmtLimit('monthlyLimitAmount') != null
-              ? 'Current limit: ${_fmtLimit('monthlyLimitAmount')}'
-              : 'No limit set',
-            onTap: () => _showLimitDialog('monthly', 'monthly'),
-          ),
+          _limitCard(icon: Icons.calendar_month, title: 'Monthly spending limit',
+            limitKey: 'monthlyLimitAmount', spentKey: 'spentThisMonth', dialogKind: 'monthly'),
           const SizedBox(height: 24),
 
           if (isExcluded)

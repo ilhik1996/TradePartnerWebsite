@@ -455,23 +455,42 @@ export default function Cabinet() {
                 Set daily, weekly, or monthly spending limits. Once set, they take effect immediately.
               </p>
               {[
-                { period: "daily",   label: "Daily",   value: limitDaily,   set: setLimitDaily },
-                { period: "weekly",  label: "Weekly",  value: limitWeekly,  set: setLimitWeekly },
-                { period: "monthly", label: "Monthly", value: limitMonthly, set: setLimitMonthly },
-              ].map(({ period, label, value, set }) => (
-                <div key={period} className="flex items-center gap-3">
-                  <span className="text-sm w-16 shrink-0">{label}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="flex-1 h-10 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="No limit"
-                    value={value}
-                    onChange={e => set(e.target.value)}
-                  />
-                </div>
-              ))}
+                { period: "daily",   label: "Daily",   value: limitDaily,   set: setLimitDaily,   spent: rgSettings?.spentToday ?? 0 },
+                { period: "weekly",  label: "Weekly",  value: limitWeekly,  set: setLimitWeekly,  spent: rgSettings?.spentThisWeek ?? 0 },
+                { period: "monthly", label: "Monthly", value: limitMonthly, set: setLimitMonthly, spent: rgSettings?.spentThisMonth ?? 0 },
+              ].map(({ period, label, value, set, spent }) => {
+                const limit = parseFloat(value) || 0;
+                const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+                return (
+                  <div key={period} className="space-y-1.5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm w-16 shrink-0">{label}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="flex-1 h-10 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        placeholder="No limit"
+                        value={value}
+                        onChange={e => set(e.target.value)}
+                      />
+                    </div>
+                    {limit > 0 && (
+                      <div className="ml-[76px]">
+                        <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-primary"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {spent.toFixed(2)} / {limit.toFixed(2)} used ({pct.toFixed(0)}%)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               <Button
                 className="btn-viona-primary w-full h-10 text-sm"
                 onClick={handleSaveLimits}
