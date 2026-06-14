@@ -5,23 +5,23 @@ import { createHash } from "crypto";
 import { insertNotification } from "./notifications";
 
 export async function getOrCreateDraw(countryId: number, dateStr: string) {
-  const [existing] = await db
-    .select()
-    .from(draws)
-    .where(and(eq(draws.countryId, countryId), eq(draws.drawDate, dateStr)));
-
-  if (existing) return existing;
-
-  const [newDraw] = await db.insert(draws).values({
+  // Use ON CONFLICT DO NOTHING to handle concurrent creation gracefully
+  await db.insert(draws).values({
     countryId,
     drawDate: dateStr,
     status: "open",
     totalPool: "0",
     totalEntries: 0,
     openedAt: new Date(),
-  }).returning();
+  }).onConflictDoNothing();
 
-  return newDraw;
+  const [draw] = await db
+    .select()
+    .from(draws)
+    .where(and(eq(draws.countryId, countryId), eq(draws.drawDate, dateStr)));
+
+  if (!draw) throw new Error(`Draw not found for country ${countryId} on ${dateStr}`);
+  return draw;
 }
 
 export function todayDateString() {
