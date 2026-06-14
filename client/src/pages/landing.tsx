@@ -78,6 +78,15 @@ export default function Landing() {
           <p className="text-sm text-muted-foreground mt-4">
             Always a free entry available. 18+ only. Play responsibly.
           </p>
+
+          {livePool && parseFloat(livePool) > 0 && (
+            <div className="mt-6 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-5 py-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-semibold text-amber-400">
+                Today's live pool: ₴{parseFloat(livePool).toFixed(2)}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

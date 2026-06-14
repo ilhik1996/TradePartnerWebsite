@@ -336,7 +336,7 @@ export default function Cabinet() {
                   <span>Prize: {draw.prizeAmount ?? "—"}</span>
                   <span>{draw.totalEntries} entries</span>
                 </div>
-                {draw.winnerUserId === user?.id && (
+                {draw.isWinner === true && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
                     <Trophy className="w-3.5 h-3.5" /> You won this draw!
                   </div>

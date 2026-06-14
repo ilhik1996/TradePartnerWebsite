@@ -82,7 +82,7 @@ export default function WalletPage() {
     if (!amt || amt <= 0) return;
     setDepositing(true);
     try {
-      const result = await api.wallet.deposit(amt, country?.currency ?? "UAH");
+      await api.wallet.deposit(amt, country?.currency ?? "UAH");
       toast({ title: "Balance topped up!", description: `${country?.currencySymbol}${amt.toFixed(2)} added` });
       setWallet((w: any) => ({ ...w, balance: (parseFloat(w.balance) + amt).toFixed(2) }));
       setDepositAmt("");
