@@ -237,3 +237,57 @@ describe("POST /api/referrals/apply — auth guard", () => {
   });
 });
 
+// ── Free entry (AMOE) — input validation ─────────────────────────────────────
+
+describe("POST /api/draws/:drawId/enter-free — input validation", () => {
+  it("returns 400 for non-numeric drawId", async () => {
+    const res = await request(app)
+      .post("/api/draws/abc/enter-free")
+      .send({ firstName: "Jane", lastName: "Doe", email: "jane@example.com", countryId: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid numeric/i);
+  });
+
+  it("returns 400 when email is missing", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ firstName: "Jane", lastName: "Doe", countryId: 1 });
+    // Zod validation fires before DB — expect 400
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when firstName is missing", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ lastName: "Doe", email: "jane@example.com", countryId: 1 });
+    expect(res.status).toBe(400);
+  });
+
+  it("requires no authentication (public AMOE endpoint)", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ firstName: "Jane", lastName: "Doe", email: "jane@example.com", countryId: 1 });
+    // DB mock empty → error, but not 401 (route is public)
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Register — existing guest account upgrade ─────────────────────────────────
+
+describe("POST /api/auth/register — guest upgrade path (unit)", () => {
+  it("returns 400 without password (Zod validates before DB)", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "guest@example.com", countryId: 1 });
+    expect(res.status).toBe(400);
+  });
+
+  it("does NOT return 401 — registration is a public endpoint", async () => {
+    // A normal 400 (validation) or 500 (DB) is expected; never 401
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "guest@example.com", password: "password123", countryId: 1 });
+    expect(res.status).not.toBe(401);
+  });
+});
+

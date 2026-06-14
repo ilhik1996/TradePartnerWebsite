@@ -164,10 +164,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password, email, phone, countryId } = data;
       const autoParticipate = req.body.autoParticipate !== false;
 
-      // Check uniqueness
+      // Check uniqueness — but allow upgrading a guest account created by free-entry (AMOE)
       if (email) {
         const [ex] = await db.select().from(users).where(eq(users.email, email));
-        if (ex) { res.status(409).json({ message: "Email already registered" }); return; }
+        if (ex) {
+          if (!ex.isGuest) { res.status(409).json({ message: "Email already registered" }); return; }
+
+          // Upgrade guest → real account: set a real password, opt-in to autoParticipate, clear guest flag
+          const passwordHash = await bcrypt.hash(password, 12);
+          const country = countryId
+            ? await db.select().from(countries).where(eq(countries.id, countryId)).then(r => r[0])
+            : await db.select().from(countries).where(eq(countries.code, "UA")).then(r => r[0]);
+
+          const [upgraded] = await db.update(users).set({
+            passwordHash,
+            countryId: country?.id ?? ex.countryId,
+            autoParticipate,
+            isGuest: false,
+          }).where(and(eq(users.id, ex.id), eq(users.isGuest, true))).returning();
+
+          if (!upgraded) { res.status(409).json({ message: "Email already registered" }); return; }
+
+          // Ensure wallet & responsible gaming rows exist (may already exist from free-entry)
+          if (country) await getOrCreateWallet(upgraded.id, country.currency);
+          const [rgRow] = await db.select().from(responsibleGaming).where(eq(responsibleGaming.userId, upgraded.id));
+          if (!rgRow) await db.insert(responsibleGaming).values({ userId: upgraded.id, notificationFrequencyHours: 24 });
+
+          const token = signToken({ userId: upgraded.id });
+          if (upgraded.email) sendWelcomeEmail(upgraded.email).catch(() => {});
+          res.status(201).json({ token, user: sanitizeUser(upgraded) });
+          return;
+        }
       }
       if (phone) {
         const [ex] = await db.select().from(users).where(eq(users.phone, phone));
@@ -386,6 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           countryId: body.countryId,
           referralCode,
           autoParticipate: false,
+          isGuest: true,
         }).returning();
         await db.insert(userProfiles).values({ userId: user.id, firstName: body.firstName, lastName: body.lastName });
         await db.insert(responsibleGaming).values({ userId: user.id });

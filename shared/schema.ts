@@ -50,6 +50,7 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").notNull().unique(),
   referredBy: integer("referred_by"),                  // user id who referred
   autoParticipate: boolean("auto_participate").notNull().default(true),
+  isGuest: boolean("is_guest").notNull().default(false), // true = AMOE free-entry account, upgradeable on register
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
 });
