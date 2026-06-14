@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/viona_theme.dart';
 import '../services/api_service.dart';
 
@@ -697,8 +698,18 @@ class _KycAgeSheetState extends State<_KycAgeSheet> {
     if (_dobCtrl.text.isEmpty) return;
     setState(() => _submitting = true);
     try {
-      await _api.startKyc(level: 'age', dateOfBirth: _dobCtrl.text.trim());
-      if (mounted) widget.onDone();
+      final result = await _api.startKyc(level: 'age', dateOfBirth: _dobCtrl.text.trim());
+      if (mounted) {
+        final sdkToken = result?['sdkToken'] as String?;
+        if (sdkToken != null) {
+          // Sumsub configured: open WebSDK in browser
+          final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          Navigator.pop(context);
+        } else {
+          widget.onDone();
+        }
+      }
     } catch (_) {
       if (mounted) widget.onDone();
     }
@@ -757,15 +768,23 @@ class _KycFullSheet extends StatefulWidget {
 }
 
 class _KycFullSheetState extends State<_KycFullSheet> {
-  String? _docType = 'passport';
   bool _submitting = false;
   final _api = ApiService();
 
   Future<void> _submit() async {
     setState(() => _submitting = true);
     try {
-      await _api.startKyc(level: 'full', documentType: _docType);
-      if (mounted) widget.onDone();
+      final result = await _api.startKyc(level: 'full');
+      if (mounted) {
+        final sdkToken = result?['sdkToken'] as String?;
+        if (sdkToken != null) {
+          final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          Navigator.pop(context);
+        } else {
+          widget.onDone();
+        }
+      }
     } catch (_) {
       if (mounted) widget.onDone();
     }
@@ -786,93 +805,37 @@ class _KycFullSheetState extends State<_KycFullSheet> {
               IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
             ],
           ),
-          const Text('Upload a government-issued ID to unlock withdrawals.', style: TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
-          const SizedBox(height: 16),
-          const Text('Document type', style: TextStyle(fontSize: 12, color: VionaColors.textSecondary)),
-          const SizedBox(height: 6),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'passport', label: Text('Passport')),
-              ButtonSegment(value: 'id_card', label: Text('ID card')),
-              ButtonSegment(value: 'driving_licence', label: Text('Licence')),
-            ],
-            selected: {_docType!},
-            onSelectionChanged: (s) => setState(() => _docType = s.first),
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: VionaColors.purple.withOpacity(0.2),
-              selectedForegroundColor: VionaColors.purple,
+          const Text('Complete identity verification to unlock withdrawals.', style: TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: VionaColors.purple.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: VionaColors.purple.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.security_outlined, color: VionaColors.purple, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'You\'ll be taken to our secure verification partner (Sumsub) to upload your ID and complete a liveness check.',
+                    style: TextStyle(fontSize: 12, color: VionaColors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          // Simulated upload zones
-          Row(
-            children: [
-              Expanded(child: _UploadBox(label: 'Front side')),
-              const SizedBox(width: 8),
-              Expanded(child: _UploadBox(label: 'Back side')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _UploadBox(label: 'Selfie with document'),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: _submitting ? null : _submit,
             style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
             child: _submitting
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Submit documents'),
+              : const Text('Start verification'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _UploadBox extends StatefulWidget {
-  final String label;
-  const _UploadBox({required this.label});
-
-  @override
-  State<_UploadBox> createState() => _UploadBoxState();
-}
-
-class _UploadBoxState extends State<_UploadBox> {
-  bool _uploaded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => _uploaded = true),
-      child: Container(
-        height: 80,
-        decoration: BoxDecoration(
-          color: _uploaded ? VionaColors.teal.withOpacity(0.08) : VionaColors.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _uploaded ? VionaColors.teal.withOpacity(0.4) : VionaColors.border,
-            style: _uploaded ? BorderStyle.solid : BorderStyle.solid,
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _uploaded ? Icons.check_circle : Icons.upload_file,
-                color: _uploaded ? VionaColors.teal : VionaColors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _uploaded ? 'Uploaded' : widget.label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: _uploaded ? VionaColors.teal : VionaColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

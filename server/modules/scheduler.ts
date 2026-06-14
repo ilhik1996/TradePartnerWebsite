@@ -53,7 +53,8 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
         try {
           const result = await conductDraw(openDraw.id);
           if (result) {
-            broadcastFn({ type: "draw_completed", countryId: country.id, ...result });
+            // Broadcast only non-sensitive fields — winnerUserId stays server-side
+            broadcastFn({ type: "draw_completed", countryId: country.id, drawId: result.drawId, prizeAmount: result.prizeAmount });
             // Award win XP non-blocking
             if (result.winnerUserId) {
               awardXp(result.winnerUserId, 'win', db).then(() => checkAndAwardBadges(result.winnerUserId, db)).catch(() => {});

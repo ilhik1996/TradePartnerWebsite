@@ -111,7 +111,7 @@ async function creditReferralBonus(refereeId: number): Promise<void> {
   }).catch(() => {});
 
   // Broadcast so the referrer's wallet page refreshes in real-time if open
-  broadcast({ type: "referral_bonus", userId: ref.referrerId, amount: bonus.toFixed(2) });
+  broadcast({ type: "referral_bonus" });
 }
 
 // ─── WebSocket broadcaster ────────────────────────────────────────────────────

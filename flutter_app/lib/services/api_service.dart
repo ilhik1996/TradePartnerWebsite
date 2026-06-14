@@ -227,14 +227,12 @@ class ApiService {
   Future<Map<String, dynamic>> startKyc({
     required String level,
     String? dateOfBirth,
-    String? documentType,
   }) async {
     final r = await _dio.post('/kyc/start', data: {
       'level': level,
       if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
-      if (documentType != null) 'documentType': documentType,
     });
-    return r.data;
+    return r.data as Map<String, dynamic>;
   }
 
   // ── Responsible gaming ────────────────────────────────────────────────────
