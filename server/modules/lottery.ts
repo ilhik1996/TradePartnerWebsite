@@ -143,10 +143,10 @@ export async function addFreeEntry(userId: number, drawId: number) {
   if (!draw || draw.status !== "open") throw new Error("Draw is not open");
 
   const [existing] = await db
-    .select()
+    .select({ ticketNumber: drawEntries.ticketNumber })
     .from(drawEntries)
     .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, userId)));
-  if (existing) throw new Error("Already have an entry in this draw");
+  if (existing) return { ticketNumber: existing.ticketNumber, alreadyEntered: true };
 
   // Atomically increment totalEntries to get a unique ticket number
   const [updatedDraw] = await db.update(draws)
