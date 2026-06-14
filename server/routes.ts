@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Withdrawal request
   app.post("/api/wallet/withdraw", requireAuth, ar(async (req: Request, res: Response) => {
     try {
-      const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
+      const { amount } = z.object({ amount: z.number().positive().max(50000) }).parse(req.body);
 
       const [user] = await db.select({ kycLevel: users.kycLevel, email: users.email })
         .from(users).where(eq(users.id, uid(req)));
@@ -1118,10 +1118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     await db.update(transactions).set({ status: "completed" }).where(eq(transactions.id, txId));
     await db.insert(auditLogs).values({
+      adminUserId: adminUid(req),
       action: "withdrawal_approved",
       entityType: "transaction",
       entityId: txId,
-      dataAfter: { approvedBy: "admin", amount: tx.amount },
+      dataAfter: { amount: tx.amount },
     });
     await insertNotification({
       userId: tx.userId!,
@@ -1135,31 +1136,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/withdrawals/:id/reject", requireAdmin, ar(async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
-    const { reason } = z.object({ reason: z.string().optional() }).parse(req.body);
+    const { reason } = z.object({ reason: z.string().max(500).optional() }).parse(req.body);
     const [tx] = await db.select().from(transactions)
       .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
     if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
 
-    // Refund balance
-    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, tx.userId!));
-    if (wallet) {
-      const refundAmount = Math.abs(parseFloat(tx.amount as string));
-      const newBalance = parseFloat(wallet.balance as string) + refundAmount;
-      await db.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
-      await db.insert(transactions).values({
-        walletId: wallet.id,
-        userId: tx.userId!,
-        type: "refund",
-        amount: refundAmount.toFixed(2),
-        balanceAfter: newBalance.toFixed(2),
-        status: "completed",
-        description: `Withdrawal refund: ${reason ?? "rejected by admin"}`,
-        metadata: { originalTxId: txId },
-      });
-    }
+    // Refund balance atomically
+    await db.transaction(async (txn) => {
+      const [wallet] = await txn.select().from(wallets).where(eq(wallets.userId, tx.userId!)).for("update");
+      if (wallet) {
+        const refundAmount = Math.abs(parseFloat(tx.amount as string));
+        const newBalance = parseFloat(wallet.balance as string) + refundAmount;
+        await txn.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
+        await txn.insert(transactions).values({
+          walletId: wallet.id,
+          userId: tx.userId!,
+          type: "refund",
+          amount: refundAmount.toFixed(2),
+          balanceAfter: newBalance.toFixed(2),
+          status: "completed",
+          description: `Withdrawal refund: ${reason ?? "rejected by admin"}`,
+          metadata: { originalTxId: txId },
+        });
+      }
+      await txn.update(transactions).set({ status: "failed" }).where(eq(transactions.id, txId));
+    });
 
-    await db.update(transactions).set({ status: "failed" }).where(eq(transactions.id, txId));
     await db.insert(auditLogs).values({
+      adminUserId: adminUid(req),
       action: "withdrawal_rejected",
       entityType: "transaction",
       entityId: txId,
