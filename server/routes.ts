@@ -318,10 +318,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // List past draws for a country
+  // List past draws for a country (winnerUserId is never sent — only boolean isWinner for the requesting user)
   app.get("/api/draws/history/:countryId", ar(async (req: Request, res: Response) => {
     const countryId = parseIntParam(req.params.countryId, res); if (countryId === null) return;
-    const list = await db.select().from(draws)
+    const list = await db.select({
+      id: draws.id,
+      countryId: draws.countryId,
+      drawDate: draws.drawDate,
+      status: draws.status,
+      totalPool: draws.totalPool,
+      prizeAmount: draws.prizeAmount,
+      winnerTicketNumber: draws.winnerTicketNumber,
+      totalEntries: draws.totalEntries,
+      rngSeed: draws.rngSeed,
+      rngProof: draws.rngProof,
+      completedAt: draws.completedAt,
+      createdAt: draws.createdAt,
+    }).from(draws)
       .where(and(eq(draws.countryId, countryId), eq(draws.status, "completed")))
       .orderBy(desc(draws.completedAt))
       .limit(30);
@@ -334,13 +347,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (payload as any).userId as number;
         const drawIds = list.map(d => d.id);
         if (drawIds.length > 0) {
-          const entries = await db.select().from(drawEntries)
-            .where(and(eq(drawEntries.userId, userId), inArray(drawEntries.drawId, drawIds)));
+          const [entries, rawDraws] = await Promise.all([
+            db.select().from(drawEntries)
+              .where(and(eq(drawEntries.userId, userId), inArray(drawEntries.drawId, drawIds))),
+            db.select({ id: draws.id, winnerUserId: draws.winnerUserId })
+              .from(draws).where(inArray(draws.id, drawIds)),
+          ]);
           const entryMap = Object.fromEntries(entries.map(e => [e.drawId, e]));
+          const winnerMap = Object.fromEntries(rawDraws.map(d => [d.id, d.winnerUserId]));
           return res.json(list.map(d => ({
             ...d,
             myEntry: entryMap[d.id] ?? null,
-            isWinner: d.winnerUserId === userId,
+            isWinner: winnerMap[d.id] === userId,
           })));
         }
       } catch {}
