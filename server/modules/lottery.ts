@@ -56,9 +56,9 @@ export async function addPaidEntry(userId: number, drawId: number) {
   const [rg] = await db.select().from(responsibleGaming).where(eq(responsibleGaming.userId, userId));
   if (rg) {
     const now = new Date();
-    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dayStart = new Date(now); dayStart.setUTCHours(0, 0, 0, 0);
+    const weekStart = new Date(now); weekStart.setUTCDate(now.getUTCDate() - now.getUTCDay()); weekStart.setUTCHours(0, 0, 0, 0);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
     const [spendRow] = await db
       .select({
@@ -119,11 +119,11 @@ export async function addPaidEntry(userId: number, drawId: number) {
       metadata: { drawId },
     }).returning();
 
-    // Atomically increment totalEntries; returned value is the unique ticket number
-    const newPool = parseFloat(draw.totalPool as string) + entryAmount;
+    // Atomically increment totalEntries and totalPool — both use SQL arithmetic to
+    // avoid stale-read races when concurrent entries update these fields simultaneously
     const [updatedDraw] = await tx.update(draws)
       .set({
-        totalPool: newPool.toFixed(2),
+        totalPool: sql`${draws.totalPool} + ${entryAmount.toFixed(2)}`,
         totalEntries: sql`${draws.totalEntries} + 1`,
       })
       .where(eq(draws.id, drawId))

@@ -747,8 +747,13 @@ class _KycAgeSheetState extends State<_KycAgeSheet> {
           widget.onDone();
         }
       }
-    } catch (_) {
-      if (mounted) widget.onDone();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: VionaColors.danger),
+        );
+      }
     }
   }
 
@@ -822,8 +827,13 @@ class _KycFullSheetState extends State<_KycFullSheet> {
           widget.onDone();
         }
       }
-    } catch (_) {
-      if (mounted) widget.onDone();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: VionaColors.danger),
+        );
+      }
     }
   }
 

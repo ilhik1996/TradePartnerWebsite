@@ -26,16 +26,8 @@ export async function createSubscription(
     ? parseFloat(country.entryAmountWeekly as string)
     : parseFloat(country.entryAmountMonthly as string);
 
-  // Cancel any existing active subscription BEFORE charging (avoids double-active state)
-  await db.update(subscriptions)
-    .set({ status: "cancelled", cancelledAt: new Date() })
-    .where(and(
-      eq(subscriptions.userId, userId),
-      eq(subscriptions.countryId, country.id),
-      eq(subscriptions.status, "active"),
-    ));
-
-  // Charge first period
+  // Charge first period BEFORE cancelling existing subscription — if the charge fails,
+  // the user's existing subscription is left intact (no rollback needed)
   const result = await processDeposit(
     userId,
     amount,
@@ -45,6 +37,15 @@ export async function createSubscription(
   );
 
   if (!result.ok) throw new Error(result.message ?? "Payment failed");
+
+  // Payment succeeded — now cancel any existing active subscription
+  await db.update(subscriptions)
+    .set({ status: "cancelled", cancelledAt: new Date() })
+    .where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.countryId, country.id),
+      eq(subscriptions.status, "active"),
+    ));
 
   const now = new Date();
   const nextBillingDate = new Date(now);
@@ -117,7 +118,25 @@ export async function renewDueSubscriptions() {
       const [country] = await db.select().from(countries).where(eq(countries.id, sub.countryId));
       const amount = parseFloat(sub.amount as string);
 
-      // Attempt renewal charge
+      // Claim renewal slot first (atomic date advance) — only one process wins;
+      // prevents concurrent schedulers from both charging the same period
+      const next = new Date(sub.nextBillingDate);
+      if (sub.type === "weekly") {
+        next.setDate(next.getDate() + 7);
+      } else {
+        next.setMonth(next.getMonth() + 1);
+      }
+      const [claimed] = await db.update(subscriptions)
+        .set({ nextBillingDate: next })
+        .where(and(
+          eq(subscriptions.id, sub.id),
+          eq(subscriptions.nextBillingDate, sub.nextBillingDate),
+        ))
+        .returning({ id: subscriptions.id });
+
+      if (!claimed) continue;  // another process already claimed this renewal
+
+      // Attempt charge (guaranteed only one process reaches here per renewal cycle)
       const result = await processDeposit(
         sub.userId,
         amount,
@@ -127,30 +146,13 @@ export async function renewDueSubscriptions() {
       );
 
       if (result.ok) {
-        const next = new Date(sub.nextBillingDate);
-        if (sub.type === "weekly") {
-          next.setDate(next.getDate() + 7);
-        } else {
-          next.setMonth(next.getMonth() + 1);
-        }
-        // Conditional update: only advance if nextBillingDate hasn't already moved
-        // (guards against double-billing if renewDueSubscriptions() runs concurrently)
-        const [advanced] = await db.update(subscriptions)
-          .set({ nextBillingDate: next })
-          .where(and(
-            eq(subscriptions.id, sub.id),
-            eq(subscriptions.nextBillingDate, sub.nextBillingDate),
-          ))
-          .returning({ id: subscriptions.id });
-
-        if (!advanced) continue;   // another process already renewed this sub
         // Award XP for renewal non-blocking
         const xpReason = sub.type === "weekly" ? "weekly_sub" : "monthly_sub";
         awardXp(sub.userId, xpReason, db).then(() => checkAndAwardBadges(sub.userId, db)).catch(() => {});
       } else {
-        // Renewal failed — pause subscription, notify user
+        // Charge failed — roll back the date advance and pause the subscription
         await db.update(subscriptions)
-          .set({ status: "paused" })
+          .set({ nextBillingDate: sub.nextBillingDate, status: "paused" })
           .where(eq(subscriptions.id, sub.id));
 
         await insertNotification({

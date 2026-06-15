@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final pw = _passwordCtrl.text;
     final confirm = _confirmCtrl.text;
 
-    if (email.isEmpty || pw.isEmpty) { setState(() => _error = 'Fill all fields'); return; }
+    if (email.isEmpty || pw.isEmpty || _selectedCountry == null) { setState(() => _error = 'Fill all fields'); return; }
     if (pw != confirm) { setState(() => _error = 'Passwords do not match'); return; }
     if (!_agree18 || !_agreeTerms) { setState(() => _error = 'You must accept all required agreements'); return; }
 

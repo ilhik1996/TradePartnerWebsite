@@ -201,7 +201,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              (r['email'] as String? ?? 'U').substring(0, 1).toUpperCase(),
+                              ((r['email'] as String?)?.isNotEmpty == true ? (r['email'] as String)[0] : 'U').toUpperCase(),
                               style: const TextStyle(fontWeight: FontWeight.w900, color: VionaColors.purple),
                             ),
                           ),

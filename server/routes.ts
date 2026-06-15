@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let [user] = await db.select().from(users).where(
         identifier.includes("@") ? eq(users.email, identifier) : eq(users.phone, identifier)
       );
-      if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
         res.status(401).json({ message: "Invalid credentials" });
         return;
       }
@@ -490,8 +490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/wallet/transactions", requireAuth, ar(async (req: Request, res: Response) => {
     try {
-      const limit = parseInt((req.query.limit as string) || "20");
-      const offset = parseInt((req.query.offset as string) || "0");
+      const limit = parseInt((req.query.limit as string) || "20") || 20;
+      const offset = parseInt((req.query.offset as string) || "0") || 0;
       const txs = await getTransactionHistory(uid(req), limit, offset);
       res.json(txs);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
@@ -708,12 +708,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       weeklyLimitAmount: z.number().positive().nullable().optional(),
       monthlyLimitAmount: z.number().positive().nullable().optional(),
     }).parse(req.body);
-    await db.update(responsibleGaming).set({
-      dailyLimitAmount: data.dailyLimitAmount?.toFixed(2) ?? null,
-      weeklyLimitAmount: data.weeklyLimitAmount?.toFixed(2) ?? null,
-      monthlyLimitAmount: data.monthlyLimitAmount?.toFixed(2) ?? null,
-      updatedAt: new Date(),
-    }).where(eq(responsibleGaming.userId, uid(req)));
+    // Only update fields explicitly sent — omitted fields must not null-out existing limits
+    const rgUpdate: Record<string, any> = { updatedAt: new Date() };
+    if (data.dailyLimitAmount !== undefined) rgUpdate.dailyLimitAmount = data.dailyLimitAmount?.toFixed(2) ?? null;
+    if (data.weeklyLimitAmount !== undefined) rgUpdate.weeklyLimitAmount = data.weeklyLimitAmount?.toFixed(2) ?? null;
+    if (data.monthlyLimitAmount !== undefined) rgUpdate.monthlyLimitAmount = data.monthlyLimitAmount?.toFixed(2) ?? null;
+    await db.update(responsibleGaming).set(rgUpdate).where(eq(responsibleGaming.userId, uid(req)));
     res.json({ ok: true });
   }));
 
@@ -855,7 +855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const referrerId = referrer.id;
       awardXp(referrerId, 'referral', db).then(() => checkAndAwardBadges(referrerId, db)).catch(() => {});
 
-      res.json({ ok: true, referrerName: referrer.email ?? referrer.phone });
+      res.json({ ok: true, referrerName: referrer.firstName ?? "Your referrer" });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
@@ -1351,7 +1351,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const secret = process.env.SUMSUB_SECRET_KEY;
     const rawBody: Buffer | undefined = (req as any).rawBody;
 
-    if (secret) {
+    if (!secret) {
+      // No secret configured — only allow in local development; reject everywhere else
+      if (process.env.NODE_ENV !== "development") {
+        res.status(503).json({ message: "KYC webhook not configured" });
+        return;
+      }
+    } else {
       if (!sig || !rawBody) {
         res.status(400).json({ message: "Missing webhook signature" });
         return;
@@ -1418,7 +1424,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const rawBody: Buffer | undefined = (req as any).rawBody;
 
-    if (webhookSecret) {
+    if (!webhookSecret) {
+      // No secret configured — only allow in local development; reject everywhere else
+      if (process.env.NODE_ENV !== "development") {
+        res.status(503).json({ message: "Stripe webhook not configured" });
+        return;
+      }
+    } else {
       if (!sig || !rawBody) {
         res.status(400).json({ message: "Missing Stripe signature header" });
         return;
@@ -1464,7 +1476,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Seed initial data (dev only) ──────────────────────────────────────────
 
   app.post("/api/dev/seed", ar(async (_req: Request, res: Response) => {
-    if (process.env.NODE_ENV === "production") { res.status(403).json({ message: "Not in production" }); return; }
+    if (process.env.NODE_ENV === "production" || process.env.SEED_ALLOWED !== "true") {
+      res.status(403).json({ message: "Forbidden" }); return;
+    }
     try {
       await seedInitialData();
       res.json({ ok: true, message: "Database seeded" });
