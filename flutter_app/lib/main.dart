@@ -72,8 +72,6 @@ class VionaApp extends StatelessWidget {
 
 // ─── Nav shell ────────────────────────────────────────────────────────────────
 
-final _notifCountProvider = StateProvider<int>((ref) => 0);
-
 class _NavShell extends ConsumerStatefulWidget {
   final Widget child;
   const _NavShell({required this.child});
