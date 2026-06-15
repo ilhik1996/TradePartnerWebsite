@@ -40,7 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markAllRead() async {
     try {
       final unread = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).toList();
-      await Future.wait(unread.map((n) => _api.markNotificationRead(n['id'] as int)));
+      await Future.wait(unread.map((n) => _api.markNotificationRead((n['id'] as num).toInt())));
       setState(() {
         _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList();
       });
@@ -103,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 notif: _notifications[i],
                 onTap: () {
                   final n = _notifications[i];
-                  if (!(n['isRead'] as bool? ?? false)) _markRead(n['id'] as int);
+                  if (!(n['isRead'] as bool? ?? false)) _markRead((n['id'] as num).toInt());
                 },
               ),
             ),

@@ -102,7 +102,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (_draw == null) return;
     final name = _freeNameCtrl.text.trim().split(' ');
     final email = _freeEmailCtrl.text.trim();
-    if (name.isEmpty || email.isEmpty) return;
+    if (_freeNameCtrl.text.trim().isEmpty || email.isEmpty) return;
     try {
       final result = await _api.enterFree(
         _draw!['id'],
@@ -310,7 +310,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             activeColor: VionaColors.purple,
                             onChanged: (v) async {
                               setState(() => _autoParticipate = v);
-                              await _api.setAutoParticipate(v);
+                              try {
+                                await _api.setAutoParticipate(v);
+                              } catch (e) {
+                                // Roll back toggle if API call fails
+                                if (mounted) {
+                                  setState(() => _autoParticipate = !v);
+                                  _showSnack('$e', error: true);
+                                }
+                              }
                             },
                           ),
                         ],

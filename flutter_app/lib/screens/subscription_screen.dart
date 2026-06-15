@@ -31,9 +31,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         _api.getSubscriptionHistory(),
       ]);
       _subscription = results[0];
-      final user = results[1] as Map<String, dynamic>;
-      _history = results[2] as List<dynamic>;
-      _country = await _api.getCountry(user['countryId'] ?? 1);
+      final user = results[1] as Map<String, dynamic>?;
+      _history = (results[2] as List<dynamic>?) ?? [];
+      _country = await _api.getCountry(user?['countryId'] ?? 1);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }

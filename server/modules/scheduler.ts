@@ -7,8 +7,13 @@ import { awardXp, checkAndAwardBadges } from "./gamification";
 import { sendDrawResultEmail, sendLowBalanceEmail } from "./email";
 import { insertNotification } from "./notifications";
 
+let _started = false;
+
 // Called once at server start — sets up interval-based checking
 export function startScheduler(broadcastFn: (data: object) => void) {
+  if (_started) return;
+  _started = true;
+
   // Check every minute if any draw needs to be conducted
   setInterval(() => checkAndConductDraws(broadcastFn), 60_000);
   // Auto-enter users with auto_participate=true and sufficient balance
