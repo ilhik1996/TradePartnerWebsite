@@ -149,29 +149,45 @@ export async function addFreeEntry(userId: number, drawId: number) {
   const draw = await db.select().from(draws).where(eq(draws.id, drawId)).then(r => r[0]);
   if (!draw || draw.status !== "open") throw new Error("Draw is not open");
 
+  // Fast path: return early if already entered (non-atomic, for UX)
   const [existing] = await db
     .select({ ticketNumber: drawEntries.ticketNumber })
     .from(drawEntries)
     .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, userId)));
   if (existing) return { ticketNumber: existing.ticketNumber, alreadyEntered: true };
 
-  // Atomically increment totalEntries to get a unique ticket number
-  const [updatedDraw] = await db.update(draws)
-    .set({ totalEntries: sql`${draws.totalEntries} + 1` })
-    .where(eq(draws.id, drawId))
-    .returning({ totalEntries: draws.totalEntries });
+  // Wrap increment + insert in a transaction so a unique-constraint violation
+  // (from concurrent duplicate requests) rolls back the totalEntries increment.
+  try {
+    return await db.transaction(async (tx) => {
+      const [updatedDraw] = await tx.update(draws)
+        .set({ totalEntries: sql`${draws.totalEntries} + 1` })
+        .where(eq(draws.id, drawId))
+        .returning({ totalEntries: draws.totalEntries });
 
-  const ticketNumber = updatedDraw.totalEntries;
+      const ticketNumber = updatedDraw.totalEntries;
 
-  await db.insert(drawEntries).values({
-    drawId,
-    userId,
-    type: "free",
-    ticketNumber,
-    amountPaid: null,
-  });
+      await tx.insert(drawEntries).values({
+        drawId,
+        userId,
+        type: "free",
+        ticketNumber,
+        amountPaid: null,
+      });
 
-  return { ticketNumber };
+      return { ticketNumber };
+    });
+  } catch (err: any) {
+    // PostgreSQL unique_violation (23505): concurrent request already inserted
+    if (err?.code === "23505") {
+      const [race] = await db
+        .select({ ticketNumber: drawEntries.ticketNumber })
+        .from(drawEntries)
+        .where(and(eq(drawEntries.drawId, drawId), eq(drawEntries.userId, userId)));
+      if (race) return { ticketNumber: race.ticketNumber, alreadyEntered: true };
+    }
+    throw err;
+  }
 }
 
 // Provably fair RNG: seed = hash of (drawId + all ticket numbers + server secret)
