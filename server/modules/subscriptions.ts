@@ -66,6 +66,9 @@ export async function createSubscription(
     paymentMethodToken,
   }).returning();
 
+  // Ensure auto-participate is on — a subscription is useless without it
+  await db.update(users).set({ autoParticipate: true }).where(eq(users.id, userId));
+
   await insertNotification({
     userId,
     type: "subscription_created",
