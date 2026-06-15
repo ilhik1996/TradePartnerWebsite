@@ -402,7 +402,7 @@ class _TxTile extends StatelessWidget {
             ),
           ),
           Text(
-            '${isCredit ? '+' : '-'}${amount.toStringAsFixed(2)}',
+            '${isCredit ? '+' : '-'}${amount.abs().toStringAsFixed(2)}',
             style: TextStyle(fontWeight: FontWeight.w700, color: isCredit ? VionaColors.teal : VionaColors.danger),
           ),
         ],
