@@ -85,7 +85,9 @@ export const paymentRateLimit = rateLimit({
 export function deviceFingerprint(req: Request, _res: Response, next: NextFunction) {
   const ua = req.headers["user-agent"] ?? "";
   const lang = req.headers["accept-language"] ?? "";
-  const ip = req.socket.remoteAddress ?? "";
+  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim()
+    ?? req.socket.remoteAddress
+    ?? "";
   const raw = `${ua}|${lang}|${ip}`;
   (req as any).deviceFingerprint = createHash("sha256").update(raw).digest("hex").slice(0, 32);
   next();

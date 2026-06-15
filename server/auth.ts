@@ -43,8 +43,8 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   next();
 }
 
-// Rejects 401 if no valid user token
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+// Rejects 401 if no valid user token; 403 if account is banned or suspended
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ message: "Authentication required" });
@@ -53,6 +53,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const payload = verifyToken(header.slice(7));
   if (!payload) {
     res.status(401).json({ message: "Invalid or expired token" });
+    return;
+  }
+  // Verify the account is still active — a valid JWT does not guarantee the account wasn't
+  // banned or suspended after the token was issued
+  const [user] = await db.select({ status: users.status })
+    .from(users)
+    .where(eq(users.id, payload.userId));
+  if (!user || user.status === "banned" || user.status === "suspended") {
+    res.status(403).json({ message: "Account suspended" });
     return;
   }
   (req as any).userId = payload.userId;

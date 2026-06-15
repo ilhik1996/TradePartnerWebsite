@@ -24,7 +24,7 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray, count, gte, sum } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, count, gte, sum, ilike, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -1034,9 +1034,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const kycFilter = req.query.kyc as string | undefined;
     const statusFilter = req.query.status as string | undefined;
 
-    const conditions: ReturnType<typeof eq>[] = [];
+    const conditions: any[] = [];
     if (kycFilter) conditions.push(eq(users.kycLevel, kycFilter as any));
     if (statusFilter) conditions.push(eq(users.status, statusFilter as any));
+    if (search) {
+      const q = `%${search}%`;
+      conditions.push(or(
+        ilike(users.email, q),
+        ilike(users.phone, q),
+        ilike(userProfiles.firstName, q),
+        ilike(userProfiles.lastName, q),
+      ));
+    }
 
     const base = db
       .select({
@@ -1062,19 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ? base.where(and(...conditions))
       : base;
 
-    let list = await filtered.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
-
-    // Client-side search filter on email / phone / name (avoids complex SQL LIKE across providers)
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(u =>
-        u.email?.toLowerCase().includes(q) ||
-        u.phone?.toLowerCase().includes(q) ||
-        u.firstName?.toLowerCase().includes(q) ||
-        u.lastName?.toLowerCase().includes(q)
-      );
-    }
-
+    const list = await filtered.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
     res.json(list);
   }));
 
