@@ -249,7 +249,9 @@ export const gamificationBadges = pgTable("gamification_badges", {
   userId: integer("user_id").notNull().references(() => users.id),
   badgeId: text("badge_id").notNull(),
   awardedAt: timestamp("awarded_at").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("gamification_badge_user_badge_idx").on(t.userId, t.badgeId),
+]);
 
 // ─── Partners ─────────────────────────────────────────────────────────────────
 
