@@ -7,7 +7,8 @@ export function useRealtime(onMessage: MessageHandler) {
   const handlerRef = useRef(onMessage);
   handlerRef.current = onMessage;
 
-  const connect = useCallback(() => {
+  const connect = useCallback((activeRef: { current: boolean }) => {
+    if (!activeRef.current) return;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const url = `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(url);
@@ -20,17 +21,17 @@ export function useRealtime(onMessage: MessageHandler) {
       } catch {}
     };
     ws.onclose = () => {
-      // Reconnect after 3s on unexpected close
-      setTimeout(() => {
-        if (wsRef.current?.readyState !== WebSocket.OPEN) connect();
-      }, 3000);
+      if (!activeRef.current) return;
+      setTimeout(() => connect(activeRef), 3000);
     };
     wsRef.current = ws;
   }, []);
 
   useEffect(() => {
-    connect();
+    const activeRef = { current: true };
+    connect(activeRef);
     return () => {
+      activeRef.current = false;
       wsRef.current?.close();
     };
   }, [connect]);
