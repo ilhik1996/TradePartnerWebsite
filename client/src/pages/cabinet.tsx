@@ -370,8 +370,9 @@ export default function Cabinet() {
                 <div className="w-full">
                   {(() => {
                     const cur = gamification.currentLevelXp ?? 0;
+                    const xp = gamification.xp ?? 0;
                     const pct = Math.min(100, Math.round(
-                      ((gamification.xp - cur) / (gamification.nextLevelXp - cur)) * 100
+                      ((xp - cur) / (gamification.nextLevelXp - cur)) * 100
                     ));
                     return (
                       <>

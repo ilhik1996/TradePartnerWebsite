@@ -20,7 +20,13 @@ export default function Partners() {
   const countryId = user?.countryId;
 
   useEffect(() => {
-    api.partners.list(countryId).then(setPartners).catch(() => {}).finally(() => setLoading(false));
+    let cancelled = false;
+    setLoading(true);
+    api.partners.list(countryId)
+      .then(data => { if (!cancelled) setPartners(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [countryId]);
 
   const filtered = partners.filter(p =>
