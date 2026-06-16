@@ -24,7 +24,14 @@ class _PartnersScreenState extends State<PartnersScreen> {
   Future<void> _load() async {
     try {
       _partners = await _api.getPartners();
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFDC2626),
+        ));
+      }
+    }
     if (mounted) setState(() => _loading = false);
   }
 

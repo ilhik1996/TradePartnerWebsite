@@ -58,7 +58,9 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
       _user = results[2] as Map<String, dynamic>?;
       final countryId = _user?['countryId'] ?? 1;
       _country = await _api.getCountry(countryId);
-    } catch (_) {}
+    } catch (e) {
+      _showSnack(e.toString().replaceFirst('Exception: ', ''), error: true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
