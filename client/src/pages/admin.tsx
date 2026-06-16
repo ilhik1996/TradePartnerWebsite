@@ -344,7 +344,10 @@ function UsersPanel() {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => { api.admin.users(100).then(setUsers).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    setLoading(true);
+    api.admin.users(100, 0, search).then(setUsers).finally(() => setLoading(false));
+  }, [search]);
 
   const updateStatus = async (id: number, status: string) => {
     try {
@@ -364,17 +367,13 @@ function UsersPanel() {
     a.click();
   };
 
-  const filtered = users.filter(u =>
-    !search || (u.email ?? u.phone ?? "").toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <div className="space-y-3 max-w-3xl">
       <div className="flex items-center gap-3">
         <h3 className="font-bold">Users ({users.length})</h3>
         <input
           className="flex-1 h-9 px-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none"
-          placeholder="Search by email…"
+          placeholder="Search by email, name…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -386,7 +385,7 @@ function UsersPanel() {
       </div>
       {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
       <div className="space-y-2 max-h-[500px] overflow-y-auto">
-        {filtered.map(u => (
+        {users.map(u => (
           <div key={u.id} className="viona-card p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground">
               #{u.id}
