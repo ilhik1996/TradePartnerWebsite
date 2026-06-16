@@ -150,7 +150,7 @@ class _DrawCardState extends State<_DrawCard> {
     final participated = myEntry != null;
     final pool = double.tryParse(draw['totalPool']?.toString() ?? '0') ?? 0;
     final prize = double.tryParse(draw['prizeAmount']?.toString() ?? '0') ?? 0;
-    final totalEntries = (draw['totalEntries'] as int?) ?? 1;
+    final totalEntries = (draw['totalEntries'] as int?) ?? 0;
     final myTicket = myEntry?['ticketNumber'] as int? ?? 0;
     final winnerTicket = (draw['winnerTicketNumber'] as int?) ?? 0;
     final distance = (myTicket - winnerTicket).abs();
@@ -193,7 +193,7 @@ class _DrawCardState extends State<_DrawCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          draw['drawDate']?.toString().substring(0, 10) ?? '',
+                          (draw['drawDate']?.toString() ?? '').split('T').first,
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                         ),
                         Text(

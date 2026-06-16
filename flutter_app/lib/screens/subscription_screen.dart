@@ -60,7 +60,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         backgroundColor: VionaColors.surface,
         title: const Text('Cancel subscription?'),
         content: Text(
-          'Your subscription will remain active until ${sub['nextBillingDate']?.toString().substring(0, 10) ?? 'end of period'}.',
+          'Your subscription will remain active until ${sub['nextBillingDate']?.toString().split('T').first ?? 'end of period'}.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep it')),
@@ -74,7 +74,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     if (confirmed != true) return;
     setState(() => _processing = true);
     try {
-      await _api.cancelSubscription(sub['id'] as int);
+      await _api.cancelSubscription((sub['id'] as num).toInt());
       _showSnack('Subscription cancelled');
       await _load();
     } catch (e) {
@@ -145,7 +145,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Renews: ${_subscription!['nextBillingDate']?.toString().substring(0, 10) ?? '—'}',
+                        'Renews: ${_subscription!['nextBillingDate']?.toString().split('T').first ?? '—'}',
                         style: const TextStyle(fontSize: 12, color: VionaColors.textSecondary),
                       ),
                       const SizedBox(height: 12),
@@ -248,7 +248,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                               Text(
-                                s['startDate']?.toString().substring(0, 10) ?? '',
+                                s['startDate']?.toString().split('T').first ?? '',
                                 style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary),
                               ),
                             ],

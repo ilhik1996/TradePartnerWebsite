@@ -212,7 +212,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_maskEmail(r['email'] as String? ?? ''), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                              Text(r['joinedAt']?.toString().substring(0, 10) ?? '', style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
+                              Text((r['joinedAt']?.toString() ?? '').split('T').first, style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
                             ],
                           ),
                         ),

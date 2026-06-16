@@ -25,6 +25,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Map<String, dynamic>? _wallet;
   dynamic _myEntry;
   bool _loading = true;
+  bool _loadError = false;
   bool _entering = false;
   bool _autoParticipate = true;
 
@@ -63,6 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
+    if (mounted) setState(() { _loading = true; _loadError = false; });
     try {
       _user = await _api.me();
       final countryId = _user?['countryId'] ?? 1;
@@ -72,15 +74,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _api.getTodayDraw(countryId),
         _api.getProfile(),
       ]);
-      _country = results[0] as Map<String, dynamic>?;
-      _wallet = results[1] as Map<String, dynamic>?;
-      _draw = results[2] as Map<String, dynamic>?;
-      _profile = results[3] as Map<String, dynamic>?;
+      if (mounted) {
+        _country = results[0] as Map<String, dynamic>?;
+        _wallet = results[1] as Map<String, dynamic>?;
+        _draw = results[2] as Map<String, dynamic>?;
+        _profile = results[3] as Map<String, dynamic>?;
+      }
       if (_draw != null) {
         _myEntry = await _api.getMyEntry(_draw!['id']);
       }
       _autoParticipate = _user?['autoParticipate'] ?? true;
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _loadError = true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -132,6 +138,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: VionaColors.purple)),
+      );
+    }
+
+    if (_loadError && _user == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 48, color: VionaColors.textSecondary),
+              const SizedBox(height: 12),
+              const Text('Could not load dashboard', style: TextStyle(color: VionaColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+            ],
+          ),
+        ),
       );
     }
 
