@@ -160,7 +160,7 @@ export async function checkAndAwardBadges(userId: number, db: any): Promise<stri
   if (toAward.length > 0) {
     await db.insert(gamificationBadges).values(
       toAward.map(badgeId => ({ userId, badgeId, awardedAt: new Date() })),
-    );
+    ).onConflictDoNothing();
   }
 
   return toAward;

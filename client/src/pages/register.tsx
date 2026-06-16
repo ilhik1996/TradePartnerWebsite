@@ -31,6 +31,10 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!countryId) {
+      toast({ title: "Please select your country", variant: "destructive" });
+      return;
+    }
     if (!age18 || !termsOk) {
       toast({ title: "Please confirm all requirements", variant: "destructive" });
       return;
