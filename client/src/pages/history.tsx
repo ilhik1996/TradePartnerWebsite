@@ -145,15 +145,20 @@ export default function History() {
   const countryId = user?.countryId ?? 1;
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     Promise.all([
       api.draws.history(countryId),
       api.countries.get(countryId),
     ]).then(([d, c]) => {
+      if (cancelled) return;
       setDraws(d);
       setSymbol(c?.currencySymbol ?? "₴");
     }).catch((err: any) => {
+      if (cancelled) return;
       toast({ title: "Failed to load history", description: err.message, variant: "destructive" });
-    }).finally(() => setLoading(false));
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [countryId]);
 
   const enriched = draws.map(d => ({

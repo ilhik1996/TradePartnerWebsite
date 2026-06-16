@@ -17,8 +17,11 @@ const NOTIF_ICONS: Record<string, any> = {
   withdrawal_rejected:        { icon: AlertTriangle,  color: "text-red-400",            bg: "bg-red-500/10" },
 };
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function timeAgo(dateStr: string | undefined) {
+  if (!dateStr) return "";
+  const ms = new Date(dateStr).getTime();
+  if (isNaN(ms)) return "";
+  const diff = Date.now() - ms;
   const m = Math.floor(diff / 60000);
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
@@ -36,13 +39,21 @@ export default function Notifications() {
 
   const markAllRead = async () => {
     const unread = notifs.filter(n => !n.isRead);
-    await Promise.all(unread.map(n => api.notifications.markRead(n.id)));
-    setNotifs(ns => ns.map(n => ({ ...n, isRead: true })));
+    try {
+      await Promise.all(unread.map(n => api.notifications.markRead(n.id)));
+      setNotifs(ns => ns.map(n => ({ ...n, isRead: true })));
+    } catch {
+      // best-effort; partial success is fine
+    }
   };
 
   const markRead = async (id: number) => {
-    await api.notifications.markRead(id);
-    setNotifs(ns => ns.map(n => n.id === id ? { ...n, isRead: true } : n));
+    try {
+      await api.notifications.markRead(id);
+      setNotifs(ns => ns.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch {
+      // best-effort
+    }
   };
 
   const unreadCount = notifs.filter(n => !n.isRead).length;

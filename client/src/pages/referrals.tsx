@@ -24,7 +24,8 @@ export default function Referrals() {
   };
 
   const shareLink = () => {
-    const url = `${window.location.origin}/register?ref=${data?.referralCode}`;
+    const code = data?.referralCode;
+    const url = code ? `${window.location.origin}/register?ref=${code}` : window.location.origin;
     if (navigator.share) {
       navigator.share({ title: "Join VIONA", text: "Daily prize draws in your currency!", url });
     } else {
@@ -147,7 +148,7 @@ export default function Referrals() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{r.email ?? `Friend #${r.refereeId}`}</p>
                   <p className="text-xs text-muted-foreground">
-                    Joined {new Date(r.joinedAt).toLocaleDateString()} · Bonus: {r.bonusAmount} {r.currency}
+                    Joined {r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : "—"} · Bonus: {r.bonusAmount} {r.currency}
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
