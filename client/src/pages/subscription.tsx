@@ -102,15 +102,20 @@ export default function Subscription() {
   const countryId = user?.countryId ?? 1;
 
   const load = async () => {
-    const [c, sub, hist] = await Promise.all([
-      api.countries.get(countryId),
-      api.subscription.get(),
-      api.subscription.history(),
-    ]);
-    setCountry(c);
-    setActiveSub(sub);
-    setSubHistory(hist);
-    setLoading(false);
+    try {
+      const [c, sub, hist] = await Promise.all([
+        api.countries.get(countryId),
+        api.subscription.get(),
+        api.subscription.history(),
+      ]);
+      setCountry(c);
+      setActiveSub(sub);
+      setSubHistory(hist);
+    } catch {
+      // Errors surface through missing data; avoid infinite spinner
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -130,7 +135,7 @@ export default function Subscription() {
 
   const cancelSub = async () => {
     if (!activeSub) return;
-    setSubmitting("weekly");
+    setSubmitting(activeSub.type as "weekly" | "monthly");
     try {
       await api.subscription.cancel(activeSub.id);
       toast({ title: "Subscription cancelled", description: "Access continues until the end of the paid period." });

@@ -20,13 +20,19 @@ function saveAdminToken(t: string) { localStorage.setItem("viona_admin_token", t
 function clearAdminToken() { localStorage.removeItem("viona_admin_token"); }
 function hasAdminToken() { return !!getAdminToken(); }
 
-// Intercept fetches to add admin token
+// Intercept fetches to add admin token — only mutates /api/admin requests
 const origFetch = window.fetch.bind(window);
 window.fetch = function(input: any, init: RequestInit = {}) {
   const url = typeof input === "string" ? input : (input as Request).url;
   if (url.includes("/api/admin") && !url.includes("/api/admin/login")) {
     const token = getAdminToken();
-    if (token) init.headers = { ...init.headers, Authorization: `Bearer ${token}` };
+    if (token) {
+      // Handle both plain-object and Headers-instance forms
+      const existing = init.headers instanceof Headers
+        ? Object.fromEntries((init.headers as Headers).entries())
+        : (init.headers ?? {});
+      init = { ...init, headers: { ...existing, Authorization: `Bearer ${token}` } };
+    }
   }
   return origFetch(input, init);
 };
@@ -34,8 +40,8 @@ window.fetch = function(input: any, init: RequestInit = {}) {
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState("admin@viona.app");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -72,7 +78,9 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
             </Button>
           </form>
         </div>
-        <p className="text-center text-xs text-muted-foreground mt-4">Dev: admin@viona.app / admin123</p>
+        {process.env.NODE_ENV === "development" && (
+          <p className="text-center text-xs text-muted-foreground mt-4">Dev: admin@viona.app / admin123</p>
+        )}
       </div>
     </div>
   );
@@ -704,7 +712,7 @@ function PetitionPanel() {
     data.signatures.forEach((s: any) =>
       rows.push([s.id, s.firstName, s.countryCode, new Date(s.agreedAt).toISOString()])
     );
-    const csv = rows.map(r => r.join(",")).join("\n");
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1120,12 +1128,6 @@ export default function Admin() {
   const [active, setActive] = useState<Section>("overview");
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (loggedIn) {
-      // Seed DB on first admin load (dev only)
-      api.dev.seed().catch(() => {});
-    }
-  }, [loggedIn]);
 
   if (!loggedIn) return <AdminLogin onLogin={() => setLoggedIn(true)} />;
 

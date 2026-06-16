@@ -1117,23 +1117,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/withdrawals/:id/approve", requireAdmin, ar(async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
-    const [tx] = await db.select().from(transactions)
-      .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
-    if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
 
-    await db.update(transactions).set({ status: "completed" }).where(eq(transactions.id, txId));
+    // Row-level lock prevents concurrent approvals from double-firing
+    const approved = await db.transaction(async (txn) => {
+      const [tx] = await txn.select().from(transactions)
+        .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")))
+        .for("update");
+      if (!tx) return null;
+      await txn.update(transactions).set({ status: "completed" }).where(eq(transactions.id, txId));
+      return tx;
+    });
+
+    if (!approved) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
+
     await db.insert(auditLogs).values({
       adminUserId: adminUid(req),
       action: "withdrawal_approved",
       entityType: "transaction",
       entityId: txId,
-      dataAfter: { amount: tx.amount },
+      dataAfter: { amount: approved.amount },
     });
     await insertNotification({
-      userId: tx.userId!,
+      userId: approved.userId!,
       type: "withdrawal_processed",
       title: "Withdrawal processed",
-      body: `Your withdrawal of ${Math.abs(parseFloat(tx.amount as string)).toFixed(2)} has been sent to your bank account.`,
+      body: `Your withdrawal of ${Math.abs(parseFloat(approved.amount as string)).toFixed(2)} has been sent to your bank account.`,
       pushUrl: "/wallet",
     }).catch(() => {});
     res.json({ ok: true });

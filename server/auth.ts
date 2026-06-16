@@ -69,8 +69,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-// Rejects 403 if not admin
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+// Rejects 403 if not admin; also verifies admin record still exists in DB
+export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ message: "Authentication required" });
@@ -78,6 +78,15 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
   const payload = verifyToken(header.slice(7));
   if (!payload || payload.role !== "admin") {
+    res.status(403).json({ message: "Admin access required" });
+    return;
+  }
+  // Verify the admin account still exists — guards against revoked/deleted admins
+  // whose JWT hasn't expired yet
+  const [admin] = await db.select({ id: adminUsers.id })
+    .from(adminUsers)
+    .where(eq(adminUsers.userId, payload.userId));
+  if (!admin) {
     res.status(403).json({ message: "Admin access required" });
     return;
   }

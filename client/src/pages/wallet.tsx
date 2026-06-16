@@ -102,7 +102,9 @@ export default function WalletPage() {
     try {
       const result = await api.wallet.withdraw(amt);
       toast({ title: "Withdrawal requested", description: `${country?.currencySymbol}${amt.toFixed(2)} pending` });
-      setWallet((w: any) => ({ ...w, balance: result.newBalance.toFixed(2) }));
+      if (result.newBalance != null) {
+        setWallet((w: any) => ({ ...w, balance: result.newBalance.toFixed(2) }));
+      }
       setWithdrawAmt("");
       const txs = await api.wallet.transactions(30);
       setTransactions(txs);
