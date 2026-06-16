@@ -308,7 +308,7 @@ export const loginSchema = z.object({
 export const freeEntrySchema = z.object({
   drawId: z.number().int(),
   firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  lastName: z.string().default(""),
   email: z.string().email(),
   countryId: z.number().int(),
 });
