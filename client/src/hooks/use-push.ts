@@ -43,14 +43,16 @@ export function usePush() {
       applicationServerKey: urlBase64ToUint8Array(vapidKey),
     });
 
-    await fetch("/api/push/subscribe", {
+    // Register with server — if this fails, throw so the caller knows push isn't active
+    const res = await fetch("/api/push/subscribe", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${localStorage.getItem("viona_token")}`,
       },
       body: JSON.stringify(sub.toJSON()),
-    }).catch(() => {});
+    });
+    if (!res.ok) throw new Error("Failed to register push subscription with server");
 
     return sub;
   };

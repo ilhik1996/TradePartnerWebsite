@@ -301,7 +301,10 @@ export default function Cabinet() {
                     <p className="text-xs text-muted-foreground">
                       Get notified about draw results, wins, and balance updates.
                     </p>
-                    <Button className="btn-viona-primary w-full h-10 text-sm" onClick={() => pushSubscribe()}>
+                    <Button className="btn-viona-primary w-full h-10 text-sm" onClick={async () => {
+                      try { await pushSubscribe(); }
+                      catch { toast({ title: "Push setup failed", description: "Could not register for notifications. Please try again.", variant: "destructive" }); }
+                    }}>
                       Enable push notifications
                     </Button>
                   </>
