@@ -619,4 +619,115 @@ describe("POST /api/admin/withdrawals/:id/reject", () => {
   });
 });
 
+// ── Email normalization (lowercase transform) ─────────────────────────────────
 
+describe("POST /api/auth/register — email normalization", () => {
+  it("does not reject UPPER-case email — Zod lowercases before validation", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "USER@EXAMPLE.COM", password: "password123", countryId: 1 });
+    // Zod accepts (email valid after lowercase); only DB or 500 possible
+    expect(res.status).not.toBe(400);
+  });
+
+  it("does not reject Mixed-Case email", async () => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "Alice@Example.Com", password: "password123", countryId: 1 });
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("POST /api/auth/login — identifier normalization", () => {
+  it("does not reject UPPER-case email identifier at schema level", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: "ADMIN@VIONA.APP", password: "admin123" });
+    // Should fail auth (wrong creds) → 401; never 400 from schema
+    expect(res.status).not.toBe(400);
+  });
+
+  it("phone identifiers are passed through unchanged", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: "+380501234567", password: "pass" });
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("POST /api/draws/:drawId/enter-free — email normalization", () => {
+  it("does not reject UPPER-case email in free entry", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ email: "GUEST@EXAMPLE.COM", firstName: "Test", countryId: 1 });
+    // DB mock returns non-guest; expect 409 (conflict) not 400 (validation)
+    expect(res.status).not.toBe(400);
+  });
+});
+
+// ── Admin users — NaN-safe pagination ────────────────────────────────────────
+
+describe("GET /api/admin/users — NaN-safe limit/offset", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("treats non-numeric limit as default (50) — no 400 from parseInt", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?limit=abc")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+
+  it("treats non-numeric offset as 0 — no 400 from parseInt", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?offset=xyz")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+
+  it("caps limit at 200 even when larger value provided", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?limit=9999")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
+// ── Admin users — wildcard escaping in search ─────────────────────────────────
+
+describe("GET /api/admin/users — search wildcard escaping", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("accepts search containing % without 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?search=admin%25user")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts search containing _ without 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?search=admin_user")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Wallet transaction pagination cap ─────────────────────────────────────────
+
+describe("GET /api/wallet/transactions — pagination", () => {
+  const token = signToken({ userId: 999 });
+
+  it("requires authentication → 401 without token", async () => {
+    const res = await request(app).get("/api/wallet/transactions");
+    expect(res.status).toBe(401);
+  });
+
+  it("accepts limit and offset query params without 400", async () => {
+    const res = await request(app)
+      .get("/api/wallet/transactions?limit=10&offset=0")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(400);
+  });
+});

@@ -985,7 +985,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Admin: Draws ──────────────────────────────────────────────────────────
 
   app.get("/api/admin/draws", requireAdmin, ar(async (req: Request, res: Response) => {
-    const list = await db.select().from(draws).orderBy(desc(draws.createdAt)).limit(50);
+    const limit = Math.min(parseInt((req.query.limit as string) || "50") || 50, 200);
+    const offset = Math.max(parseInt((req.query.offset as string) || "0") || 0, 0);
+    const list = await db.select().from(draws).orderBy(desc(draws.createdAt)).limit(limit).offset(offset);
     res.json(list);
   }));
 
@@ -1100,7 +1102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Admin: Financials ─────────────────────────────────────────────────────
 
   app.get("/api/admin/transactions", requireAdmin, ar(async (req, res) => {
-    const list = await db.select().from(transactions).orderBy(desc(transactions.createdAt)).limit(100);
+    const limit = Math.min(parseInt((req.query.limit as string) || "100") || 100, 500);
+    const offset = Math.max(parseInt((req.query.offset as string) || "0") || 0, 0);
+    const list = await db.select().from(transactions).orderBy(desc(transactions.createdAt)).limit(limit).offset(offset);
     res.json(list);
   }));
 
@@ -1270,8 +1274,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Admin: Audit Log ──────────────────────────────────────────────────────
 
-  app.get("/api/admin/audit-logs", requireAdmin, ar(async (_req, res) => {
-    const list = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(100);
+  app.get("/api/admin/audit-logs", requireAdmin, ar(async (req, res) => {
+    const limit = Math.min(parseInt((req.query.limit as string) || "100") || 100, 500);
+    const offset = Math.max(parseInt((req.query.offset as string) || "0") || 0, 0);
+    const list = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
     res.json(list);
   }));
 
