@@ -15,6 +15,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Map<String, dynamic>? _country;
   List<dynamic> _history = [];
   bool _loading = true;
+  bool _loadError = false;
   bool _processing = false;
 
   @override
@@ -24,6 +25,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() { _loadError = false; });
     try {
       final results = await Future.wait([
         _api.getSubscription(),
@@ -34,7 +36,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       final user = results[1] as Map<String, dynamic>?;
       _history = (results[2] as List<dynamic>?) ?? [];
       _country = await _api.getCountry(user?['countryId'] ?? 1);
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _loadError = true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -96,6 +100,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator(color: VionaColors.purple)));
+    }
+    if (_loadError && _country == null) {
+      return Scaffold(
+        appBar: AppBar(backgroundColor: VionaColors.background, title: const Text('Subscribe')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 48, color: VionaColors.textSecondary),
+              const SizedBox(height: 12),
+              const Text('Could not load subscription data', style: TextStyle(color: VionaColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
 
     final symbol = _country?['currencySymbol'] ?? '$';

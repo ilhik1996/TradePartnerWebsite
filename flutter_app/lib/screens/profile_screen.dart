@@ -54,7 +54,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       _profile = results[3] as Map<String, dynamic>?;
       _firstNameCtrl.text = _profile?['firstName'] ?? '';
       _lastNameCtrl.text = _profile?['lastName'] ?? '';
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) _showSnack('Failed to load profile: $e', error: true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 

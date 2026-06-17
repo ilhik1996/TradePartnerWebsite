@@ -35,7 +35,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _loadCountries() async {
     try {
       _countries = await _api.getCountries();
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not load country list. Please check your connection and retry.');
+    }
     if (mounted) setState(() => _loadingCountries = false);
   }
 
