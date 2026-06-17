@@ -1038,7 +1038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users", requireAdmin, ar(async (req, res) => {
     const limit = Math.min(parseInt((req.query.limit as string) || "50") || 50, 200);
-    const offset = parseInt((req.query.offset as string) || "0") || 0;
+    const offset = Math.max(parseInt((req.query.offset as string) || "0") || 0, 0);
     const search = (req.query.search as string)?.trim() ?? "";
     const KYC_LEVELS = ["none", "age_verified", "full"] as const;
     const USER_STATUSES = ["active", "suspended", "banned"] as const;
