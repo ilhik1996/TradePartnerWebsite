@@ -1040,8 +1040,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const limit = Math.min(parseInt((req.query.limit as string) || "50") || 50, 200);
     const offset = parseInt((req.query.offset as string) || "0") || 0;
     const search = (req.query.search as string)?.trim() ?? "";
+    const KYC_LEVELS = ["none", "age_verified", "full"] as const;
+    const USER_STATUSES = ["active", "suspended", "banned"] as const;
     const kycFilter = req.query.kyc as string | undefined;
     const statusFilter = req.query.status as string | undefined;
+    if (kycFilter && !KYC_LEVELS.includes(kycFilter as any)) {
+      res.status(400).json({ message: `Invalid kyc value. Allowed: ${KYC_LEVELS.join(", ")}` }); return;
+    }
+    if (statusFilter && !USER_STATUSES.includes(statusFilter as any)) {
+      res.status(400).json({ message: `Invalid status value. Allowed: ${USER_STATUSES.join(", ")}` }); return;
+    }
 
     const conditions: any[] = [];
     if (kycFilter) conditions.push(eq(users.kycLevel, kycFilter as any));

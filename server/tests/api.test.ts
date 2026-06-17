@@ -714,6 +714,40 @@ describe("GET /api/admin/users — search wildcard escaping", () => {
   });
 });
 
+// ── Admin users — enum filter validation ─────────────────────────────────────
+
+describe("GET /api/admin/users — enum filter validation", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("rejects invalid kyc filter value → 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?kyc=hacked")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects invalid status filter value → 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?status=evil")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid kyc filter → not 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?kyc=age_verified")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+
+  it("accepts valid status filter → not 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?status=active")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
 // ── Wallet transaction pagination cap ─────────────────────────────────────────
 
 describe("GET /api/wallet/transactions — pagination", () => {
