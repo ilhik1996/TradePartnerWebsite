@@ -861,7 +861,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const referrerId = referrer.id;
       awardXp(referrerId, 'referral', db).then(() => checkAndAwardBadges(referrerId, db)).catch(() => {});
 
-      res.json({ ok: true, referrerName: referrer.firstName ?? "Your referrer" });
+      const [referrerProfile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, referrerId));
+      res.json({ ok: true, referrerName: referrerProfile?.firstName ?? "Your referrer" });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
