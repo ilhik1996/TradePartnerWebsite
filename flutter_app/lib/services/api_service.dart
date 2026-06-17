@@ -23,9 +23,9 @@ class ApiService {
       if (token != null) options.headers['Authorization'] = 'Bearer $token';
       handler.next(options);
     },
-    onError: (e, handler) {
+    onError: (e, handler) async {
       if (e.response?.statusCode == 401) {
-        _storage.delete(key: 'viona_token');
+        await _storage.delete(key: 'viona_token');
       }
       handler.next(e);
     },
