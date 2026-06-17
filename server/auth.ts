@@ -81,12 +81,12 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     res.status(403).json({ message: "Admin access required" });
     return;
   }
-  // Verify the admin account still exists — guards against revoked/deleted admins
+  // Verify the admin account still exists and is active — guards against revoked/deleted admins
   // whose JWT hasn't expired yet
-  const [admin] = await db.select({ id: adminUsers.id })
+  const [admin] = await db.select({ id: adminUsers.id, isActive: adminUsers.isActive })
     .from(adminUsers)
-    .where(eq(adminUsers.userId, payload.userId));
-  if (!admin) {
+    .where(eq(adminUsers.id, payload.userId));
+  if (!admin || !admin.isActive) {
     res.status(403).json({ message: "Admin access required" });
     return;
   }

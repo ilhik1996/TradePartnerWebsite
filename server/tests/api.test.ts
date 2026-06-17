@@ -12,7 +12,7 @@ vi.mock("../db", () => {
   const makeChain = (): any => {
     const chain: any = {
       from: () => makeChain(),
-      where: () => Promise.resolve([{ status: "active", id: 1 }]),
+      where: () => Promise.resolve([{ status: "active", id: 1, isActive: true }]),
       for: () => chain,
       leftJoin: () => chain,
       innerJoin: () => chain,

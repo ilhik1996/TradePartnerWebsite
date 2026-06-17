@@ -13,6 +13,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final _api = ApiService();
   List<dynamic> _notifications = [];
   bool _loading = true;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -21,9 +22,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() { _loading = true; _loadError = false; });
     try {
       _notifications = await _api.getNotifications();
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _loadError = true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -51,6 +55,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator(color: VionaColors.purple)));
+    }
+
+    if (_loadError && _notifications.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(backgroundColor: VionaColors.background, title: const Text('Notifications')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 48, color: VionaColors.textSecondary),
+              const SizedBox(height: 12),
+              const Text('Could not load notifications', style: TextStyle(color: VionaColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
 
     final unreadCount = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).length;

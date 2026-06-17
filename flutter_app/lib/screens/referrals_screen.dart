@@ -15,6 +15,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   final _codeCtrl = TextEditingController();
   Map<String, dynamic>? _data;
   bool _loading = true;
+  bool _loadError = false;
   bool _applying = false;
 
   @override
@@ -30,9 +31,12 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() { _loading = true; _loadError = false; });
     try {
       _data = await _api.getReferrals();
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _loadError = true);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -64,6 +68,24 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator(color: VionaColors.purple)));
+    }
+
+    if (_loadError && _data == null) {
+      return Scaffold(
+        appBar: AppBar(backgroundColor: VionaColors.background, title: const Text('Referrals')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 48, color: VionaColors.textSecondary),
+              const SizedBox(height: 12),
+              const Text('Could not load referrals', style: TextStyle(color: VionaColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
 
     final myCode = _data?['referralCode'] as String? ?? '';
