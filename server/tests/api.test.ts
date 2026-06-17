@@ -257,6 +257,35 @@ describe("POST /api/referrals/apply — auth guard", () => {
   });
 });
 
+// ── Free entry — registered-account guard ─────────────────────────────────────
+
+describe("POST /api/draws/:drawId/enter-free — account conflict guard", () => {
+  it("returns 409 when email belongs to a registered (non-guest) account", async () => {
+    // DB mock returns { status: "active", id: 1, isActive: true } (isGuest undefined === falsy)
+    // so the guard should fire and return 409 instead of creating a duplicate entry.
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ email: "existing@example.com", firstName: "Test", lastName: "User", countryId: 1 });
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/sign in/i);
+  });
+
+  it("returns 400 for non-numeric draw id", async () => {
+    const res = await request(app)
+      .post("/api/draws/abc/enter-free")
+      .send({ email: "guest@example.com", firstName: "Test", lastName: "User", countryId: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid numeric/i);
+  });
+
+  it("returns 400 when required fields are missing", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ email: "guest@example.com" });
+    expect(res.status).toBe(400);
+  });
+});
+
 // ── Free entry (AMOE) — input validation ─────────────────────────────────────
 
 describe("POST /api/draws/:drawId/enter-free — input validation", () => {

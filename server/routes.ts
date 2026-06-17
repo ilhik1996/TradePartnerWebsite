@@ -448,6 +448,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const body = freeEntrySchema.parse({ ...req.body, drawId });
       // Find or create a free-entry guest user by email
       let [user] = await db.select().from(users).where(eq(users.email, body.email));
+      if (user && !user.isGuest) {
+        // Existing registered account — require them to authenticate instead of
+        // silently submitting on their behalf, which would block their paid entry.
+        res.status(409).json({ message: "An account with this email already exists. Please sign in to enter." });
+        return;
+      }
       if (!user) {
         const passwordHash = await bcrypt.hash(nanoid(16), 10);
         const referralCode = nanoid(8).toUpperCase();
