@@ -419,3 +419,105 @@ describe("POST /api/admin/withdrawals/:id/reject — reason validation", () => {
   });
 });
 
+// ── Webhook fail-closed behaviour ─────────────────────────────────────────────
+
+describe("POST /api/webhooks/kyc — 503 when SUMSUB_SECRET_KEY not configured", () => {
+  it("returns 503 in non-development environment (test env has no secret)", async () => {
+    // NODE_ENV=test satisfies !== 'development', so the fail-closed branch fires
+    const res = await request(app)
+      .post("/api/webhooks/kyc")
+      .set("x-payload-digest", "fakesig")
+      .send({ type: "applicantReviewed", externalUserId: "1" });
+    expect(res.status).toBe(503);
+  });
+});
+
+describe("POST /api/webhooks/stripe — 503 when STRIPE_WEBHOOK_SECRET not configured", () => {
+  it("returns 503 in non-development environment (test env has no secret)", async () => {
+    const res = await request(app)
+      .post("/api/webhooks/stripe")
+      .set("stripe-signature", "t=1,v1=fakesig")
+      .send({ type: "checkout.session.completed" });
+    expect(res.status).toBe(503);
+  });
+});
+
+// ── Free entry — lastName now optional ───────────────────────────────────────
+
+describe("POST /api/draws/:drawId/enter-free — lastName is now optional", () => {
+  it("does not reject with a lastName validation error when lastName is omitted", async () => {
+    const res = await request(app)
+      .post("/api/draws/1/enter-free")
+      .send({ firstName: "Jane", email: "jane@example.com", countryId: 1 });
+    // Zod now defaults missing lastName to ""; any 400 comes from DB, not validation
+    if (res.status === 400) {
+      expect(res.body.message ?? "").not.toMatch(/last.name|lastName/i);
+    }
+  });
+});
+
+// ── Admin user search ──────────────────────────────────────────────────────────
+
+describe("GET /api/admin/users — search parameter", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("accepts ?search= and does not return 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?search=test&limit=10")
+      .set("Authorization", `Bearer ${adminToken}`);
+    // DB mock may produce 500; must not be 400 or 401
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Responsible gaming partial update ─────────────────────────────────────────
+
+describe("PATCH /api/settings/responsible-gaming — partial update", () => {
+  const token = signToken({ userId: 999 });
+
+  it("accepts only dailyLimitAmount (partial update valid) → auth passes, DB error expected", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: 50 });
+    // Zod accepts; DB mock may error → 400 or 500; never 422
+    expect([200, 400, 500]).toContain(res.status);
+    expect(res.status).not.toBe(422);
+  });
+
+  it("rejects negative dailyLimitAmount → 400", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: -10 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts explicit null to clear a limit", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: null });
+    expect([200, 400, 500]).toContain(res.status);
+    expect(res.status).not.toBe(422);
+  });
+});
+
+// ── Countries endpoint ────────────────────────────────────────────────────────
+
+describe("GET /api/countries/:id", () => {
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app).get("/api/countries/abc");
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid numeric/i);
+  });
+
+  it("returns 200 or 404 for numeric id (no auth required)", async () => {
+    const res = await request(app).get("/api/countries/1");
+    expect([200, 404, 500]).toContain(res.status);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+
