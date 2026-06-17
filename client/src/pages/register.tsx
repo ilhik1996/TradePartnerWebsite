@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Trophy, Mail, Lock, Eye, EyeOff, Globe, CheckCircle } from "lucide-react";
+import { Trophy, Mail, Lock, Eye, EyeOff, Globe, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,10 +23,13 @@ export default function Register() {
   const [termsOk, setTermsOk] = useState(false);
   const [autoOk, setAutoOk] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [countriesError, setCountriesError] = useState(false);
   const [refCode] = useState(() => new URLSearchParams(window.location.search).get("ref") ?? "");
 
   useEffect(() => {
-    api.countries.list().then(setCountries).catch(() => {});
+    api.countries.list()
+      .then(setCountries)
+      .catch(() => setCountriesError(true));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,21 +85,28 @@ export default function Register() {
             {/* Country */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Your country</Label>
-              <div className="relative">
-                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                <select
-                  className="w-full h-12 pl-10 pr-4 rounded-md bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
-                  value={countryId ?? ""}
-                  onChange={e => setCountryId(e.target.value ? parseInt(e.target.value) : undefined)}
-                >
-                  <option value="">Select country…</option>
-                  {countries.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} — {c.currencySymbol}{c.entryAmountDaily}/day
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {countriesError ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Could not load country list. Please refresh the page and try again.
+                </div>
+              ) : (
+                <div className="relative">
+                  <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                  <select
+                    className="w-full h-12 pl-10 pr-4 rounded-md bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
+                    value={countryId ?? ""}
+                    onChange={e => setCountryId(e.target.value ? parseInt(e.target.value) : undefined)}
+                  >
+                    <option value="">Select country…</option>
+                    {countries.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} — {c.currencySymbol}{c.entryAmountDaily}/day
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Email */}
