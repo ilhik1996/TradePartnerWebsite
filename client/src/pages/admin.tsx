@@ -342,12 +342,19 @@ function UsersPanel() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const { toast } = useToast();
+
+  // Debounce search input — wait 400ms after the user stops typing before querying
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     setLoading(true);
-    api.admin.users(100, 0, search).then(setUsers).finally(() => setLoading(false));
-  }, [search]);
+    api.admin.users(100, 0, debouncedSearch).then(setUsers).finally(() => setLoading(false));
+  }, [debouncedSearch]);
 
   const updateStatus = async (id: number, status: string) => {
     try {
@@ -1156,11 +1163,11 @@ export default function Admin() {
         </button>
       </aside>
 
-      {/* Mobile bottom nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 viona-nav border-t border-border grid grid-cols-6">
+      {/* Mobile bottom nav — horizontally scrollable to handle all 9 sections */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 viona-nav border-t border-border flex overflow-x-auto">
         {SECTIONS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActive(id)}
-            className={`flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium ${
+            className={`flex flex-col items-center py-2 px-3 gap-0.5 text-[10px] font-medium shrink-0 ${
               active === id ? "text-primary" : "text-muted-foreground"
             }`}>
             <Icon className="w-4 h-4" />{label}
