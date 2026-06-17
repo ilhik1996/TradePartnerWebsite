@@ -9,6 +9,10 @@
  * Without RESEND_API_KEY: logs emails to console (dev mode).
  */
 
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+}
+
 interface EmailPayload {
   to: string;
   subject: string;
@@ -78,11 +82,11 @@ function layout(content: string, preheader = ""): string {
 // ─── Email templates ──────────────────────────────────────────────────────────
 
 export async function sendWelcomeEmail(to: string, firstName?: string) {
-  const name = firstName ?? "there";
+  const name = escHtml(firstName ?? "there");
   return sendEmail({
     to,
     subject: "Welcome to VIONA — your daily draw awaits",
-    text: `Hi ${name}! Welcome to VIONA. Daily draws in your local currency. May the odds be with you.`,
+    text: `Hi ${firstName ?? "there"}! Welcome to VIONA. Daily draws in your local currency. May the odds be with you.`,
     html: layout(`
       <div class="card">
         <h2>Welcome to VIONA, ${name}!</h2>
@@ -113,7 +117,7 @@ export async function sendDrawResultEmail(opts: {
   totalEntries?: number;
 }) {
   const { to, firstName, drawDate, isWinner, prizeAmount, currencySymbol = "", myTicket, winnerTicket, totalEntries } = opts;
-  const name = firstName ?? "there";
+  const name = escHtml(firstName ?? "there");
 
   if (isWinner) {
     return sendEmail({
