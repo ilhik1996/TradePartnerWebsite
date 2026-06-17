@@ -50,9 +50,9 @@ export async function createSubscription(
   const now = new Date();
   const nextBillingDate = new Date(now);
   if (type === "weekly") {
-    nextBillingDate.setDate(now.getDate() + 7);
+    nextBillingDate.setUTCDate(now.getUTCDate() + 7);
   } else {
-    nextBillingDate.setMonth(now.getMonth() + 1);
+    nextBillingDate.setUTCMonth(now.getUTCMonth() + 1);
   }
 
   const [sub] = await db.insert(subscriptions).values({
@@ -122,9 +122,9 @@ export async function renewDueSubscriptions() {
       // prevents concurrent schedulers from both charging the same period
       const next = new Date(sub.nextBillingDate);
       if (sub.type === "weekly") {
-        next.setDate(next.getDate() + 7);
+        next.setUTCDate(next.getUTCDate() + 7);
       } else {
-        next.setMonth(next.getMonth() + 1);
+        next.setUTCMonth(next.getUTCMonth() + 1);
       }
       const [claimed] = await db.update(subscriptions)
         .set({ nextBillingDate: next })

@@ -1035,8 +1035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ── Admin: Users ──────────────────────────────────────────────────────────
 
   app.get("/api/admin/users", requireAdmin, ar(async (req, res) => {
-    const limit = Math.min(parseInt((req.query.limit as string) || "50"), 200);
-    const offset = parseInt((req.query.offset as string) || "0");
+    const limit = Math.min(parseInt((req.query.limit as string) || "50") || 50, 200);
+    const offset = parseInt((req.query.offset as string) || "0") || 0;
     const search = (req.query.search as string)?.trim() ?? "";
     const kycFilter = req.query.kyc as string | undefined;
     const statusFilter = req.query.status as string | undefined;
@@ -1045,7 +1045,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (kycFilter) conditions.push(eq(users.kycLevel, kycFilter as any));
     if (statusFilter) conditions.push(eq(users.status, statusFilter as any));
     if (search) {
-      const q = `%${search}%`;
+      const escaped = search.replace(/[%_\\]/g, "\\$&");
+      const q = `%${escaped}%`;
       conditions.push(or(
         ilike(users.email, q),
         ilike(users.phone, q),

@@ -301,19 +301,21 @@ export async function conductDraw(drawId: number) {
 
   db.select().from(drawEntries).where(eq(drawEntries.drawId, drawId))
     .then(allEntries => {
-      for (const entry of allEntries) {
-        if (!entry.userId || entry.userId === winnerEntry.userId) continue;
-        const distance = Math.abs((entry.ticketNumber ?? 0) - winnerTicket);
-        const proximity = Math.round((1 - distance / draw.totalEntries) * 100);
-        insertNotification({
-          userId: entry.userId,
-          type: "draw_result",
-          title: "Today's draw completed",
-          body: `Your ticket was ${proximity}% close to the winner. Better luck tomorrow!`,
-          metadata: { drawId, winnerTicket, myTicket: entry.ticketNumber },
-          pushUrl: "/history",
-        }).catch(() => {});
-      }
+      const tasks = allEntries
+        .filter(e => e.userId && e.userId !== winnerEntry.userId)
+        .map(entry => {
+          const distance = Math.abs((entry.ticketNumber ?? 0) - winnerTicket);
+          const proximity = Math.max(0, Math.min(100, Math.round((1 - distance / draw.totalEntries) * 100)));
+          return insertNotification({
+            userId: entry.userId!,
+            type: "draw_result",
+            title: "Today's draw completed",
+            body: `Your ticket was ${proximity}% close to the winner. Better luck tomorrow!`,
+            metadata: { drawId, winnerTicket, myTicket: entry.ticketNumber },
+            pushUrl: "/history",
+          }).catch(() => {});
+        });
+      Promise.allSettled(tasks).catch(() => {});
     }).catch(() => {});
 
   return {

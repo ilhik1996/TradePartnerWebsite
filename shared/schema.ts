@@ -294,14 +294,14 @@ export const userSessions = pgTable("user_sessions", {
 // ─── Zod Schemas & Types ──────────────────────────────────────────────────────
 
 export const insertUserSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().email().transform(v => v.toLowerCase()).optional(),
   phone: z.string().min(7).optional(),
   password: z.string().min(8),
   countryId: z.number().int().optional(),
 }).refine(d => d.email || d.phone, { message: "Email or phone required" });
 
 export const loginSchema = z.object({
-  identifier: z.string().min(3),   // email or phone
+  identifier: z.string().min(3).transform(v => v.includes("@") ? v.toLowerCase() : v),
   password: z.string().min(1),
 });
 
@@ -309,7 +309,7 @@ export const freeEntrySchema = z.object({
   drawId: z.number().int(),
   firstName: z.string().min(1),
   lastName: z.string().default(""),
-  email: z.string().email(),
+  email: z.string().email().transform(v => v.toLowerCase()),
   countryId: z.number().int(),
 });
 
