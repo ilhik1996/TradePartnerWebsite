@@ -867,7 +867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { firstName, countryCode } = z.object({
         firstName: z.string().min(1).max(100),
-        countryCode: z.string().length(2),
+        countryCode: z.string().length(2).toUpperCase(),
       }).parse(req.body);
       await db.insert(petitionSignatures).values({
         userId: uid(req),
@@ -1150,12 +1150,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/withdrawals/:id/reject", requireAdmin, ar(async (req: Request, res: Response) => {
     const txId = parseIntParam(req.params.id, res); if (txId === null) return;
     const { reason } = z.object({ reason: z.string().max(500).optional() }).parse(req.body);
-    const [tx] = await db.select().from(transactions)
-      .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")));
-    if (!tx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
 
-    // Refund balance atomically
+    // Lock the withdrawal row INSIDE the transaction — prevents concurrent rejects from double-refunding
+    let rejectedTx: typeof transactions.$inferSelect | null = null;
     await db.transaction(async (txn) => {
+      const [tx] = await txn.select().from(transactions)
+        .where(and(eq(transactions.id, txId), eq(transactions.type, "withdrawal"), eq(transactions.status, "pending")))
+        .for("update");
+      if (!tx) return;
+      rejectedTx = tx;
+
       const [wallet] = await txn.select().from(wallets).where(eq(wallets.userId, tx.userId!)).for("update");
       if (wallet) {
         const refundAmount = Math.abs(parseFloat(tx.amount as string));
@@ -1175,6 +1179,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await txn.update(transactions).set({ status: "failed" }).where(eq(transactions.id, txId));
     });
 
+    if (!rejectedTx) { res.status(404).json({ message: "Pending withdrawal not found" }); return; }
+
     await db.insert(auditLogs).values({
       adminUserId: adminUid(req),
       action: "withdrawal_rejected",
@@ -1183,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       dataAfter: { reason: reason ?? "no reason given" },
     });
     await insertNotification({
-      userId: tx.userId!,
+      userId: (rejectedTx as typeof transactions.$inferSelect).userId!,
       type: "withdrawal_rejected",
       title: "Withdrawal rejected",
       body: `Your withdrawal could not be processed${reason ? `: ${reason}` : ". Your balance has been refunded."}`,

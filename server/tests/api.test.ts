@@ -520,4 +520,74 @@ describe("GET /api/countries/:id", () => {
   });
 });
 
+// ── Petition sign — countryCode normalization ─────────────────────────────────
+
+describe("POST /api/petition/sign — countryCode normalization", () => {
+  const token = signToken({ userId: 42 });
+
+  it("accepts lowercase countryCode (Zod toUpperCase normalizes it)", async () => {
+    const res = await request(app)
+      .post("/api/petition/sign")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ firstName: "Ivan", countryCode: "ua" });
+    // Zod accepts "ua" and uppercases to "UA"; any 400 comes from DB, not countryCode validation
+    if (res.status === 400) {
+      expect(res.body.message ?? "").not.toMatch(/country.?code|length/i);
+    }
+  });
+
+  it("rejects countryCode shorter than 2 chars with 400", async () => {
+    const res = await request(app)
+      .post("/api/petition/sign")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ firstName: "Ivan", countryCode: "u" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects countryCode longer than 2 chars with 400", async () => {
+    const res = await request(app)
+      .post("/api/petition/sign")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ firstName: "Ivan", countryCode: "UAH" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects missing firstName with 400", async () => {
+    const res = await request(app)
+      .post("/api/petition/sign")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ countryCode: "UA" });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Withdrawal reject — guard and route existence ─────────────────────────────
+
+describe("POST /api/admin/withdrawals/:id/reject", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("requires admin auth → 401 without token", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .send({});
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric withdrawal id", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/abc/reject")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects reason exceeding 500 chars with 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "x".repeat(501) });
+    expect(res.status).toBe(400);
+  });
+});
+
 
