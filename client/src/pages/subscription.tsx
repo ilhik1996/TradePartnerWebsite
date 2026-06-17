@@ -202,7 +202,7 @@ export default function Subscription() {
             perDay={monthlyAmt / 30}
             currency={country?.currency ?? "UAH"}
             symbol={symbol}
-            savings={`Save ${monthSavings}%`}
+            savings={monthSavings > 0 ? `Save ${monthSavings}%` : undefined}
             isActive={activeSub?.type === "monthly"}
             loading={submitting === "monthly"}
             onSelect={() => activeSub?.type === "monthly" ? setCancelConfirm(true) : subscribe("monthly")}

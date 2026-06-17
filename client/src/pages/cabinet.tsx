@@ -48,6 +48,7 @@ export default function Cabinet() {
   // Self-exclusion
   const [exDays, setExDays] = useState(30);
   const [excluding, setExcluding] = useState(false);
+  const [excludeConfirm, setExcludeConfirm] = useState(false);
 
   // Spending limits
   const [limitDaily, setLimitDaily] = useState("");
@@ -81,7 +82,7 @@ export default function Cabinet() {
     }).catch((err: any) => {
       toast({ title: "Failed to load profile", description: err.message, variant: "destructive" });
     }).finally(() => setLoading(false));
-  }, [user]);
+  }, [user?.id]);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -148,6 +149,10 @@ export default function Cabinet() {
   };
 
   const handleSelfExclude = async () => {
+    if (!excludeConfirm) {
+      setExcludeConfirm(true);
+      return;
+    }
     setExcluding(true);
     try {
       await api.profile.selfExclude(exDays);
@@ -156,6 +161,7 @@ export default function Cabinet() {
       navigate("/");
     } catch (err: any) {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
+      setExcludeConfirm(false);
     } finally {
       setExcluding(false);
     }
@@ -519,14 +525,31 @@ export default function Cabinet() {
                 <option value={180}>180 days</option>
                 <option value={365}>1 year</option>
               </select>
-              <Button
-                variant="outline"
-                className="w-full h-10 text-sm border-red-500/30 text-red-400 hover:bg-red-500/10"
-                onClick={handleSelfExclude}
-                disabled={excluding}
-              >
-                {excluding ? "Processing…" : `Exclude for ${exDays} days`}
-              </Button>
+              {excludeConfirm && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                  ⚠️ This will lock your account for {exDays} days and cannot be undone. Click confirm to proceed.
+                </div>
+              )}
+              <div className="flex gap-2">
+                {excludeConfirm && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 text-sm"
+                    onClick={() => setExcludeConfirm(false)}
+                    disabled={excluding}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className={`h-10 text-sm border-red-500/30 text-red-400 hover:bg-red-500/10 ${excludeConfirm ? "flex-1" : "w-full"}`}
+                  onClick={handleSelfExclude}
+                  disabled={excluding}
+                >
+                  {excluding ? "Processing…" : excludeConfirm ? "Confirm exclusion" : `Exclude for ${exDays} days`}
+                </Button>
+              </div>
             </div>
           </div>
         )}
