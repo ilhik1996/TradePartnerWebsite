@@ -209,12 +209,10 @@ export function generateProvablyFairWinner(
 ): { winnerTicket: number; seedHash: string; proof: string } {
   // seed contains server secret — never stored in plaintext; only its hash is public
   const seed = `viona:draw:${drawId}:entries:${totalEntries}:secret:${serverSecret}`;
-  const hash = createHash("sha256").update(seed).digest("hex");
-  const winnerTicket = (parseInt(hash.slice(0, 8), 16) % totalEntries) + 1;
-  // proof is hash(hash + drawId) — can be verified publicly without revealing the secret
-  const proof = createHash("sha256").update(hash + drawId).digest("hex");
-  // Store only the hash of the seed, not the plaintext (which contains the server secret)
   const seedHash = createHash("sha256").update(seed).digest("hex");
+  const winnerTicket = (parseInt(seedHash.slice(0, 8), 16) % totalEntries) + 1;
+  // proof is hash(seedHash + drawId) — can be verified publicly without revealing the secret
+  const proof = createHash("sha256").update(seedHash + drawId).digest("hex");
   return { winnerTicket, seedHash, proof };
 }
 
