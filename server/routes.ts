@@ -496,8 +496,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/wallet/transactions", requireAuth, ar(async (req: Request, res: Response) => {
     try {
-      const limit = parseInt((req.query.limit as string) || "20") || 20;
-      const offset = parseInt((req.query.offset as string) || "0") || 0;
+      const limit = Math.min(Math.max(parseInt((req.query.limit as string) || "20") || 20, 1), 100);
+      const offset = Math.max(parseInt((req.query.offset as string) || "0") || 0, 0);
       const txs = await getTransactionHistory(uid(req), limit, offset);
       res.json(txs);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
