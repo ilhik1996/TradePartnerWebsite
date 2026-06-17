@@ -21,19 +21,31 @@ export default function Referrals() {
       .finally(() => setLoading(false));
   }, []);
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(data?.referralCode ?? "");
-    toast({ title: "Copied!", description: "Referral code copied to clipboard" });
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(data?.referralCode ?? "");
+      toast({ title: "Copied!", description: "Referral code copied to clipboard" });
+    } catch {
+      toast({ title: "Could not copy", description: "Please copy the code manually", variant: "destructive" });
+    }
   };
 
-  const shareLink = () => {
+  const shareLink = async () => {
     const code = data?.referralCode;
     const url = code ? `${window.location.origin}/register?ref=${code}` : window.location.origin;
     if (navigator.share) {
-      navigator.share({ title: "Join VIONA", text: "Daily prize draws in your currency!", url });
+      try {
+        await navigator.share({ title: "Join VIONA", text: "Daily prize draws in your currency!", url });
+      } catch {
+        // User cancelled the native share dialog — no feedback needed
+      }
     } else {
-      navigator.clipboard.writeText(url);
-      toast({ title: "Link copied!" });
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied!" });
+      } catch {
+        toast({ title: "Could not copy link", description: "Please copy the link manually", variant: "destructive" });
+      }
     }
   };
 
