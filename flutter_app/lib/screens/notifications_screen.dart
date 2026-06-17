@@ -14,6 +14,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<dynamic> _notifications = [];
   bool _loading = true;
   bool _loadError = false;
+  bool _marking = false;
 
   @override
   void initState() {
@@ -42,13 +43,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAllRead() async {
+    if (_marking) return;
+    if (mounted) setState(() => _marking = true);
     try {
       final unread = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).toList();
       await Future.wait(unread.map((n) => _api.markNotificationRead((n['id'] as num).toInt())));
-      setState(() {
-        _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList();
-      });
+      if (mounted) setState(() => _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList());
     } catch (_) {}
+    if (mounted) setState(() => _marking = false);
   }
 
   @override
@@ -99,7 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           if (unreadCount > 0)
             TextButton(
-              onPressed: _markAllRead,
+              onPressed: _marking ? null : _markAllRead,
               child: const Text('Mark all read', style: TextStyle(color: VionaColors.purple, fontSize: 13)),
             ),
         ],

@@ -194,7 +194,7 @@ export default function Register() {
             <Button
               type="submit"
               className="btn-viona-primary w-full h-12 text-base"
-              disabled={loading || !age18 || !termsOk}
+              disabled={loading || !age18 || !termsOk || !countryId}
             >
               {loading ? "Creating account…" : "Create account"}
             </Button>

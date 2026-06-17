@@ -111,8 +111,8 @@ export default function Subscription() {
       setCountry(c);
       setActiveSub(sub);
       setSubHistory(hist);
-    } catch {
-      // Errors surface through missing data; avoid infinite spinner
+    } catch (err: any) {
+      toast({ title: "Failed to load subscription data", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }

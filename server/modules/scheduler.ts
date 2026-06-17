@@ -95,21 +95,20 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
                 eq(drawEntries.drawId, openDraw.id),
                 ne(drawEntries.userId, result.winnerUserId),
               ))
-              .then(async (loserRows) => {
-                for (const loser of loserRows) {
-                  if (loser.email) {
-                    sendDrawResultEmail({
-                      to: loser.email,
-                      firstName: loser.firstName ?? undefined,
-                      drawDate: openDraw.drawDate,
-                      isWinner: false,
-                      myTicket: loser.ticketNumber ?? undefined,
-                      winnerTicket: result.winnerTicket,
-                      totalEntries: openDraw.totalEntries,
-                      currencySymbol: country.currencySymbol ?? "",
-                    }).catch(() => {});
-                  }
-                }
+              .then((loserRows) => {
+                const tasks = loserRows
+                  .filter(l => !!l.email)
+                  .map(loser => sendDrawResultEmail({
+                    to: loser.email!,
+                    firstName: loser.firstName ?? undefined,
+                    drawDate: openDraw.drawDate,
+                    isWinner: false,
+                    myTicket: loser.ticketNumber ?? undefined,
+                    winnerTicket: result.winnerTicket,
+                    totalEntries: openDraw.totalEntries,
+                    currencySymbol: country.currencySymbol ?? "",
+                  }).catch(() => {}));
+                return Promise.allSettled(tasks);
               }).catch(() => {});
           }
         } catch (err) {

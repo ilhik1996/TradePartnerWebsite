@@ -7,6 +7,9 @@ class ApiService {
     defaultValue: 'https://viona.app/api',
   );
 
+  // Public accessor so other screens can build URLs without duplicating the constant
+  static String get baseUrl => _baseUrl;
+
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();

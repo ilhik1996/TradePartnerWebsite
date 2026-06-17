@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 const CATEGORY_ICON: Record<string, string> = {
@@ -13,6 +14,7 @@ const CATEGORY_ICON: Record<string, string> = {
 
 export default function Partners() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -24,7 +26,7 @@ export default function Partners() {
     setLoading(true);
     api.partners.list(countryId)
       .then(data => { if (!cancelled) setPartners(data); })
-      .catch(() => {})
+      .catch((err: any) => { if (!cancelled) toast({ title: "Failed to load partners", description: err.message, variant: "destructive" }); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [countryId]);

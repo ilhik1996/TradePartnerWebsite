@@ -292,7 +292,7 @@ class _DrawCardState extends State<_DrawCard> {
                     GestureDetector(
                       onTap: () async {
                         final drawId = draw['id'];
-                        final uri = Uri.parse('https://viona.app/api/draws/$drawId/verify');
+                        final uri = Uri.parse('${ApiService.baseUrl}/draws/$drawId/verify');
                         if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
                       },
                       child: const Row(

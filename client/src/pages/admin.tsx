@@ -677,8 +677,8 @@ function FinancePanel() {
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-mono ${TYPE_COLORS[tx.type] ?? "text-muted-foreground"}`}>{tx.type}</span>
                 <span className="text-xs text-muted-foreground">user #{tx.userId}</span>
-                <span className={`text-xs font-bold ${parseFloat(tx.amount) > 0 ? "text-green-400" : "text-muted-foreground"}`}>
-                  {parseFloat(tx.amount) > 0 ? "+" : ""}{parseFloat(tx.amount).toFixed(2)}
+                <span className={`text-xs font-bold ${parseFloat(tx.amount ?? "0") > 0 ? "text-green-400" : "text-muted-foreground"}`}>
+                  {parseFloat(tx.amount ?? "0") > 0 ? "+" : ""}{parseFloat(tx.amount ?? "0").toFixed(2)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground truncate mt-0.5">{tx.description ?? "—"}</p>

@@ -35,6 +35,7 @@ class WebSocketService {
   }
 
   void _doConnect() {
+    if (_channel != null) return; // already connected
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       _channel!.stream.listen(
@@ -46,8 +47,8 @@ class WebSocketService {
             }
           } catch (_) {}
         },
-        onDone: _scheduleReconnect,
-        onError: (_) => _scheduleReconnect(),
+        onDone: () { _channel = null; _scheduleReconnect(); },
+        onError: (_) { _channel = null; _scheduleReconnect(); },
       );
     } catch (_) {
       _scheduleReconnect();

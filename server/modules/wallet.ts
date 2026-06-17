@@ -22,6 +22,7 @@ export async function depositFunds(userId: number, amount: number, reference?: s
     if (!wallet) throw new Error("Wallet not found");
 
     const newBalance = parseFloat(wallet.balance as string) + amount;
+    if (newBalance > 9_999_999.99) throw new Error("Deposit would exceed maximum account balance");
 
     await tx.update(wallets)
       .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })

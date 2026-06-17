@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Bell, Trophy, Wallet, Info, CheckCheck, ShieldCheck, ShieldX, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 const NOTIF_ICONS: Record<string, any> = {
@@ -30,11 +31,15 @@ function timeAgo(dateStr: string | undefined) {
 }
 
 export default function Notifications() {
+  const { toast } = useToast();
   const [notifs, setNotifs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.notifications.list().then(setNotifs).catch(() => {}).finally(() => setLoading(false));
+    api.notifications.list()
+      .then(setNotifs)
+      .catch((err: any) => toast({ title: "Failed to load notifications", description: err.message, variant: "destructive" }))
+      .finally(() => setLoading(false));
   }, []);
 
   const markAllRead = async () => {
