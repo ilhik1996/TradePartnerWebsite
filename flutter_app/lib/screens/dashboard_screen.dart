@@ -31,6 +31,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // Free entry modal
   bool _showFreeEntry = false;
+  bool _freeEntering = false;
   final _freeNameCtrl = TextEditingController();
   final _freeEmailCtrl = TextEditingController();
 
@@ -105,10 +106,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _enterFree() async {
-    if (_draw == null) return;
+    if (_freeEntering || _draw == null) return;
     final name = _freeNameCtrl.text.trim().split(' ');
     final email = _freeEmailCtrl.text.trim();
     if (_freeNameCtrl.text.trim().isEmpty || email.isEmpty) return;
+    setState(() => _freeEntering = true);
     try {
       final result = await _api.enterFree(
         _draw!['id'],
@@ -122,6 +124,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       await _loadData();
     } catch (e) {
       _showSnack('$e', error: true);
+    } finally {
+      if (mounted) setState(() => _freeEntering = false);
     }
   }
 
@@ -430,7 +434,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             decoration: const InputDecoration(hintText: 'Email address'),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(onPressed: _enterFree, child: const Text('Get free ticket')),
+          ElevatedButton(
+            onPressed: _freeEntering ? null : _enterFree,
+            child: _freeEntering
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Get free ticket'),
+          ),
         ],
       ),
     );

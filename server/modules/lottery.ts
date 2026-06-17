@@ -85,6 +85,17 @@ export async function addPaidEntry(userId: number, drawId: number) {
 
   // Atomic: deduct balance + record entry inside a single DB transaction
   return db.transaction(async (tx) => {
+    // Re-verify draw is still open inside the transaction.  Without this, a
+    // user whose pre-flight check raced past conductDraw's status flip would
+    // get their wallet debited but their ticket would exceed the winner pool.
+    // FOR UPDATE serialises with conductDraw's UPDATE on the same row.
+    const [currentDraw] = await tx
+      .select({ status: draws.status })
+      .from(draws)
+      .where(eq(draws.id, drawId))
+      .for("update");
+    if (!currentDraw || currentDraw.status !== "open") throw new Error("Draw has already closed");
+
     // Re-check duplicate inside transaction to prevent double-entry under concurrency
     const [existing] = await tx
       .select({ id: drawEntries.id })

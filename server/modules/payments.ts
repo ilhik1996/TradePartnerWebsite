@@ -81,7 +81,14 @@ class StripeProvider implements PaymentProvider {
   }
 
   async charge(opts: Parameters<PaymentProvider["charge"]>[0]): Promise<ChargeResult> {
-    if (!this.stripe) return new MockProvider().charge(opts);
+    if (!this.stripe) {
+      return {
+        success: false,
+        transactionId: nanoid(),
+        errorCode: "provider_not_configured",
+        errorMessage: "Stripe is not configured — set STRIPE_SECRET_KEY",
+      };
+    }
 
     try {
       const intent = await this.stripe.paymentIntents.create({
