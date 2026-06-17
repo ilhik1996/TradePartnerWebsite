@@ -289,7 +289,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                   child: Center(
                     child: Text(
-                      (_profile?['firstName'] as String? ?? 'U').substring(0, 1).toUpperCase(),
+                      ((_profile?['firstName'] as String?)?.isNotEmpty == true
+                        ? (_profile!['firstName'] as String)[0]
+                        : 'U').toUpperCase(),
                       style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                   ),
@@ -742,7 +744,7 @@ class _KycAgeSheetState extends State<_KycAgeSheet> {
           // Sumsub configured: open WebSDK in browser
           final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-          Navigator.pop(context);
+          if (mounted) Navigator.pop(context);
         } else {
           widget.onDone();
         }
@@ -822,7 +824,7 @@ class _KycFullSheetState extends State<_KycFullSheet> {
         if (sdkToken != null) {
           final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-          Navigator.pop(context);
+          if (mounted) Navigator.pop(context);
         } else {
           widget.onDone();
         }
