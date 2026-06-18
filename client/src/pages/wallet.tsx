@@ -56,12 +56,14 @@ export default function WalletPage() {
     setTransactions(txs);
   }, []);
 
-  // Refresh balance when a draw is completed (prize credited) or referral bonus arrives
+  // Refresh balance when a draw completes (prize) or a referral bonus is credited to this user
   useRealtime(useCallback((msg) => {
-    if (msg.type === "draw_completed" || msg.type === "referral_bonus") {
+    if (msg.type === "draw_completed") {
+      reloadWallet().catch(() => {});
+    } else if (msg.type === "referral_bonus" && msg.userId === user?.id) {
       reloadWallet().catch(() => {});
     }
-  }, [reloadWallet]));
+  }, [reloadWallet, user?.id]));
 
   useEffect(() => {
     Promise.all([
