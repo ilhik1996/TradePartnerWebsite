@@ -50,7 +50,7 @@ export interface UserLevel {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function computeLevel(totalXp: number): { level: number; title: string; currentLevelXp: number; nextLevelXp: number | null } {
+export function computeLevel(totalXp: number): { level: number; title: string; currentLevelXp: number; nextLevelXp: number | null } {
   let level = 1;
   for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalXp >= LEVEL_THRESHOLDS[i]) {
@@ -66,7 +66,7 @@ function computeLevel(totalXp: number): { level: number; title: string; currentL
 }
 
 // Checks whether an array of ISO date strings contains a consecutive run of ≥ n days.
-function hasConsecutiveDays(days: string[], n: number): boolean {
+export function hasConsecutiveDays(days: string[], n: number): boolean {
   if (days.length < n) return false;
   const sorted = Array.from(new Set(days)).sort();
   let run = 1;
