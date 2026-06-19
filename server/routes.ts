@@ -24,7 +24,7 @@ import {
   subscriptions, referrals, partners, pushSubscriptions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
-import { eq, desc, and, sql, inArray, count, gte, sum, ilike, or } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, count, gte, sum, ilike, or, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -1276,7 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/petition/count", ar(async (_req, res) => {
     const [row] = await db.select({ count: sql<number>`count(*)` })
       .from(petitionSignatures)
-      .where(sql`revoked_at IS NULL`);
+      .where(isNull(petitionSignatures.revokedAt));
     res.json({ count: row.count });
   }));
 
@@ -1591,17 +1591,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // GET /api/partners/:id — single partner by id
   app.get("/api/partners/:id", ar(async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
-
-      const partner = await getPartner(id);
-      if (!partner) { res.status(404).json({ message: "Partner not found" }); return; }
-
-      res.json(partner);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
+    const id = parseIntParam(req.params.id, res); if (id === null) return;
+    const partner = await getPartner(id);
+    if (!partner) { res.status(404).json({ message: "Partner not found" }); return; }
+    res.json(partner);
   }));
 
   // POST /api/admin/partners — create a partner
@@ -1645,8 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/admin/partners/:id — update partner fields
   app.patch("/api/admin/partners/:id", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
+      const id = parseIntParam(req.params.id, res); if (id === null) return;
 
       const schema = z.object({
         name: z.string().min(1).optional(),
@@ -1688,8 +1680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/admin/partners/:id — soft-delete (set isActive=false)
   app.delete("/api/admin/partners/:id", requireAdmin, ar(async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) { res.status(400).json({ message: "Invalid partner id" }); return; }
+      const id = parseIntParam(req.params.id, res); if (id === null) return;
 
       const [deactivated] = await db.update(partners)
         .set({ isActive: false })

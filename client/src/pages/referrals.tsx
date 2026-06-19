@@ -22,8 +22,9 @@ export default function Referrals() {
   }, []);
 
   const copyCode = async () => {
+    if (!data?.referralCode) return;
     try {
-      await navigator.clipboard.writeText(data?.referralCode ?? "");
+      await navigator.clipboard.writeText(data.referralCode);
       toast({ title: "Copied!", description: "Referral code copied to clipboard" });
     } catch {
       toast({ title: "Could not copy", description: "Please copy the code manually", variant: "destructive" });
