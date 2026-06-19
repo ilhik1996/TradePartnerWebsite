@@ -21,7 +21,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     final id = _identifierCtrl.text.trim();
     final pw = _passwordCtrl.text;
-    if (id.isEmpty || pw.isEmpty) return;
+    if (id.isEmpty || pw.isEmpty) {
+      setState(() => _error = 'Please enter your email/phone and password');
+      return;
+    }
     setState(() { _loading = true; _error = null; });
     try {
       await _api.login(id, pw);

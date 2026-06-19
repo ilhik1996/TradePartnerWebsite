@@ -177,8 +177,9 @@ export default function Dashboard() {
     setAutoParticipate(next);
     try {
       await api.profile.setAutoParticipate(next);
-    } catch {
+    } catch (err: any) {
       setAutoParticipate(!next);
+      toast({ title: "Failed to update preference", description: err.message, variant: "destructive" });
     }
   };
 

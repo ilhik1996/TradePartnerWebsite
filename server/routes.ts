@@ -573,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.headers["user-agent"] ?? "",
         amountUsd: amount,
       });
-      if (riskScore >= 80) {
+      if (riskScore >= 60) {
         res.status(403).json({ message: "Transaction flagged for review. Please contact support." });
         return;
       }
@@ -883,7 +883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json({ ok: true });
     } catch (err: any) {
-      if (err.message?.includes("unique")) {
+      if (err.code === "23505") {
         res.status(409).json({ message: "Already signed" });
       } else {
         res.status(400).json({ message: err.message });
