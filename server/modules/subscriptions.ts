@@ -7,6 +7,19 @@ import { nanoid } from "nanoid";
 import { awardXp, checkAndAwardBadges } from "./gamification";
 import { insertNotification } from "./notifications";
 
+// Advance date by one calendar month, clamped to last day of target month.
+// e.g. Jan 31 → Feb 28 (not March 3, which setUTCMonth overflows to).
+function addOneUTCMonth(d: Date): Date {
+  const result = new Date(d);
+  const targetMonth = result.getUTCMonth() + 1;
+  result.setUTCMonth(targetMonth);
+  // If the day overflowed into the following month, back up to last day of target month
+  if (result.getUTCMonth() !== targetMonth % 12) {
+    result.setUTCDate(0); // day 0 = last day of previous month
+  }
+  return result;
+}
+
 // ─── Create subscription ──────────────────────────────────────────────────────
 
 export async function createSubscription(
@@ -48,12 +61,9 @@ export async function createSubscription(
     ));
 
   const now = new Date();
-  const nextBillingDate = new Date(now);
-  if (type === "weekly") {
-    nextBillingDate.setUTCDate(now.getUTCDate() + 7);
-  } else {
-    nextBillingDate.setUTCMonth(now.getUTCMonth() + 1);
-  }
+  const nextBillingDate = type === "weekly"
+    ? (() => { const d = new Date(now); d.setUTCDate(now.getUTCDate() + 7); return d; })()
+    : addOneUTCMonth(now);
 
   const [sub] = await db.insert(subscriptions).values({
     userId,
@@ -120,12 +130,9 @@ export async function renewDueSubscriptions() {
 
       // Claim renewal slot first (atomic date advance) — only one process wins;
       // prevents concurrent schedulers from both charging the same period
-      const next = new Date(sub.nextBillingDate);
-      if (sub.type === "weekly") {
-        next.setUTCDate(next.getUTCDate() + 7);
-      } else {
-        next.setUTCMonth(next.getUTCMonth() + 1);
-      }
+      const next = sub.type === "weekly"
+        ? (() => { const d = new Date(sub.nextBillingDate); d.setUTCDate(d.getUTCDate() + 7); return d; })()
+        : addOneUTCMonth(new Date(sub.nextBillingDate));
       const [claimed] = await db.update(subscriptions)
         .set({ nextBillingDate: next })
         .where(and(

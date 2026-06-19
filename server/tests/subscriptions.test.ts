@@ -31,9 +31,10 @@ vi.mock("../modules/lottery", () => ({
 
 // ─── Imports (after mocks) ────────────────────────────────────────────────────
 
-import { cancelSubscription, createSubscription } from "../modules/subscriptions";
+import { cancelSubscription, createSubscription, renewDueSubscriptions } from "../modules/subscriptions";
 import { db } from "../db";
 import { processDeposit } from "../modules/payments";
+import { insertNotification } from "../modules/notifications";
 
 const mockedDb = db as any;
 const mockedProcessDeposit = vi.mocked(processDeposit);
@@ -60,6 +61,17 @@ function makeInsertChain(returnRows: any[] = []) {
   return {
     values: () => ({
       returning: () => Promise.resolve(returnRows),
+    }),
+  };
+}
+
+// update().set().where().returning() — used by renewDueSubscriptions atomic claim
+function makeUpdateWithReturning(returnRows: any[] = []) {
+  return {
+    set: () => ({
+      where: () => ({
+        returning: () => Promise.resolve(returnRows),
+      }),
     }),
   };
 }
@@ -292,5 +304,144 @@ describe("createSubscription — next billing date", () => {
     await createSubscription(1, "weekly", "tok");
     expect(callOrder[0]).toBe("charge");
     expect(callOrder[1]).toBe("cancel_existing");
+  });
+});
+
+// ─── renewDueSubscriptions ────────────────────────────────────────────────────
+
+const COUNTRY = { id: 1, currency: "UAH", currencySymbol: "₴" };
+
+function makeSub(overrides: Record<string, any> = {}) {
+  return {
+    id: 1,
+    userId: 10,
+    countryId: 1,
+    type: "weekly",
+    status: "active",
+    amount: "50.00",
+    currency: "UAH",
+    paymentMethodToken: "tok_valid",
+    nextBillingDate: new Date("2025-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+describe("renewDueSubscriptions", () => {
+  // Reset ALL mock state (including implementations) before each test in this block,
+  // because earlier describe blocks leave persistent mockImplementations on db.update.
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(insertNotification).mockResolvedValue(undefined as any);
+  });
+
+  it("does nothing when no subscriptions are due", async () => {
+    mockedDb.select.mockReturnValue(makeSelectChain([]));
+    await renewDueSubscriptions();
+    expect(mockedProcessDeposit).not.toHaveBeenCalled();
+    expect(mockedDb.update).not.toHaveBeenCalled();
+  });
+
+  it("skips renewal when another process already claimed the slot (claimed is empty)", async () => {
+    const sub = makeSub();
+    mockedDb.select
+      .mockReturnValueOnce(makeSelectChain([sub]))
+      .mockReturnValueOnce(makeSelectChain([COUNTRY]));
+    mockedDb.update.mockReturnValue(makeUpdateWithReturning([]));
+
+    await renewDueSubscriptions();
+    expect(mockedProcessDeposit).not.toHaveBeenCalled();
+  });
+
+  it("charges the subscription amount when the claim succeeds", async () => {
+    const sub = makeSub();
+    mockedDb.select
+      .mockReturnValueOnce(makeSelectChain([sub]))
+      .mockReturnValueOnce(makeSelectChain([COUNTRY]));
+    mockedDb.update.mockReturnValue(makeUpdateWithReturning([{ id: 1 }]));
+    mockedProcessDeposit.mockResolvedValue({ ok: true });
+
+    await renewDueSubscriptions();
+    expect(mockedProcessDeposit).toHaveBeenCalledWith(
+      10, 50, "UAH", "tok_valid", expect.stringContaining("renewal")
+    );
+  });
+
+  it("pauses subscription and sends notification when charge fails", async () => {
+    const sub = makeSub();
+    mockedDb.select
+      .mockReturnValueOnce(makeSelectChain([sub]))
+      .mockReturnValueOnce(makeSelectChain([COUNTRY]));
+    // First update = atomic claim (succeeds), second update = pause on failure
+    mockedDb.update
+      .mockReturnValueOnce(makeUpdateWithReturning([{ id: 1 }]))
+      .mockReturnValueOnce(makeUpdateChain());
+    mockedProcessDeposit.mockResolvedValue({ ok: false, message: "Card declined" });
+
+    await renewDueSubscriptions();
+
+    expect(mockedDb.update).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(insertNotification)).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 10, type: "subscription_renewal_failed" })
+    );
+  });
+
+  it("advances weekly nextBillingDate by 7 days in the claim update", async () => {
+    const sub = makeSub({ type: "weekly", nextBillingDate: new Date("2025-01-01T00:00:00.000Z") });
+    mockedDb.select
+      .mockReturnValueOnce(makeSelectChain([sub]))
+      .mockReturnValueOnce(makeSelectChain([COUNTRY]));
+
+    let claimSetArg: any = null;
+    mockedDb.update.mockReturnValue({
+      set: (v: any) => {
+        claimSetArg = v;
+        return { where: () => ({ returning: () => Promise.resolve([{ id: 1 }]) }) };
+      },
+    });
+    mockedProcessDeposit.mockResolvedValue({ ok: true });
+
+    await renewDueSubscriptions();
+
+    expect(claimSetArg.nextBillingDate.getTime()).toBe(new Date("2025-01-08T00:00:00.000Z").getTime());
+  });
+
+  it("clamps monthly renewal to last day of month (Jan 31 → Feb 28, not Mar 3)", async () => {
+    const sub = makeSub({ type: "monthly", nextBillingDate: new Date("2025-01-31T00:00:00.000Z") });
+    mockedDb.select
+      .mockReturnValueOnce(makeSelectChain([sub]))
+      .mockReturnValueOnce(makeSelectChain([COUNTRY]));
+
+    let claimSetArg: any = null;
+    mockedDb.update.mockReturnValue({
+      set: (v: any) => {
+        claimSetArg = v;
+        return { where: () => ({ returning: () => Promise.resolve([{ id: 1 }]) }) };
+      },
+    });
+    mockedProcessDeposit.mockResolvedValue({ ok: true });
+
+    await renewDueSubscriptions();
+
+    expect(claimSetArg.nextBillingDate.getUTCMonth()).toBe(1);   // February (not March)
+    expect(claimSetArg.nextBillingDate.getUTCDate()).toBe(28);   // Feb 28 in 2025 (non-leap)
+  });
+
+  it("does not crash when one renewal throws in the claim step — continues to next", async () => {
+    const sub1 = makeSub({ id: 1 });
+    const sub2 = makeSub({ id: 2, userId: 20 });
+    mockedDb.select.mockReturnValue(makeSelectChain([sub1, sub2]));
+
+    let updateCount = 0;
+    mockedDb.update.mockImplementation(() => {
+      updateCount++;
+      if (updateCount === 1) throw new Error("DB deadlock on sub1");
+      return makeUpdateWithReturning([{ id: 2 }]);
+    });
+    mockedProcessDeposit.mockResolvedValue({ ok: true });
+
+    await expect(renewDueSubscriptions()).resolves.toBeUndefined();
+    // sub1 threw, sub2 was processed
+    expect(mockedProcessDeposit).toHaveBeenCalledTimes(1);
+    expect(mockedProcessDeposit).toHaveBeenCalledWith(20, 50, "UAH", "tok_valid", expect.any(String));
   });
 });
