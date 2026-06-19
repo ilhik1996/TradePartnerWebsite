@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { LEVEL_THRESHOLDS, LEVEL_TITLES, XP, computeLevel, hasConsecutiveDays } from "../modules/gamification";
+import { describe, it, expect, vi } from "vitest";
+import { LEVEL_THRESHOLDS, LEVEL_TITLES, XP, computeLevel, hasConsecutiveDays, awardXp, checkAndAwardBadges } from "../modules/gamification";
 
 describe("LEVEL_THRESHOLDS", () => {
   it("has 10 levels", () => {
@@ -185,5 +185,147 @@ describe("hasConsecutiveDays", () => {
   it("handles year boundary correctly", () => {
     const days = ["2024-12-30","2024-12-31","2025-01-01","2025-01-02"];
     expect(hasConsecutiveDays(days, 4)).toBe(true);
+  });
+});
+
+// ─── awardXp ──────────────────────────────────────────────────────────────────
+// gamification.ts receives `db` as a parameter, so we pass a plain mock object
+
+function makeFakeDb(selectResults: any[][], insertOk = true) {
+  let selectIdx = 0;
+  return {
+    insert: vi.fn(() => ({
+      values: vi.fn(() => (insertOk ? Promise.resolve([]) : Promise.reject(new Error("DB error")))),
+    })),
+    select: vi.fn(() => ({
+      from: () => ({
+        where: () => Promise.resolve(selectResults[selectIdx++] ?? []),
+      }),
+    })),
+  };
+}
+
+describe("awardXp", () => {
+  it("returns the accumulated XP total after inserting the event", async () => {
+    const db = makeFakeDb([[{ total: 60 }]]);
+    const total = await awardXp(1, "entry", db);
+    expect(total).toBe(60);
+  });
+
+  it("inserts an event with the correct XP value for each reason", async () => {
+    for (const [reason, xp] of Object.entries(XP) as [keyof typeof XP, number][]) {
+      const db = makeFakeDb([[{ total: xp }]]);
+      await awardXp(1, reason, db);
+      const valuesArg = (db.insert as any).mock.results[0].value.values.mock.calls[0][0];
+      expect(valuesArg.xp).toBe(xp);
+      expect(valuesArg.reason).toBe(reason);
+    }
+  });
+
+  it("returns 0 when the user has no prior XP events (empty aggregate)", async () => {
+    const db = makeFakeDb([[{ total: 0 }]]);
+    expect(await awardXp(42, "entry", db)).toBe(0);
+  });
+
+  it("handles null/undefined aggregate total gracefully (returns 0)", async () => {
+    const db = makeFakeDb([[{ total: null }]]);
+    expect(await awardXp(1, "entry", db)).toBe(0);
+  });
+});
+
+// ─── checkAndAwardBadges ──────────────────────────────────────────────────────
+
+function makeBadgeDb(
+  existingBadges: string[],
+  counts: { entries?: number; wins?: number; referrals?: number; days?: string[] }
+) {
+  const results: any[][] = [
+    existingBadges.map(id => ({ badgeId: id })),                             // existing badges
+    [{ count: counts.entries ?? 0 }],                                        // drawEntries count
+    [{ count: counts.wins ?? 0 }],                                           // draws won count
+    [{ count: counts.referrals ?? 0 }],                                      // referrals count
+    (counts.days ?? []).map(d => ({ day: d })),                              // streak days
+  ];
+
+  let selectIdx = 0;
+  return {
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        onConflictDoNothing: vi.fn(() => Promise.resolve([])),
+      })),
+    })),
+    select: vi.fn(() => ({
+      from: () => ({
+        where: () => {
+          const rows = results[selectIdx++] ?? [];
+          // handle groupBy chaining for streak_7 query
+          return { groupBy: () => Promise.resolve(rows), ...{ then: Promise.resolve(rows).then.bind(Promise.resolve(rows)) } };
+        },
+      }),
+    })),
+  };
+}
+
+describe("checkAndAwardBadges", () => {
+  it("awards first_entry when the user has ≥ 1 draw entry and no badge yet", async () => {
+    const db = makeBadgeDb([], { entries: 1 });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).toContain("first_entry");
+  });
+
+  it("does NOT re-award first_entry when the badge already exists", async () => {
+    const db = makeBadgeDb(["first_entry"], { entries: 5 });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).not.toContain("first_entry");
+  });
+
+  it("awards first_win when the user has won ≥ 1 draw", async () => {
+    const db = makeBadgeDb([], { wins: 1 });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).toContain("first_win");
+  });
+
+  it("does NOT award first_win when wins = 0", async () => {
+    const db = makeBadgeDb([], { entries: 0, wins: 0, referrals: 0 });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).not.toContain("first_win");
+  });
+
+  it("awards referrer badge when the user has ≥ 1 referral", async () => {
+    const db = makeBadgeDb([], { referrals: 1 });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).toContain("referrer");
+  });
+
+  it("awards streak_7 when 7 consecutive active days exist", async () => {
+    const days = ["2025-01-01","2025-01-02","2025-01-03","2025-01-04","2025-01-05","2025-01-06","2025-01-07"];
+    const db = makeBadgeDb([], { days });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).toContain("streak_7");
+  });
+
+  it("does NOT award streak_7 when days have a gap", async () => {
+    const days = ["2025-01-01","2025-01-02","2025-01-04","2025-01-05","2025-01-06","2025-01-07","2025-01-08"];
+    const db = makeBadgeDb([], { days });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).not.toContain("streak_7");
+  });
+
+  it("calls db.insert when badges need to be awarded", async () => {
+    const db = makeBadgeDb([], { entries: 1 });
+    await checkAndAwardBadges(1, db);
+    expect(db.insert).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT call db.insert when all conditions are unmet", async () => {
+    const db = makeBadgeDb([], { entries: 0, wins: 0, referrals: 0, days: [] });
+    await checkAndAwardBadges(1, db);
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty array when all conditions are unmet", async () => {
+    const db = makeBadgeDb([], { entries: 0, wins: 0, referrals: 0, days: [] });
+    const awarded = await checkAndAwardBadges(1, db);
+    expect(awarded).toHaveLength(0);
   });
 });
