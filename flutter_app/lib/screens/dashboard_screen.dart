@@ -115,7 +115,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       final result = await _api.enterFree(
         _draw!['id'],
         firstName: name.first,
-        lastName: name.length > 1 ? name.last : '',
+        lastName: name.length > 1 ? name.skip(1).join(' ') : '',
         email: email,
         countryId: _user?['countryId'] ?? 1,
       );

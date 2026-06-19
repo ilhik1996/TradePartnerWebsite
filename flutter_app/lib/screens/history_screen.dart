@@ -28,7 +28,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (mounted) setState(() { _loading = true; _loadError = false; });
     try {
       final user = await _api.me();
-      final countryId = user['countryId'] ?? 1;
+      final countryId = user?['countryId'] ?? 1;
       _draws = await _api.getDrawHistory(countryId);
       _totalEntries = _draws.where((d) => d['myEntry'] != null).length;
       _totalWins = _draws.where((d) => d['isWinner'] == true).length;

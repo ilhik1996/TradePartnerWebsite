@@ -35,6 +35,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markRead(int id) async {
     try {
       await _api.markNotificationRead(id);
+      if (!mounted) return;
       setState(() {
         final idx = _notifications.indexWhere((n) => n['id'] == id);
         if (idx != -1) _notifications[idx] = {..._notifications[idx], 'isRead': true};

@@ -156,11 +156,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () { ctrl.dispose(); Navigator.pop(ctx); },
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(ctx);
               final val = double.tryParse(ctrl.text.trim());
+              ctrl.dispose();
+              Navigator.pop(ctx);
               try {
                 await _api.updateResponsibleGaming(
                   dailyLimit:   kind == 'daily'   ? val : double.tryParse(_rg?['dailyLimitAmount']?.toString() ?? ''),
@@ -393,10 +397,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final xp = (_level?['xp'] as int?) ?? 0;
     final lvl = (_level?['level'] as int?) ?? 1;
     final curXp = (_level?['currentLevelXp'] as int?) ?? 0;
-    final nextXp = (_level?['nextLevelXp'] as int?) ?? 100;
+    final rawNextXp = _level?['nextLevelXp'] as int?;
+    final isMaxLevel = rawNextXp == null;
+    final nextXp = rawNextXp ?? curXp + 1;
     final badges = (_level?['badges'] as List<dynamic>?) ?? [];
     final range = nextXp - curXp;
-    final progress = range > 0 ? ((xp - curXp) / range).clamp(0.0, 1.0) : 0.0;
+    final progress = isMaxLevel ? 1.0 : (range > 0 ? ((xp - curXp) / range).clamp(0.0, 1.0) : 0.0);
     final title = (_level?['title'] as String?) ?? 'Newcomer';
 
     final levelColors = [
@@ -433,7 +439,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 const SizedBox(height: 12),
                 Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text('${xp - curXp} / ${nextXp - curXp} XP this level', style: const TextStyle(color: VionaColors.textSecondary, fontSize: 13)),
+                Text(
+                  isMaxLevel ? 'Max level — $xp XP total' : '${xp - curXp} / $range XP this level',
+                  style: const TextStyle(color: VionaColors.textSecondary, fontSize: 13),
+                ),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
