@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await _api.login(id, pw);
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

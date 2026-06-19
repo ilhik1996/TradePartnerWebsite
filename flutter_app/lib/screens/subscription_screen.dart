@@ -25,7 +25,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() { _loadError = false; });
+    if (mounted) setState(() { _loading = true; _loadError = false; });
     try {
       final results = await Future.wait([
         _api.getSubscription(),
@@ -76,6 +76,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
     setState(() => _processing = true);
     try {
       await _api.cancelSubscription((sub['id'] as num).toInt());
