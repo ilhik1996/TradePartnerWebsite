@@ -254,13 +254,11 @@ class ApiService {
     double? weeklyLimit,
     double? monthlyLimit,
   }) async {
-    // Only include fields explicitly passed — sending null would clear existing limits on the server
-    final body = <String, dynamic>{};
-    if (dailyLimit != null) body['dailyLimitAmount'] = dailyLimit;
-    if (weeklyLimit != null) body['weeklyLimitAmount'] = weeklyLimit;
-    if (monthlyLimit != null) body['monthlyLimitAmount'] = monthlyLimit;
-    if (body.isEmpty) return;
-    await _dio.patch('/settings/responsible-gaming', data: body);
+    await _dio.patch('/settings/responsible-gaming', data: {
+      'dailyLimitAmount': dailyLimit,
+      'weeklyLimitAmount': weeklyLimit,
+      'monthlyLimitAmount': monthlyLimit,
+    });
   }
 
   Future<Map<String, dynamic>> selfExclude(int days) async {
