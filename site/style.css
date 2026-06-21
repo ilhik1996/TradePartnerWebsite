@@ -70,6 +70,19 @@ p { max-width: 68ch; }
   margin-block-end: .9rem;
 }
 
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------- Layout Utilities ---------- */
 .container {
   width: min(1200px, 100% - 2.5rem);
@@ -416,6 +429,12 @@ p { max-width: 68ch; }
   transform: translateY(100%);
   opacity: 0;
   animation: slideUp .9s cubic-bezier(.16,1,.3,1) forwards;
+}
+/* Used on lang-switch updates — text changes without replaying slide animation */
+.hero__title .line-static {
+  transform: none;
+  opacity: 1;
+  animation: none;
 }
 .hero__title .line:nth-child(2) .line-inner { animation-delay: .12s; }
 .hero__title .line:nth-child(3) .line-inner { animation-delay: .24s; }

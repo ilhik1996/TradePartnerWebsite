@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# TODO: replace with real domain before publishing
+Sitemap: https://labellotaco.com/sitemap.xml

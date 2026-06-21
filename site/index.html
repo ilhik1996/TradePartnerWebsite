@@ -53,6 +53,7 @@
   <!-- Google Fonts: Fraunces (display) + Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="style.css" />
@@ -61,6 +62,16 @@
 
 <!-- Skip to main content (keyboard accessibility) -->
 <a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- Screen reader live region: announces language changes -->
+<span id="lang-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></span>
+
+<!-- Shown only when JavaScript is disabled -->
+<noscript>
+  <div style="background:#B5481F;color:#fff;text-align:center;padding:.75rem 1rem;font-family:Georgia,serif;font-size:.95rem;position:fixed;inset-block-start:0;inset-inline:0;z-index:9999">
+    La Bellota Co. — Please enable JavaScript for full site functionality.
+  </div>
+</noscript>
 
 <!-- ===================================================
      NAVIGATION

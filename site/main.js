@@ -9,6 +9,7 @@
    =================================================== */
 let i18nData = null;
 let currentLang = 'en';
+let firstRender  = true;
 
 const SUPPORTED_LANGS = ['en', 'es', 'ru'];
 const FUTURE_LANGS   = ['zh', 'fr', 'de', 'uk', 'ko', 'ja'];
@@ -27,8 +28,15 @@ const LANG_LABELS = {
 };
 
 async function loadI18n() {
-  const resp = await fetch('i18n.json');
-  i18nData = await resp.json();
+  try {
+    const resp = await fetch('i18n.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    i18nData = await resp.json();
+  } catch (err) {
+    /* If JSON fails to load, build a minimal fallback so the site stays legible */
+    console.error('i18n load failed:', err);
+    i18nData = { en: { _fallback_error: true } };
+  }
 }
 
 function t(key) {
@@ -61,14 +69,26 @@ function applyTranslations() {
     el.setAttribute('data-tooltip', t(el.dataset.i18nTooltip));
   });
 
-  /* Hero title: split on \n for the animated lines */
+  /* Hero title: animated on first load, plain update on language switch */
   const heroTitle = document.getElementById('hero-title');
   if (heroTitle) {
     const raw = t('hero_title');
     const lines = raw.split('\n');
-    heroTitle.innerHTML = lines.map(line =>
-      `<span class="line"><span class="line-inner">${line}</span></span>`
-    ).join('');
+    if (firstRender) {
+      heroTitle.innerHTML = lines.map(line =>
+        `<span class="line"><span class="line-inner">${line}</span></span>`
+      ).join('');
+    } else {
+      /* Update text in-place without replaying the slide-up animation */
+      const inners = heroTitle.querySelectorAll('.line-inner');
+      if (inners.length === lines.length) {
+        inners.forEach((el, i) => { el.textContent = lines[i]; });
+      } else {
+        heroTitle.innerHTML = lines.map(line =>
+          `<span class="line"><span class="line-inner line-static">${line}</span></span>`
+        ).join('');
+      }
+    }
   }
 
   /* Update lang switcher active state */
@@ -92,6 +112,19 @@ function applyTranslations() {
     : currentLang === 'es'
       ? 'La Bellota Co. — Delicias Españolas Auténticas'
       : 'La Bellota Co. — Authentic Spanish Delicacies';
+
+  /* Announce language change to screen readers */
+  if (!firstRender) {
+    const announcer = document.getElementById('lang-announcer');
+    if (announcer) {
+      announcer.textContent = '';
+      requestAnimationFrame(() => {
+        announcer.textContent = LANG_LABELS[currentLang];
+      });
+    }
+  }
+
+  firstRender = false;
 }
 
 function setLang(lang) {
