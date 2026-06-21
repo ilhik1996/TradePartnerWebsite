@@ -75,7 +75,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     try {
       await _api.deposit(amount, _wallet?['currency'] ?? 'USD');
       _showSnack('Deposit successful!');
-      _amountCtrl.clear();
+      if (mounted) _amountCtrl.clear();
       await _load();
     } catch (e) {
       _showSnack('$e', error: true);
@@ -91,7 +91,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     try {
       await _api.withdraw(amount);
       _showSnack('Withdrawal submitted!');
-      _withdrawCtrl.clear();
+      if (mounted) _withdrawCtrl.clear();
       await _load();
     } catch (e) {
       _showSnack('$e', error: true);

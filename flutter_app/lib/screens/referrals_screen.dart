@@ -46,7 +46,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     setState(() => _applying = true);
     try {
       await _api.applyReferralCode(code);
-      _codeCtrl.clear();
+      if (mounted) _codeCtrl.clear();
       _showSnack('Referral code applied! 🎉');
       await _load();
     } catch (e) {
