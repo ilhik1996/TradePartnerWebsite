@@ -669,6 +669,30 @@ p { max-width: 68ch; }
   margin-block-start: .15rem;
 }
 
+/* Label colour legend */
+.label-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 2rem;
+  margin-block-end: 1.5rem;
+  font-size: .78rem;
+  color: var(--muted);
+}
+.label-legend__item {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.label-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.label-legend__dot.dot--black { background: #1C1916; }
+.label-legend__dot.dot--green { background: #2A6B4A; }
+.label-legend__dot.dot--white { background: var(--bg); border: 1.5px solid var(--muted); }
+
 .catalog__note {
   margin-block-start: 2rem;
   font-size: .88rem;
@@ -1121,6 +1145,28 @@ p { max-width: 68ch; }
     inset-inline-start: 0;
     transform: none;
   }
+
+  /* Tighter catalog at 375px */
+  .catalog__item {
+    padding: 1.2rem 1.1rem;
+    grid-template-columns: 1fr;
+    gap: .5rem;
+  }
+  .catalog__item-label { align-self: auto; }
+
+  /* Tighter section padding on small screens */
+  .jamon__card { padding: 1.4rem 1.2rem; }
+  .who__card { padding: 1.6rem 1.2rem; }
+  .quote-form { padding: 1.25rem; }
+  .form-row { gap: 1rem; margin-block-end: 1rem; }
+
+  /* Back to top closer to edge */
+  .back-to-top {
+    inset-block-end: 1.25rem;
+    inset-inline-end: 1rem;
+    width: 2.4rem;
+    height: 2.4rem;
+  }
 }
 
 /* ===================================================
@@ -1185,6 +1231,12 @@ p { max-width: 68ch; }
   border-color: var(--accent3);
   font-style: italic;
 }
+
+/* ===================================================
+   FORM SPINNER
+   =================================================== */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .7s linear infinite; }
 
 /* ===================================================
    REDUCED MOTION

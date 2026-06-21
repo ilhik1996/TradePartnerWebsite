@@ -7,13 +7,11 @@
     "nav_who": "Who We Serve",
     "nav_contact": "Contact",
     "nav_cta": "Get Pricing",
-
     "hero_tagline": "Direct from Spain.",
     "hero_title": "Authentic Spanish\nDelicacies for the\nAmerican Table.",
     "hero_sub": "Jamón ibérico, embutidos, and artisan cheeses — supplied directly to restaurants, specialty retailers, and distributors across the USA. Headquartered in Los Angeles.",
     "hero_cta": "Request Wholesale Pricing",
     "hero_scroll": "Scroll to explore",
-
     "jamon_section_label": "The Product",
     "jamon_title": "Why Spanish Jamón\nIs a Category of Its Own",
     "jamon_intro": "Most buyers encounter jamón ibérico once and never look back. Here is why this product stands apart from everything else on the charcuterie board.",
@@ -27,14 +25,12 @@
     "jamon_card4_body": "Four DOPs legally guarantee regional origin and production method: Jabugo (Huelva, Andalusia), Guijuelo (Salamanca, Castile & León), Dehesa de Extremadura, and Los Pedroches (Córdoba). These are legal certifications backed by EU law — not marketing language.",
     "jamon_dop_label": "DOP",
     "jamon_dop_tooltip": "Denominación de Origen Protegida — EU-backed Protected Designation of Origin, guaranteeing the product's region and production method.",
-
     "catalog_section_label": "Catalog",
     "catalog_title": "Our Product Range",
     "catalog_sub": "A curated selection of Spain's finest jamón, embutidos, and quesos — available under one order. Specific availability is confirmed per order.",
     "catalog_tab_jamon": "Jamón & Embutidos",
     "catalog_tab_queso": "Quesos",
     "catalog_note": "Product availability and SKU selection are confirmed at time of order. We work with you to source exactly what your menu or shelf requires.",
-
     "cat_jamon_bellota_name": "Jamón Ibérico de Bellota",
     "cat_jamon_bellota_label": "Black Label",
     "cat_jamon_bellota_desc": "The pinnacle of Spanish jamón. 100% purebred Iberian pig, acorn-fed during montanera, cured 36–48+ months. Intense marbling, deep nutty flavour with a long, lingering finish.",
@@ -59,26 +55,24 @@
     "cat_morcilla_name": "Morcilla",
     "cat_morcilla_label": "On Request",
     "cat_morcilla_desc": "Traditional Spanish blood sausage, available in regional styles. Excellent for authentic tapas menus. Available by special order.",
-
     "cat_manchego_name": "Manchego (DOP)",
-    "cat_manchego_label": "La Mancha",
+    "cat_manchego_label": "La Mancha · DOP",
     "cat_manchego_desc": "Spain's most recognised cheese. Raw or pasteurised sheep's milk from La Mancha. Available in semicurado (3 mo.), curado (6 mo.), and viejo (12+ mo.) — each with distinct character from fresh and buttery to nutty and crystalline.",
     "cat_idiazabal_name": "Idiazábal (DOP)",
-    "cat_idiazabal_label": "Basque Country",
+    "cat_idiazabal_label": "Basque Country · DOP",
     "cat_idiazabal_desc": "Smoked or unsmoked Latxa sheep's milk cheese from the Basque Country and Navarre. Firm, slightly waxy texture, smoky-herbal notes. A conversation piece on any cheese board.",
     "cat_mahon_name": "Mahón-Menorca (DOP)",
-    "cat_mahon_label": "Menorca",
+    "cat_mahon_label": "Menorca · DOP",
     "cat_mahon_desc": "Cow's milk cheese from the island of Menorca. Recognisable by its characteristic paprika-rubbed rind. Ranges from young and semi-soft (tierno/semicurado) to aged and sharp (añejo).",
     "cat_cabrales_name": "Cabrales (DOP)",
-    "cat_cabrales_label": "Asturias",
+    "cat_cabrales_label": "Asturias · DOP",
     "cat_cabrales_desc": "Asturian blue cheese aged in natural limestone caves. Made with cow's milk or a blend of cow, sheep, and goat. Bold, pungent, and complex — sought by serious cheese programmes.",
     "cat_tetilla_name": "Tetilla (DOP)",
-    "cat_tetilla_label": "Galicia",
+    "cat_tetilla_label": "Galicia · DOP",
     "cat_tetilla_desc": "Soft, mild, creamy cow's milk cheese from Galicia, named for its distinctive conical shape. Approachable for all palates — excellent for melting and pairing with lighter dishes.",
     "cat_iberico_name": "Queso Ibérico",
     "cat_iberico_label": "Blended Milk",
     "cat_iberico_desc": "A blend of cow, goat, and sheep's milk. Smooth, mild, and versatile — easy to eat across all age groups and cuisines. Strong shelf presence for retail environments.",
-
     "why_section_label": "Why La Bellota Co.",
     "why_title": "A Direct Channel,\nNot Another Middleman",
     "why_sub": "We say what we can actually deliver — and we deliver what we say.",
@@ -92,7 +86,6 @@
     "why_4_body": "Trial orders for a single restaurant. Regular supply for a multi-location group. Container shipments for distributors. We scale to your operation.",
     "why_5_title": "Verified Origin, Every Time",
     "why_5_body": "Every product comes with its DOP certification. You know exactly which region, which breed, which production method — documented, not promised.",
-
     "who_section_label": "Who We Serve",
     "who_title": "Built for Buyers\nWho Know Quality",
     "who_1_title": "Restaurants & Tapas Bars",
@@ -101,7 +94,6 @@
     "who_2_body": "Gourmet delicatessens, specialty food shops, and gastro markets with a premium charcuterie or cheese section. Customers at your counter expect the real thing — we supply it.",
     "who_3_title": "Gourmet Distributors",
     "who_3_body": "Importers and distributors looking to expand their Iberian portfolio with verified DOP products. Container-level volumes, reliable origin documentation, direct producer access.",
-
     "form_section_label": "Get In Touch",
     "form_title": "Request a Price List",
     "form_sub": "Tell us a little about your business and what you are looking for. We will respond within 1–2 business days with pricing and current availability.",
@@ -128,7 +120,6 @@
     "form_success_title": "Request Received",
     "form_success_body": "Thank you. We will be in touch within 1–2 business days with pricing and availability.",
     "form_error": "Something went wrong. Please email us directly at",
-
     "footer_tagline": "Direct Spanish Delicacies for the American Table.",
     "footer_contact_label": "Contact Us",
     "footer_location": "Los Angeles, California, USA",
@@ -138,17 +129,18 @@
     "footer_origin": "Products sourced directly from Spain",
     "footer_legal": "© 2025 La Bellota Co. All rights reserved.",
     "footer_dop_note": "All products carry valid DOP certification from their respective region of origin.",
-
     "glossary_bellota": "Bellota — Spanish for 'acorn'. In the context of jamón, it designates pigs that foraged exclusively on acorns during the montanera season, producing distinctively marbled, flavourful meat.",
     "glossary_montanera": "Montanera — the seasonal acorn-foraging period (October to February) when Iberian pigs fatten on bellotas in the dehesa. This final feeding phase determines the fat quality in bellota-grade jamón.",
     "glossary_dehesa": "Dehesa — the unique agroforestry landscape of southwestern Spain and Portugal, consisting of sparse oak woodland and open pasture. A protected ecosystem and the natural habitat of Iberian pig production.",
     "glossary_dop": "DOP (Denominación de Origen Protegida) — EU Protected Designation of Origin. A legal certification guaranteeing that a product's name, origin, and production method meet strict regional standards, verified by an independent control body.",
     "glossary_embutidos": "Embutidos — Spanish term for cured and dried sausages and charcuterie products, including chorizo, salchichón, lomo, and morcilla.",
     "glossary_iberico": "Ibérico — refers to the Iberian pig breed (Sus scrofa domesticus, Iberian sub-breed), native to the Iberian Peninsula. Known for its unique ability to infiltrate fat between muscle fibres, producing exceptional marbling.",
-
-    "coming_soon": "Translation coming soon — showing English."
+    "coming_soon": "Translation coming soon — showing English.",
+    "form_sending": "Sending…",
+    "legend_black": "Black — 100% Ibérico, acorn-fed",
+    "legend_green": "Green — Ibérico, pasture-fed",
+    "legend_white": "White — Serrano, grain-fed"
   },
-
   "es": {
     "lang_name": "Español",
     "nav_products": "Productos",
@@ -157,13 +149,11 @@
     "nav_who": "A Quién Servimos",
     "nav_contact": "Contacto",
     "nav_cta": "Solicitar Precio",
-
     "hero_tagline": "Directo desde España.",
     "hero_title": "Delicias Españolas\nAuténticas para la\nMesa Americana.",
     "hero_sub": "Jamón ibérico, embutidos y quesos artesanales — suministrados directamente a restaurantes, tiendas especializadas y distribuidores en todo EE.UU. Con sede en Los Ángeles.",
     "hero_cta": "Solicitar Precios al por Mayor",
     "hero_scroll": "Desplázate para explorar",
-
     "jamon_section_label": "El Producto",
     "jamon_title": "Por Qué el Jamón Español\nEs una Categoría Única",
     "jamon_intro": "La mayoría de los compradores prueban el jamón ibérico una vez y no vuelven atrás. Esto es lo que lo distingue de todo lo demás en la tabla de charcutería.",
@@ -177,14 +167,12 @@
     "jamon_card4_body": "Cuatro DOP garantizan legalmente el origen regional y el método de producción: Jabugo (Huelva, Andalucía), Guijuelo (Salamanca, Castilla y León), Dehesa de Extremadura y Los Pedroches (Córdoba). Son certificaciones legales respaldadas por la legislación de la UE.",
     "jamon_dop_label": "DOP",
     "jamon_dop_tooltip": "Denominación de Origen Protegida — certificación de la UE que garantiza la región de origen y el método de producción del producto.",
-
     "catalog_section_label": "Catálogo",
     "catalog_title": "Nuestra Gama de Productos",
     "catalog_sub": "Una selección curada del mejor jamón, embutidos y quesos de España — disponibles bajo un solo pedido. La disponibilidad específica se confirma por pedido.",
     "catalog_tab_jamon": "Jamón & Embutidos",
     "catalog_tab_queso": "Quesos",
     "catalog_note": "La disponibilidad y selección de productos se confirman en el momento del pedido. Trabajamos contigo para obtener exactamente lo que tu menú o estantería requiere.",
-
     "cat_jamon_bellota_name": "Jamón Ibérico de Bellota",
     "cat_jamon_bellota_label": "Etiqueta Negra",
     "cat_jamon_bellota_desc": "La cúspide del jamón español. Cerdo ibérico 100% de raza pura, alimentado con bellotas en montanera, curado 36–48+ meses. Veteado intenso, sabor profundo y avellonado con un largo y persistente posgusto.",
@@ -209,26 +197,24 @@
     "cat_morcilla_name": "Morcilla",
     "cat_morcilla_label": "Bajo Pedido",
     "cat_morcilla_desc": "Embutido de sangre tradicional español, disponible en estilos regionales. Excelente para menús de tapas auténticas. Disponible bajo pedido especial.",
-
     "cat_manchego_name": "Manchego (DOP)",
-    "cat_manchego_label": "La Mancha",
+    "cat_manchego_label": "La Mancha · DOP",
     "cat_manchego_desc": "El queso español más reconocido. Leche de oveja cruda o pasteurizada de La Mancha. Disponible en semicurado (3 m.), curado (6 m.) y viejo (12+ m.) — cada uno con carácter distinto, desde cremoso y fresco hasta seco y cristalizado.",
     "cat_idiazabal_name": "Idiazábal (DOP)",
-    "cat_idiazabal_label": "País Vasco",
+    "cat_idiazabal_label": "País Vasco · DOP",
     "cat_idiazabal_desc": "Queso de leche de oveja Latxa ahumado o sin ahumar del País Vasco y Navarra. Textura firme y ligeramente cerosa, notas ahumadas y herbáceas. Un queso que siempre genera conversación.",
     "cat_mahon_name": "Mahón-Menorca (DOP)",
-    "cat_mahon_label": "Menorca",
+    "cat_mahon_label": "Menorca · DOP",
     "cat_mahon_desc": "Queso de leche de vaca de la isla de Menorca. Reconocible por su corteza untada con pimentón. Va desde joven y semiblanda (tierno/semicurado) hasta curada y potente (añejo).",
     "cat_cabrales_name": "Cabrales (DOP)",
-    "cat_cabrales_label": "Asturias",
+    "cat_cabrales_label": "Asturias · DOP",
     "cat_cabrales_desc": "Queso azul asturiano madurado en cuevas naturales de caliza. Elaborado con leche de vaca o mezcla de vaca, oveja y cabra. Intenso, picante y complejo — buscado por los mejores programas de queso.",
     "cat_tetilla_name": "Tetilla (DOP)",
-    "cat_tetilla_label": "Galicia",
+    "cat_tetilla_label": "Galicia · DOP",
     "cat_tetilla_desc": "Queso de vaca suave, cremoso y de sabor suave de Galicia, reconocible por su forma cónica característica. Accesible para todos los paladares — excelente para fundir y para maridajes con platos más ligeros.",
     "cat_iberico_name": "Queso Ibérico",
     "cat_iberico_label": "Leche Mixta",
     "cat_iberico_desc": "Mezcla de leche de vaca, cabra y oveja. Suave, versátil y fácil de consumir para todos los públicos. Excelente presencia en lineales de tiendas especializadas.",
-
     "why_section_label": "Por Qué La Bellota Co.",
     "why_title": "Un Canal Directo,\nNo Un Intermediario Más",
     "why_sub": "Decimos lo que realmente podemos entregar — y entregamos lo que decimos.",
@@ -242,7 +228,6 @@
     "why_4_body": "Pedidos de prueba para un solo restaurante. Suministro regular para grupos con múltiples locales. Envíos en contenedor para distribuidores. Nos adaptamos a tu operación.",
     "why_5_title": "Origen Verificado, Siempre",
     "why_5_body": "Cada producto viene con su certificación DOP. Sabes exactamente qué región, qué raza, qué método de producción — documentado, no prometido.",
-
     "who_section_label": "A Quién Servimos",
     "who_title": "Pensado para Compradores\nQue Conocen la Calidad",
     "who_1_title": "Restaurantes y Bares de Tapas",
@@ -251,7 +236,6 @@
     "who_2_body": "Charcuterías gourmet, tiendas de alimentación especializada y gastromercados con sección premium de charcutería o quesos. Tus clientes esperan el producto auténtico — nosotros lo suministramos.",
     "who_3_title": "Distribuidores Gourmet",
     "who_3_body": "Importadores y distribuidores que buscan ampliar su portafolio ibérico con productos DOP verificados. Volúmenes a nivel de contenedor, documentación de origen fiable, acceso directo al productor.",
-
     "form_section_label": "Contacta con Nosotros",
     "form_title": "Solicita una Lista de Precios",
     "form_sub": "Cuéntanos un poco sobre tu negocio y lo que buscas. Responderemos en 1–2 días hábiles con precios y disponibilidad actual.",
@@ -278,7 +262,6 @@
     "form_success_title": "Solicitud Recibida",
     "form_success_body": "Gracias. Nos pondremos en contacto en 1–2 días hábiles con precios y disponibilidad.",
     "form_error": "Algo salió mal. Por favor contáctanos directamente a",
-
     "footer_tagline": "Delicias Españolas Directas para la Mesa Americana.",
     "footer_contact_label": "Contáctanos",
     "footer_location": "Los Ángeles, California, EE.UU.",
@@ -288,17 +271,18 @@
     "footer_origin": "Productos obtenidos directamente de España",
     "footer_legal": "© 2025 La Bellota Co. Todos los derechos reservados.",
     "footer_dop_note": "Todos los productos llevan certificación DOP válida de su respectiva región de origen.",
-
     "glossary_bellota": "Bellota — bellota en español. En el contexto del jamón, designa cerdos que se alimentaron exclusivamente de bellotas durante la montanera, produciendo una carne con un veteado y sabor únicos.",
     "glossary_montanera": "Montanera — el período estacional de engorde con bellotas (octubre a febrero) en el que los cerdos ibéricos comen bellotas en la dehesa. Esta fase final de alimentación determina la calidad de la grasa del jamón de bellota.",
     "glossary_dehesa": "Dehesa — el paisaje agroforestal único del suroeste de España y Portugal, compuesto por arbolado disperso de encinas y pastizales abiertos. Ecosistema protegido y hábitat natural de la producción del cerdo ibérico.",
     "glossary_dop": "DOP (Denominación de Origen Protegida) — certificación legal de la UE que garantiza que el nombre, origen y método de producción de un producto cumplen estrictos estándares regionales, verificados por un organismo de control independiente.",
     "glossary_embutidos": "Embutidos — término español para los productos de charcutería curada y seca, incluyendo chorizo, salchichón, lomo y morcilla.",
     "glossary_iberico": "Ibérico — hace referencia a la raza de cerdo ibérico (Sus scrofa domesticus, sub-raza ibérica), autóctona de la Península Ibérica. Conocida por su capacidad única de infiltrar grasa entre las fibras musculares, produciendo un veteado excepcional.",
-
-    "coming_soon": "Traducción próximamente — mostrando inglés."
+    "coming_soon": "Traducción próximamente — mostrando inglés.",
+    "form_sending": "Enviando…",
+    "legend_black": "Negra — 100% Ibérico, bellota",
+    "legend_green": "Verde — Ibérico, pasto y pienso",
+    "legend_white": "Blanca — Serrano, pienso"
   },
-
   "ru": {
     "lang_name": "Русский",
     "nav_products": "Продукты",
@@ -307,13 +291,11 @@
     "nav_who": "Кому Поставляем",
     "nav_contact": "Контакты",
     "nav_cta": "Запросить Цены",
-
     "hero_tagline": "Напрямую из Испании.",
     "hero_title": "Подлинные Испанские\nДеликатесы для\nАмериканского Рынка.",
     "hero_sub": "Хамон иберико, эмбутидос и сыры ручной работы — прямые поставки для ресторанов, специализированных магазинов и дистрибьюторов по всей территории США. Офис в Лос-Анджелесе.",
     "hero_cta": "Запросить Оптовые Цены",
     "hero_scroll": "Прокрутить вниз",
-
     "jamon_section_label": "О Продукте",
     "jamon_title": "Почему Испанский Хамон —\nЭто Отдельная Категория",
     "jamon_intro": "Большинство покупателей пробуют хамон иберико один раз — и никогда больше не возвращаются к аналогам. Вот почему этот продукт стоит особняком.",
@@ -327,14 +309,12 @@
     "jamon_card4_body": "Четыре DOP юридически гарантируют региональное происхождение и метод производства: Хабуго (Уэльва, Андалусия), Гихуэло (Саламанка, Кастилия и Леон), Дехеса де Эстремадура и Лос-Педрочес (Кордова). Это юридические сертификаты, подкреплённые законодательством ЕС.",
     "jamon_dop_label": "DOP",
     "jamon_dop_tooltip": "Denominación de Origen Protegida — Защищённое наименование места происхождения ЕС, гарантирующее регион и метод производства продукта.",
-
     "catalog_section_label": "Каталог",
     "catalog_title": "Наш Ассортимент",
     "catalog_sub": "Тщательно подобранная коллекция лучшего испанского хамона, эмбутидос и сыров — доступна в рамках одного заказа. Конкретное наличие подтверждается под каждый заказ.",
     "catalog_tab_jamon": "Хамон и Эмбутидос",
     "catalog_tab_queso": "Сыры",
     "catalog_note": "Наличие продуктов и выбор позиций подтверждаются на момент оформления заказа. Мы работаем с вами, чтобы подобрать именно то, что нужно вашему меню или витрине.",
-
     "cat_jamon_bellota_name": "Jamón Ibérico de Bellota",
     "cat_jamon_bellota_label": "Чёрная Этикетка",
     "cat_jamon_bellota_desc": "Вершина испанского хамона. 100% чистокровная иберийская свинья, желудёвый откорм в монтанера, выдержка 36–48+ месяцев. Интенсивная мраморность, глубокий ореховый вкус с долгим послевкусием.",
@@ -359,26 +339,24 @@
     "cat_morcilla_name": "Morcilla",
     "cat_morcilla_label": "Под Заказ",
     "cat_morcilla_desc": "Традиционная испанская кровяная колбаса в региональных вариантах. Отлично подходит для аутентичного тапас-меню. Доступна под специальный заказ.",
-
     "cat_manchego_name": "Manchego (DOP)",
-    "cat_manchego_label": "Ла-Манча",
+    "cat_manchego_label": "Ла-Манча · DOP",
     "cat_manchego_desc": "Самый узнаваемый испанский сыр. Из сырого или пастеризованного овечьего молока из Ла-Манчи. Доступен в вариантах: semicurado (3 мес.), curado (6 мес.) и viejo (12+ мес.) — от сливочного и свежего до орехового и кристаллического.",
     "cat_idiazabal_name": "Idiazábal (DOP)",
-    "cat_idiazabal_label": "Страна Басков",
+    "cat_idiazabal_label": "Страна Басков · DOP",
     "cat_idiazabal_desc": "Копчёный или некопчёный сыр из молока овец породы Латча из Страны Басков и Наварры. Плотная, слегка воскообразная текстура, дымно-травяные нотки. Всегда привлекает внимание на сырной доске.",
     "cat_mahon_name": "Mahón-Menorca (DOP)",
-    "cat_mahon_label": "Менорка",
+    "cat_mahon_label": "Менорка · DOP",
     "cat_mahon_desc": "Коровий сыр с острова Менорка, узнаваемый по характерной корке с паприкой. От молодого и полумягкого (тьерно/семикурадо) до выдержанного и острого (аньехо).",
     "cat_cabrales_name": "Cabrales (DOP)",
-    "cat_cabrales_label": "Астурия",
+    "cat_cabrales_label": "Астурия · DOP",
     "cat_cabrales_desc": "Астурийский голубой сыр, выдержанный в природных известняковых пещерах. Из коровьего молока или смеси коровьего, овечьего и козьего. Насыщенный, пикантный и сложный — востребован в серьёзных сырных программах.",
     "cat_tetilla_name": "Tetilla (DOP)",
-    "cat_tetilla_label": "Галисия",
+    "cat_tetilla_label": "Галисия · DOP",
     "cat_tetilla_desc": "Мягкий, нежный, сливочный коровий сыр из Галисии, узнаваемый по характерной конической форме. Доступен для любого вкуса — отлично плавится и сочетается с лёгкими блюдами.",
     "cat_iberico_name": "Queso Ibérico",
     "cat_iberico_label": "Смешанное Молоко",
     "cat_iberico_desc": "Смесь коровьего, козьего и овечьего молока. Нежный, мягкий, универсальный — подходит для любой аудитории. Хорошая полочная видимость в магазинах специализированных продуктов.",
-
     "why_section_label": "Почему La Bellota Co.",
     "why_title": "Прямой Канал,\nНе Ещё Один Посредник",
     "why_sub": "Мы говорим то, что реально можем поставить — и поставляем то, что говорим.",
@@ -392,7 +370,6 @@
     "why_4_body": "Пробные партии для одного ресторана. Регулярные поставки для сетей. Контейнерные отгрузки для дистрибьюторов. Мы масштабируемся под ваши задачи.",
     "why_5_title": "Подтверждённое Происхождение",
     "why_5_body": "Каждый продукт поставляется с сертификатом DOP. Вы точно знаете регион, породу и метод производства — всё задокументировано, не просто заявлено.",
-
     "who_section_label": "Кому Поставляем",
     "who_title": "Для Тех, Кто\nЗнает Цену Качеству",
     "who_1_title": "Рестораны и Тапас-Бары",
@@ -401,7 +378,6 @@
     "who_2_body": "Гурме-деликатесни, специализированные продовольственные магазины и гастромаркеты с премиальным отделом колбасных изделий или сыров. Ваши покупатели ждут настоящего продукта — мы его поставляем.",
     "who_3_title": "Гурме-Дистрибьюторы",
     "who_3_body": "Импортёры и дистрибьюторы, расширяющие иберийский портфель за счёт верифицированных DOP-продуктов. Объёмы на уровне контейнера, надёжная документация происхождения, прямой доступ к производителю.",
-
     "form_section_label": "Свяжитесь с Нами",
     "form_title": "Запросить Прайс-Лист",
     "form_sub": "Расскажите немного о вашем бизнесе и что вас интересует. Мы ответим в течение 1–2 рабочих дней с ценами и актуальным ассортиментом.",
@@ -428,7 +404,6 @@
     "form_success_title": "Запрос Получен",
     "form_success_body": "Спасибо. Мы свяжемся с вами в течение 1–2 рабочих дней с ценами и доступным ассортиментом.",
     "form_error": "Что-то пошло не так. Пожалуйста, напишите нам напрямую на",
-
     "footer_tagline": "Прямые Испанские Деликатесы для Американского Рынка.",
     "footer_contact_label": "Контакты",
     "footer_location": "Лос-Анджелес, Калифорния, США",
@@ -438,21 +413,34 @@
     "footer_origin": "Продукты поставляются напрямую из Испании",
     "footer_legal": "© 2025 La Bellota Co. Все права защищены.",
     "footer_dop_note": "Все продукты имеют действующую сертификацию DOP соответствующего региона происхождения.",
-
     "glossary_bellota": "Бельота (bellota) — по-испански «жёлудь». В контексте хамона обозначает свиней, питавшихся исключительно желудями в сезон монтанера, что придаёт мясу уникальную мраморность и вкус.",
     "glossary_montanera": "Монтанера (montanera) — сезонный период желудёвого откорма (октябрь–февраль), когда иберийские свиньи нагуливают вес на желудях в дехесе. Эта финальная фаза кормления определяет качество жира в хамоне де бельота.",
     "glossary_dehesa": "Дехеса (dehesa) — уникальный агролесной ландшафт юго-запада Испании и Португалии: разреженный дубовый лес на открытых пастбищах. Охраняемая экосистема и природная среда иберийского свиноводства.",
     "glossary_dop": "DOP (Denominación de Origen Protegida) — Защищённое наименование места происхождения ЕС. Юридическая сертификация, гарантирующая, что название, происхождение и метод производства продукта соответствуют строгим региональным стандартам, верифицированным независимым контрольным органом.",
     "glossary_embutidos": "Эмбутидос (embutidos) — испанский термин для вяленых и сушёных колбасных изделий: чоризо, сальчичон, ломо, морсилья и другие.",
     "glossary_iberico": "Иберико (ibérico) — относится к породе иберийской свиньи (Sus scrofa domesticus, иберийская субпорода), родом с Иберийского полуострова. Известна уникальной способностью инфильтрировать жир между мышечными волокнами, создавая исключительную мраморность.",
-
-    "coming_soon": "Перевод скоро — показываем английский."
+    "coming_soon": "Перевод скоро — показываем английский.",
+    "form_sending": "Отправляем…",
+    "legend_black": "Чёрная — 100% Иберико, желудёвый откорм",
+    "legend_green": "Зелёная — Иберико, пастбищный откорм",
+    "legend_white": "Белая — Серрано, зерновой откорм"
   },
-
-  "zh": { "_fallback": "en" },
-  "fr": { "_fallback": "en" },
-  "de": { "_fallback": "en" },
-  "uk": { "_fallback": "en" },
-  "ko": { "_fallback": "en" },
-  "ja": { "_fallback": "en" }
+  "zh": {
+    "_fallback": "en"
+  },
+  "fr": {
+    "_fallback": "en"
+  },
+  "de": {
+    "_fallback": "en"
+  },
+  "uk": {
+    "_fallback": "en"
+  },
+  "ko": {
+    "_fallback": "en"
+  },
+  "ja": {
+    "_fallback": "en"
+  }
 }

@@ -350,6 +350,8 @@ function initForm() {
     const formWrap  = document.getElementById('form-wrap');
 
     submitBtn.disabled = true;
+    const btnOrigHTML = submitBtn.innerHTML;
+    submitBtn.innerHTML = `<svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg><span>${t('form_sending')}</span>`;
     if (errorMsg) errorMsg.style.display = 'none';
 
     const formData = {
@@ -387,6 +389,7 @@ function initForm() {
       }
     } catch {
       if (errorMsg) errorMsg.style.display = 'block';
+      submitBtn.innerHTML = btnOrigHTML;
       submitBtn.disabled = false;
     }
   });

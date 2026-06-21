@@ -17,6 +17,13 @@
   <link rel="alternate" hreflang="ru"        href="./index.html" />
   <link rel="alternate" hreflang="x-default" href="./index.html" />
 
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+  <!-- Open Graph — TODO: replace og:url and og:image with real domain/image -->
+  <meta property="og:url"   content="https://labellotaco.com" />
+  <meta property="og:image" content="https://labellotaco.com/og-image.jpg" />
+
   <!-- Structured data -->
   <script type="application/ld+json">
   {
@@ -313,6 +320,23 @@
 
       <!-- Tab: Jamón & Embutidos -->
       <div id="tab-jamon" class="tab-panel active" role="tabpanel" aria-label="Jamón and Embutidos">
+
+        <!-- Label colour legend — explains the official Spanish grading system -->
+        <div class="label-legend" role="note">
+          <span class="label-legend__item">
+            <span class="label-legend__dot dot--black" aria-hidden="true"></span>
+            <span data-i18n="legend_black">Black — 100% Ibérico, acorn-fed</span>
+          </span>
+          <span class="label-legend__item">
+            <span class="label-legend__dot dot--green" aria-hidden="true"></span>
+            <span data-i18n="legend_green">Green — Ibérico, pasture-fed</span>
+          </span>
+          <span class="label-legend__item">
+            <span class="label-legend__dot dot--white" aria-hidden="true"></span>
+            <span data-i18n="legend_white">White — Serrano, grain-fed</span>
+          </span>
+        </div>
+
         <div class="catalog__grid reveal">
 
           <div class="catalog__item">
