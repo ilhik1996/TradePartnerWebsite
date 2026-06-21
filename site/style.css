@@ -151,6 +151,7 @@ p { max-width: 68ch; }
   transition: opacity var(--transition), color var(--transition);
 }
 .nav__links a:hover { opacity: 1; color: var(--accent1); }
+.nav__links a.active { opacity: 1; color: var(--accent1); font-weight: 600; }
 
 .nav__right {
   display: flex;
@@ -300,6 +301,30 @@ p { max-width: 68ch; }
   align-self: flex-start;
   margin-block-start: .5rem;
 }
+
+.nav__mobile-lang {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--accent3);
+  margin-block-start: auto;
+}
+.nav__mobile-lang button {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: .4rem .8rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--accent3);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.nav__mobile-lang button.active {
+  color: var(--accent1);
+  border-color: var(--accent1);
+  background: rgba(181,72,31,.06);
+}
+.nav__mobile-lang button:hover { color: var(--text); border-color: var(--text); }
 
 /* ===================================================
    HERO
@@ -700,7 +725,9 @@ p { max-width: 68ch; }
 /* ===================================================
    SECTION: WHO WE SERVE
    =================================================== */
+.jamon h2 { white-space: pre-line; }
 .who { background: var(--accent3); }
+.who h2 { white-space: pre-line; }
 
 .who__grid {
   display: grid;
@@ -811,6 +838,20 @@ p { max-width: 68ch; }
 
 .form-field input::placeholder,
 .form-field textarea::placeholder { color: var(--muted); opacity: .7; }
+
+.form-field input[aria-invalid="true"],
+.form-field select[aria-invalid="true"],
+.form-field textarea[aria-invalid="true"] {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(107,39,55,.1);
+}
+
+.field-error {
+  font-size: .76rem;
+  color: var(--accent2);
+  margin-block-start: .25rem;
+  min-height: 1.1em;
+}
 
 .btn-submit {
   width: 100%;

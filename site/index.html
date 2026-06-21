@@ -95,6 +95,8 @@
   <a href="#who" data-i18n="nav_who">Who We Serve</a>
   <a href="#contact" data-i18n="nav_contact">Contact</a>
   <a href="#contact" class="nav__cta" data-i18n="nav_cta">Get Pricing</a>
+  <!-- Language switcher for mobile — populated by JS -->
+  <div id="mobile-lang-switcher" class="nav__mobile-lang" role="group" aria-label="Language selection"></div>
 </div>
 
 
@@ -541,18 +543,21 @@
             <div class="form-row">
               <div class="form-field">
                 <label for="company" data-i18n="form_company">Company Name</label>
-                <input type="text" id="company" name="company" autocomplete="organization" required />
+                <input type="text" id="company" name="company" autocomplete="organization" required aria-describedby="err-company" />
+                <span class="field-error" id="err-company" role="alert" data-error="company"></span>
               </div>
               <div class="form-field">
                 <label for="contact" data-i18n="form_contact">Contact Person</label>
-                <input type="text" id="contact" name="contact" autocomplete="name" required />
+                <input type="text" id="contact" name="contact" autocomplete="name" required aria-describedby="err-contact" />
+                <span class="field-error" id="err-contact" role="alert" data-error="contact"></span>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-field">
                 <label for="email" data-i18n="form_email">Email Address</label>
-                <input type="email" id="email" name="email" autocomplete="email" required />
+                <input type="email" id="email" name="email" autocomplete="email" required aria-describedby="err-email" />
+                <span class="field-error" id="err-email" role="alert" data-error="email"></span>
               </div>
               <div class="form-field">
                 <label for="phone" data-i18n="form_phone">Phone Number</label>
@@ -563,22 +568,24 @@
             <div class="form-row">
               <div class="form-field">
                 <label for="biz_type" data-i18n="form_biz_type">Type of Business</label>
-                <select id="biz_type" name="biz_type" required>
-                  <option value="" disabled selected></option>
+                <select id="biz_type" name="biz_type" required aria-describedby="err-biz_type">
+                  <option value="" disabled selected data-i18n="form_select_placeholder">Select…</option>
                   <option value="restaurant" data-i18n="form_biz_restaurant">Restaurant / Bar</option>
                   <option value="retail" data-i18n="form_biz_retail">Retail / Specialty Store</option>
                   <option value="distributor" data-i18n="form_biz_distributor">Distributor / Importer</option>
                   <option value="other" data-i18n="form_biz_other">Other</option>
                 </select>
+                <span class="field-error" id="err-biz_type" role="alert" data-error="biz_type"></span>
               </div>
               <div class="form-field">
                 <label for="volume" data-i18n="form_volume">Estimated Order Volume</label>
-                <select id="volume" name="volume" required>
-                  <option value="" disabled selected></option>
+                <select id="volume" name="volume" required aria-describedby="err-volume">
+                  <option value="" disabled selected data-i18n="form_select_placeholder">Select…</option>
                   <option value="trial" data-i18n="form_vol_trial">Trial Order (single shipment)</option>
                   <option value="regular" data-i18n="form_vol_regular">Regular Supply (monthly / quarterly)</option>
                   <option value="container" data-i18n="form_vol_container">Container-Level (wholesale / distribution)</option>
                 </select>
+                <span class="field-error" id="err-volume" role="alert" data-error="volume"></span>
               </div>
             </div>
 

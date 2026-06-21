@@ -86,8 +86,17 @@ function applyTranslations() {
   const langBtnLabel = document.getElementById('lang-current');
   if (langBtnLabel) langBtnLabel.textContent = LANG_LABELS[currentLang];
 
-  /* Show/hide fallback notice (only on future-lang pages if we add full pages) */
-  /* Currently just shows the language name correctly */
+  /* Update mobile lang switcher active state */
+  document.querySelectorAll('#mobile-lang-switcher button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+
+  /* Update page <title> */
+  document.title = currentLang === 'ru'
+    ? 'La Bellota Co. — Испанские Деликатесы'
+    : currentLang === 'es'
+      ? 'La Bellota Co. — Delicias Españolas Auténticas'
+      : 'La Bellota Co. — Authentic Spanish Delicacies';
 }
 
 function setLang(lang) {
@@ -139,21 +148,44 @@ function buildLangSwitcher() {
     btn.addEventListener('click', () => setLang(lang));
     dropdown.appendChild(btn);
   });
+
+  /* Mobile lang switcher — all languages as compact buttons */
+  const mobileSwitcher = document.getElementById('mobile-lang-switcher');
+  if (mobileSwitcher) {
+    mobileSwitcher.innerHTML = '';
+    ALL_LANGS.forEach(lang => {
+      const btn = document.createElement('button');
+      btn.dataset.lang = lang;
+      btn.textContent = LANG_LABELS[lang];
+      btn.classList.toggle('active', lang === currentLang);
+      btn.addEventListener('click', () => {
+        setLang(lang);
+        document.querySelectorAll('#mobile-lang-switcher button').forEach(b =>
+          b.classList.toggle('active', b.dataset.lang === currentLang)
+        );
+      });
+      mobileSwitcher.appendChild(btn);
+    });
+  }
 }
 
 function openLangDropdown() {
   const dropdown = document.getElementById('lang-dropdown');
+  const btn = document.getElementById('lang-btn');
   if (!dropdown) return;
   dropdown.classList.add('open');
   dropdown.setAttribute('aria-hidden', 'false');
+  btn?.setAttribute('aria-expanded', 'true');
   langDropdownOpen = true;
 }
 
 function closeLangDropdown() {
   const dropdown = document.getElementById('lang-dropdown');
+  const btn = document.getElementById('lang-btn');
   if (!dropdown) return;
   dropdown.classList.remove('open');
   dropdown.setAttribute('aria-hidden', 'true');
+  btn?.setAttribute('aria-expanded', 'false');
   langDropdownOpen = false;
 }
 
@@ -210,6 +242,30 @@ function initNav() {
 }
 
 /* ===================================================
+   Scroll Spy
+   =================================================== */
+function initScrollSpy() {
+  const sections = document.querySelectorAll('main section[id]');
+  const navLinks = document.querySelectorAll('.nav__links a[href^="#"]');
+  if (!sections.length || !navLinks.length) return;
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.toggle(
+            'active',
+            link.getAttribute('href') === `#${entry.target.id}`
+          );
+        });
+      }
+    });
+  }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+}
+
+/* ===================================================
    Catalog Tabs
    =================================================== */
 function initTabs() {
@@ -239,12 +295,59 @@ function initTabs() {
    On success, show #form-success; on error, show
    #form-error with the contact email.
    =================================================== */
+function validateForm(form) {
+  const rules = [
+    { name: 'company',  type: 'text'   },
+    { name: 'contact',  type: 'text'   },
+    { name: 'email',    type: 'email'  },
+    { name: 'biz_type', type: 'select' },
+    { name: 'volume',   type: 'select' },
+  ];
+
+  let firstInvalid = null;
+  let valid = true;
+
+  rules.forEach(({ name, type }) => {
+    const el = form[name];
+    const errorEl = form.querySelector(`[data-error="${name}"]`);
+    let msg = '';
+
+    if (!el || !el.value.trim()) {
+      msg = t('form_err_required');
+    } else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim())) {
+      msg = t('form_err_email');
+    }
+
+    if (el) el.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    if (errorEl) errorEl.textContent = msg;
+
+    if (msg) {
+      valid = false;
+      if (!firstInvalid) firstInvalid = el;
+    }
+  });
+
+  if (firstInvalid) firstInvalid.focus();
+  return valid;
+}
+
 function initForm() {
   const form = document.getElementById('quote-form');
   if (!form) return;
 
+  /* Clear error on input */
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('input', () => {
+      el.setAttribute('aria-invalid', 'false');
+      const errorEl = form.querySelector(`[data-error="${el.name}"]`);
+      if (errorEl) errorEl.textContent = '';
+    });
+  });
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
+
+    if (!validateForm(form)) return;
 
     const submitBtn = form.querySelector('.btn-submit');
     const errorMsg  = document.getElementById('form-error');
@@ -336,6 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   applyTranslations();
   initNav();
+  initScrollSpy();
   initTabs();
   initForm();
   initScrollReveal();
