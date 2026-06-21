@@ -9,6 +9,40 @@
   <meta property="og:type" content="website" />
   <title>La Bellota Co. — Authentic Spanish Delicacies</title>
 
+  <meta name="theme-color" content="#B5481F" />
+
+  <!-- hreflang: single-page multilingual — all variants point to the same URL -->
+  <link rel="alternate" hreflang="en"        href="./index.html" />
+  <link rel="alternate" hreflang="es"        href="./index.html" />
+  <link rel="alternate" hreflang="ru"        href="./index.html" />
+  <link rel="alternate" hreflang="x-default" href="./index.html" />
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "La Bellota Co.",
+    "description": "Direct supplier of authentic Spanish jamón ibérico, embutidos, and artisan cheeses to restaurants, specialty retailers, and distributors across the USA.",
+    "url": "https://labellotaco.com",
+    "email": "hello@labellotaco.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Los Angeles",
+      "addressRegion": "CA",
+      "addressCountry": "US"
+    },
+    "areaServed": "US",
+    "knowsAbout": ["Jamón Ibérico", "Embutidos", "Spanish Cheese", "DOP Products", "Iberian Charcuterie"],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "sales",
+      "email": "hello@labellotaco.com",
+      "availableLanguage": ["English", "Spanish", "Russian"]
+    }
+  }
+  </script>
+
   <!-- Google Fonts: Fraunces (display) + Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -286,7 +320,7 @@
               <p class="catalog__item-name" data-i18n="cat_jamon_bellota_name">Jamón Ibérico de Bellota</p>
               <p class="catalog__item-desc" data-i18n="cat_jamon_bellota_desc">The pinnacle of Spanish jamón. 100% purebred Iberian pig, acorn-fed during montanera, cured 36–48+ months.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_jamon_bellota_label">Black Label</span>
+            <span class="catalog__item-label label--black" data-i18n="cat_jamon_bellota_label">Black Label</span>
           </div>
 
           <div class="catalog__item">
@@ -294,7 +328,7 @@
               <p class="catalog__item-name" data-i18n="cat_jamon_campo_name">Jamón Ibérico de Cebo de Campo</p>
               <p class="catalog__item-desc" data-i18n="cat_jamon_campo_desc">Free-range Iberian pig, pasture and feed-finished. Cured 24–36 months.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_jamon_campo_label">Green Label</span>
+            <span class="catalog__item-label label--green" data-i18n="cat_jamon_campo_label">Green Label</span>
           </div>
 
           <div class="catalog__item">
@@ -302,7 +336,7 @@
               <p class="catalog__item-name" data-i18n="cat_jamon_serrano_name">Jamón Serrano</p>
               <p class="catalog__item-desc" data-i18n="cat_jamon_serrano_desc">Classic Spanish mountain ham from white-breed pigs. Cured 12–18 months.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_jamon_serrano_label">White Label</span>
+            <span class="catalog__item-label label--white" data-i18n="cat_jamon_serrano_label">White Label</span>
           </div>
 
           <div class="catalog__item">
@@ -310,7 +344,7 @@
               <p class="catalog__item-name" data-i18n="cat_paleta_name">Paleta Ibérica</p>
               <p class="catalog__item-desc" data-i18n="cat_paleta_desc">The front leg counterpart to jamón. More compact format, same breed and production standards.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_paleta_label">Shoulder Cut</span>
+            <span class="catalog__item-label label--black" data-i18n="cat_paleta_label">Shoulder Cut</span>
           </div>
 
           <div class="catalog__item">
@@ -342,7 +376,7 @@
               <p class="catalog__item-name" data-i18n="cat_morcilla_name">Morcilla</p>
               <p class="catalog__item-desc" data-i18n="cat_morcilla_desc">Traditional Spanish blood sausage, available in regional styles.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_morcilla_label">On Request</span>
+            <span class="catalog__item-label label--request" data-i18n="cat_morcilla_label">On Request</span>
           </div>
 
         </div>
@@ -357,7 +391,7 @@
               <p class="catalog__item-name" data-i18n="cat_manchego_name">Manchego (DOP)</p>
               <p class="catalog__item-desc" data-i18n="cat_manchego_desc">Spain's most recognised cheese. Sheep's milk from La Mancha, available in semicurado, curado, and viejo.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_manchego_label">La Mancha</span>
+            <span class="catalog__item-label" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin" data-i18n="cat_manchego_label">La Mancha · DOP</span>
           </div>
 
           <div class="catalog__item">
@@ -365,7 +399,7 @@
               <p class="catalog__item-name" data-i18n="cat_idiazabal_name">Idiazábal (DOP)</p>
               <p class="catalog__item-desc" data-i18n="cat_idiazabal_desc">Smoked or unsmoked Latxa sheep's milk cheese from the Basque Country and Navarre.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_idiazabal_label">Basque Country</span>
+            <span class="catalog__item-label" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin" data-i18n="cat_idiazabal_label">Basque Country · DOP</span>
           </div>
 
           <div class="catalog__item">
@@ -373,7 +407,7 @@
               <p class="catalog__item-name" data-i18n="cat_mahon_name">Mahón-Menorca (DOP)</p>
               <p class="catalog__item-desc" data-i18n="cat_mahon_desc">Cow's milk cheese from Menorca, recognisable by its paprika-rubbed rind.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_mahon_label">Menorca</span>
+            <span class="catalog__item-label" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin" data-i18n="cat_mahon_label">Menorca · DOP</span>
           </div>
 
           <div class="catalog__item">
@@ -381,7 +415,7 @@
               <p class="catalog__item-name" data-i18n="cat_cabrales_name">Cabrales (DOP)</p>
               <p class="catalog__item-desc" data-i18n="cat_cabrales_desc">Asturian blue cheese aged in natural limestone caves. Bold, pungent, and complex.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_cabrales_label">Asturias</span>
+            <span class="catalog__item-label" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin" data-i18n="cat_cabrales_label">Asturias · DOP</span>
           </div>
 
           <div class="catalog__item">
@@ -389,7 +423,7 @@
               <p class="catalog__item-name" data-i18n="cat_tetilla_name">Tetilla (DOP)</p>
               <p class="catalog__item-desc" data-i18n="cat_tetilla_desc">Soft, mild, creamy cow's milk cheese from Galicia, named for its distinctive conical shape.</p>
             </div>
-            <span class="catalog__item-label" data-i18n="cat_tetilla_label">Galicia</span>
+            <span class="catalog__item-label" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin" data-i18n="cat_tetilla_label">Galicia · DOP</span>
           </div>
 
           <div class="catalog__item">
@@ -704,6 +738,13 @@
     </div>
   </div>
 </footer>
+
+<!-- Back to top -->
+<button id="back-to-top" class="back-to-top" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+    <path d="M18 15l-6-6-6 6"/>
+  </svg>
+</button>
 
 <script src="main.js"></script>
 </body>

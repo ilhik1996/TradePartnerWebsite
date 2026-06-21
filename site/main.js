@@ -38,11 +38,6 @@ function t(key) {
   return dict[key] || i18nData.en[key] || key;
 }
 
-function isFallback(lang) {
-  const dict = i18nData[lang];
-  return !dict || !!dict._fallback;
-}
-
 function applyTranslations() {
   document.documentElement.lang = currentLang;
 
@@ -403,6 +398,22 @@ function showFormSuccess(formWrap, successEl) {
 }
 
 /* ===================================================
+   Back to Top
+   =================================================== */
+function initBackToTop() {
+  const btn = document.getElementById('back-to-top');
+  if (!btn) return;
+
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 500);
+  }, { passive: true });
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+/* ===================================================
    Scroll Reveal
    =================================================== */
 function initScrollReveal() {
@@ -443,4 +454,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initForm();
   initScrollReveal();
+  initBackToTop();
 });

@@ -1130,3 +1130,73 @@ p { max-width: 68ch; }
   .nav, .hero__scroll-hint, .nav__cta { display: none; }
   body { background: white; }
 }
+
+/* ===================================================
+   BACK TO TOP BUTTON
+   =================================================== */
+.back-to-top {
+  position: fixed;
+  inset-block-end: 2rem;
+  inset-inline-end: 1.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: var(--accent1);
+  color: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(181,72,31,.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity .3s ease, transform .3s ease, background var(--transition);
+  z-index: 80;
+}
+.back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.back-to-top:hover { background: var(--accent2); }
+
+/* ===================================================
+   CATALOG LABEL COLOUR VARIANTS
+   Black / Green / White label system (RD 4/2014)
+   =================================================== */
+.catalog__item-label { color: var(--accent2); border-color: var(--accent2); }
+
+.label--black {
+  color: #1C1916;
+  border-color: #1C1916;
+  background: rgba(28,25,22,.06);
+}
+.label--green {
+  color: #2A6B4A;
+  border-color: #2A6B4A;
+  background: rgba(42,107,74,.06);
+}
+.label--white {
+  color: var(--muted);
+  border-color: var(--muted);
+}
+.label--request {
+  color: var(--muted);
+  border-color: var(--accent3);
+  font-style: italic;
+}
+
+/* ===================================================
+   REDUCED MOTION
+   =================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+  .hero__title .line-inner { opacity: 1; transform: none; }
+  .hero__sub, .hero__cta-row, .hero__scroll-hint { opacity: 1; }
+  .reveal { opacity: 1; transform: none; }
+}
