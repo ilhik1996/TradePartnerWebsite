@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { LEVEL_THRESHOLDS, LEVEL_TITLES, XP, computeLevel, hasConsecutiveDays, awardXp, checkAndAwardBadges } from "../modules/gamification";
+import { LEVEL_THRESHOLDS, LEVEL_TITLES, XP, computeLevel, hasConsecutiveDays, awardXp, checkAndAwardBadges, getUserLevel } from "../modules/gamification";
 
 describe("LEVEL_THRESHOLDS", () => {
   it("has 10 levels", () => {
@@ -327,5 +327,58 @@ describe("checkAndAwardBadges", () => {
     const db = makeBadgeDb([], { entries: 0, wins: 0, referrals: 0, days: [] });
     const awarded = await checkAndAwardBadges(1, db);
     expect(awarded).toHaveLength(0);
+  });
+});
+
+// ─── getUserLevel ──────────────────────────────────────────────────────────────
+
+function makeUserLevelDb(totalXp: number, badges: string[]) {
+  const results = [
+    [{ total: totalXp }],                     // XP aggregate
+    badges.map(id => ({ badgeId: id })),       // badge rows
+  ];
+  let idx = 0;
+  return {
+    select: vi.fn(() => ({
+      from: () => ({
+        where: () => Promise.resolve(results[idx++] ?? []),
+      }),
+    })),
+  };
+}
+
+describe("getUserLevel", () => {
+  it("returns xp = 0, level = 1, no badges for a brand-new user", async () => {
+    const db = makeUserLevelDb(0, []);
+    const result = await getUserLevel(1, db);
+    expect(result.xp).toBe(0);
+    expect(result.level).toBe(1);
+    expect(result.badges).toEqual([]);
+  });
+
+  it("returns the correct level for a user with 500 XP (level 4)", async () => {
+    // LEVEL_THRESHOLDS[3] = 500 → level 4
+    const db = makeUserLevelDb(500, []);
+    const result = await getUserLevel(1, db);
+    expect(result.level).toBe(4);
+  });
+
+  it("includes all awarded badge ids", async () => {
+    const db = makeUserLevelDb(100, ["first_entry", "first_win"]);
+    const result = await getUserLevel(1, db);
+    expect(result.badges).toEqual(["first_entry", "first_win"]);
+  });
+
+  it("nextLevelXp is null at max level", async () => {
+    const db = makeUserLevelDb(999_999, []);
+    const result = await getUserLevel(1, db);
+    expect(result.nextLevelXp).toBeNull();
+    expect(result.level).toBe(LEVEL_THRESHOLDS.length);
+  });
+
+  it("title matches LEVEL_TITLES for the computed level", async () => {
+    const db = makeUserLevelDb(LEVEL_THRESHOLDS[1], []); // exactly level 2
+    const result = await getUserLevel(1, db);
+    expect(result.title).toBe(LEVEL_TITLES[1]);
   });
 });

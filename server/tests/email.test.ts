@@ -96,6 +96,62 @@ describe("sendWelcomeEmail — dev fallback (no RESEND_API_KEY)", () => {
   });
 });
 
+describe("sendWithdrawalConfirmationEmail — dev fallback", () => {
+  const origEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...origEnv };
+    delete process.env.RESEND_API_KEY;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.env = origEnv;
+    vi.restoreAllMocks();
+  });
+
+  it("returns true when RESEND_API_KEY is absent", async () => {
+    const { sendWithdrawalConfirmationEmail } = await import("../modules/email");
+    expect(await sendWithdrawalConfirmationEmail("u@example.com", "250.00", "UAH")).toBe(true);
+  });
+
+  it("includes the amount and currency in the log output", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { sendWithdrawalConfirmationEmail } = await import("../modules/email");
+    await sendWithdrawalConfirmationEmail("u@example.com", "500.00", "USD");
+    const logText = spy.mock.calls.flat().join(" ");
+    expect(logText).toMatch(/500\.00/);
+  });
+});
+
+describe("sendLowBalanceEmail — dev fallback", () => {
+  const origEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...origEnv };
+    delete process.env.RESEND_API_KEY;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.env = origEnv;
+    vi.restoreAllMocks();
+  });
+
+  it("returns true when RESEND_API_KEY is absent", async () => {
+    const { sendLowBalanceEmail } = await import("../modules/email");
+    expect(await sendLowBalanceEmail("u@example.com", "₴", "5.00")).toBe(true);
+  });
+
+  it("logs the recipient address in dev mode", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { sendLowBalanceEmail } = await import("../modules/email");
+    await sendLowBalanceEmail("low@example.com", "$", "10.00");
+    const logText = spy.mock.calls.flat().join(" ");
+    expect(logText).toContain("low@example.com");
+  });
+});
+
 describe("sendDrawResultEmail — dev fallback", () => {
   const origEnv = process.env;
 

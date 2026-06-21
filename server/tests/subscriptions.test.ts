@@ -31,7 +31,7 @@ vi.mock("../modules/lottery", () => ({
 
 // ─── Imports (after mocks) ────────────────────────────────────────────────────
 
-import { cancelSubscription, createSubscription, renewDueSubscriptions } from "../modules/subscriptions";
+import { cancelSubscription, createSubscription, renewDueSubscriptions, getActiveSubscription } from "../modules/subscriptions";
 import { db } from "../db";
 import { processDeposit } from "../modules/payments";
 import { insertNotification } from "../modules/notifications";
@@ -443,5 +443,32 @@ describe("renewDueSubscriptions", () => {
     // sub1 threw, sub2 was processed
     expect(mockedProcessDeposit).toHaveBeenCalledTimes(1);
     expect(mockedProcessDeposit).toHaveBeenCalledWith(20, 50, "UAH", "tok_valid", expect.any(String));
+  });
+});
+
+// ─── getActiveSubscription ────────────────────────────────────────────────────
+
+describe("getActiveSubscription", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("returns null when the user has no active subscription", async () => {
+    mockedDb.select.mockReturnValue(makeSelectChain([]));
+    expect(await getActiveSubscription(1)).toBeNull();
+  });
+
+  it("returns the active subscription row when one exists", async () => {
+    const sub = { id: 5, userId: 1, status: "active", type: "weekly" };
+    mockedDb.select.mockReturnValue(makeSelectChain([sub]));
+    const result = await getActiveSubscription(1);
+    expect(result?.id).toBe(5);
+    expect(result?.status).toBe("active");
+  });
+
+  it("returns null when the only subscription is cancelled", async () => {
+    // The query filters by status=active; mock returns [] for non-active
+    mockedDb.select.mockReturnValue(makeSelectChain([]));
+    expect(await getActiveSubscription(7)).toBeNull();
   });
 });

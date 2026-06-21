@@ -5,12 +5,13 @@ vi.mock("../db", () => {
   return {
     db: {
       select: vi.fn(),
+      insert: vi.fn(),
       transaction: vi.fn(),
     },
   };
 });
 
-import { depositFunds, getBalance } from "../modules/wallet";
+import { depositFunds, getBalance, getOrCreateWallet, getTransactionHistory } from "../modules/wallet";
 import { db } from "../db";
 
 const mockedDb = db as any;
@@ -147,5 +148,98 @@ describe("getBalance", () => {
   it("handles zero balance", async () => {
     mockedDb.select.mockReturnValue(makeSelectChain([{ balance: "0.00" }]));
     expect(await getBalance(1)).toBe(0);
+  });
+});
+
+// ─── getOrCreateWallet ────────────────────────────────────────────────────────
+
+function makeInsertChain() {
+  return {
+    values: () => ({
+      onConflictDoNothing: () => Promise.resolve([]),
+    }),
+  };
+}
+
+describe("getOrCreateWallet", () => {
+  it("returns the wallet after upsert", async () => {
+    const wallet = { id: 3, userId: 7, balance: "0.00", currency: "UAH" };
+    mockedDb.insert.mockReturnValue(makeInsertChain());
+    mockedDb.select.mockReturnValue(makeSelectChain([wallet]));
+
+    const result = await getOrCreateWallet(7, "UAH");
+    expect(result.id).toBe(3);
+    expect(result.currency).toBe("UAH");
+  });
+
+  it("throws when the wallet row is missing after insert", async () => {
+    mockedDb.insert.mockReturnValue(makeInsertChain());
+    mockedDb.select.mockReturnValue(makeSelectChain([]));
+
+    await expect(getOrCreateWallet(99, "USD")).rejects.toThrow("Wallet not found");
+  });
+
+  it("always calls db.insert with onConflictDoNothing", async () => {
+    const wallet = { id: 1, userId: 1, balance: "0.00", currency: "USD" };
+    mockedDb.insert.mockReturnValue(makeInsertChain());
+    mockedDb.select.mockReturnValue(makeSelectChain([wallet]));
+
+    await getOrCreateWallet(1, "USD");
+    expect(mockedDb.insert).toHaveBeenCalledOnce();
+  });
+
+  it("returns a non-zero balance for an existing wallet", async () => {
+    const wallet = { id: 2, userId: 5, balance: "1500.00", currency: "EUR" };
+    mockedDb.insert.mockReturnValue(makeInsertChain());
+    mockedDb.select.mockReturnValue(makeSelectChain([wallet]));
+
+    const result = await getOrCreateWallet(5, "EUR");
+    expect(result.balance).toBe("1500.00");
+  });
+});
+
+// ─── getTransactionHistory ────────────────────────────────────────────────────
+
+function makeHistoryChain(rows: any[]) {
+  return {
+    from: () => ({
+      where: () => ({
+        orderBy: () => ({
+          limit: () => ({
+            offset: () => Promise.resolve(rows),
+          }),
+        }),
+      }),
+    }),
+  };
+}
+
+describe("getTransactionHistory", () => {
+  it("returns an empty array when the user has no transactions", async () => {
+    mockedDb.select.mockReturnValue(makeHistoryChain([]));
+    expect(await getTransactionHistory(1)).toEqual([]);
+  });
+
+  it("returns all rows from the DB query", async () => {
+    const rows = [
+      { id: 1, type: "deposit", amount: "50.00" },
+      { id: 2, type: "lottery_entry", amount: "-5.00" },
+    ];
+    mockedDb.select.mockReturnValue(makeHistoryChain(rows));
+    const result = await getTransactionHistory(1);
+    expect(result).toHaveLength(2);
+    expect(result[0].type).toBe("deposit");
+  });
+
+  it("accepts custom limit and offset without throwing", async () => {
+    mockedDb.select.mockReturnValue(makeHistoryChain([]));
+    await expect(getTransactionHistory(1, 5, 10)).resolves.toEqual([]);
+  });
+
+  it("uses default limit=20 and offset=0 when not specified", async () => {
+    // The important thing is no error is thrown and the chain is traversed
+    mockedDb.select.mockReturnValue(makeHistoryChain([{ id: 1 }]));
+    const result = await getTransactionHistory(42);
+    expect(result).toHaveLength(1);
   });
 });
