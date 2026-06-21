@@ -714,6 +714,71 @@ describe("GET /api/admin/users — search wildcard escaping", () => {
   });
 });
 
+// ── Notification mark-read — id validation ───────────────────────────────────
+
+describe("PATCH /api/notifications/:id/read — id validation", () => {
+  const token = signToken({ userId: 999 });
+
+  it("returns 400 for non-numeric notification id", async () => {
+    const res = await request(app)
+      .patch("/api/notifications/abc/read")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid numeric/i);
+  });
+
+  it("returns 401 without auth token", async () => {
+    const res = await request(app).patch("/api/notifications/1/read");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── Push subscribe — body validation ─────────────────────────────────────────
+
+describe("POST /api/push/subscribe — body validation", () => {
+  const token = signToken({ userId: 999 });
+
+  it("returns 400 when endpoint is missing", async () => {
+    const res = await request(app)
+      .post("/api/push/subscribe")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ keys: { p256dh: "key", auth: "auth" } });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when endpoint is not a valid URL", async () => {
+    const res = await request(app)
+      .post("/api/push/subscribe")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ endpoint: "not-a-url", keys: { p256dh: "key", auth: "auth" } });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when keys object is missing entirely", async () => {
+    const res = await request(app)
+      .post("/api/push/subscribe")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ endpoint: "https://push.example.com/sub" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when p256dh is missing from keys", async () => {
+    const res = await request(app)
+      .post("/api/push/subscribe")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ endpoint: "https://push.example.com/sub", keys: { auth: "auth123" } });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when auth is missing from keys", async () => {
+    const res = await request(app)
+      .post("/api/push/subscribe")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ endpoint: "https://push.example.com/sub", keys: { p256dh: "key123" } });
+    expect(res.status).toBe(400);
+  });
+});
+
 // ── Admin users — enum filter validation ─────────────────────────────────────
 
 describe("GET /api/admin/users — enum filter validation", () => {
