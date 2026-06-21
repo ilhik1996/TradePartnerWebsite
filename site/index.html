@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="La Bellota Co. — direct supplier of authentic Spanish jamón ibérico, embutidos, and artisan cheeses to restaurants, specialty retailers, and distributors across the USA. Based in Los Angeles." />
+  <meta property="og:title" content="La Bellota Co. — Authentic Spanish Delicacies" />
+  <meta property="og:description" content="Direct supply of Spanish jamón ibérico, embutidos, and quesos to US restaurants and retailers. Los Angeles." />
+  <meta property="og:type" content="website" />
+  <title>La Bellota Co. — Authentic Spanish Delicacies</title>
+
+  <!-- Google Fonts: Fraunces (display) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Skip to main content (keyboard accessibility) -->
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- ===================================================
+     NAVIGATION
+     =================================================== -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container nav__inner">
+
+    <!-- Logo -->
+    <a href="#" class="nav__logo" aria-label="La Bellota Co. — home">
+      La Bellota <span>Co.</span>
+    </a>
+
+    <!-- Desktop links -->
+    <ul class="nav__links" role="list">
+      <li><a href="#jamon" data-i18n="nav_why_jamon">Why Jamón</a></li>
+      <li><a href="#catalog" data-i18n="nav_products">Products</a></li>
+      <li><a href="#why" data-i18n="nav_why_us">Why Us</a></li>
+      <li><a href="#who" data-i18n="nav_who">Who We Serve</a></li>
+      <li><a href="#contact" data-i18n="nav_contact">Contact</a></li>
+    </ul>
+
+    <div class="nav__right">
+      <!-- Language Switcher -->
+      <div class="lang-switcher" role="navigation" aria-label="Language selection">
+        <button
+          id="lang-btn"
+          class="lang-switcher__btn"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="lang-dropdown"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span id="lang-current">English</span>
+          <svg width="10" height="10" viewBox="0 0 12 8" fill="none" aria-hidden="true">
+            <path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div
+          id="lang-dropdown"
+          class="lang-switcher__dropdown"
+          role="menu"
+          aria-hidden="true"
+        >
+          <!-- Populated by main.js -->
+        </div>
+      </div>
+
+      <!-- Desktop CTA -->
+      <a href="#contact" class="nav__cta" data-i18n="nav_cta">Get Pricing</a>
+
+      <!-- Mobile hamburger -->
+      <button
+        id="hamburger"
+        class="nav__hamburger"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="mobile-nav"
+      >
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+  </div>
+</nav>
+
+<!-- Mobile nav drawer -->
+<div id="mobile-nav" class="nav__mobile" role="dialog" aria-label="Mobile navigation" aria-modal="false">
+  <a href="#jamon" data-i18n="nav_why_jamon">Why Jamón</a>
+  <a href="#catalog" data-i18n="nav_products">Products</a>
+  <a href="#why" data-i18n="nav_why_us">Why Us</a>
+  <a href="#who" data-i18n="nav_who">Who We Serve</a>
+  <a href="#contact" data-i18n="nav_contact">Contact</a>
+  <a href="#contact" class="nav__cta" data-i18n="nav_cta">Get Pricing</a>
+</div>
+
+
+<!-- ===================================================
+     MAIN CONTENT
+     =================================================== -->
+<main id="main">
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 1: HERO
+       ────────────────────────────────────────────── -->
+  <section class="hero" id="hero" aria-label="Hero">
+    <div class="hero__bg" aria-hidden="true"></div>
+    <div class="hero__texture" aria-hidden="true"></div>
+
+    <div class="container hero__content">
+      <p class="hero__tagline" data-i18n="hero_tagline">Direct from Spain.</p>
+
+      <h1 class="hero__title" id="hero-title" aria-live="polite">
+        <!-- Lines injected by JS after i18n loads -->
+        <span class="line"><span class="line-inner">Authentic Spanish</span></span>
+        <span class="line"><span class="line-inner">Delicacies for the</span></span>
+        <span class="line"><span class="line-inner">American Table.</span></span>
+      </h1>
+
+      <p class="hero__sub" data-i18n="hero_sub">
+        Jamón ibérico, embutidos, and artisan cheeses — supplied directly to restaurants,
+        specialty retailers, and distributors across the USA. Headquartered in Los Angeles.
+      </p>
+
+      <div class="hero__cta-row">
+        <a href="#contact" class="btn-primary" data-i18n="hero_cta">
+          Request Wholesale Pricing
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Right decorative panel (desktop only) -->
+    <div class="hero__deco" aria-hidden="true">
+      <div class="hero__deco-inner">
+        <span class="hero__deco-text">Jamón&#10;Ibérico&#10;de Bellota</span>
+        <span class="hero__deco-label">La Bellota Co.</span>
+      </div>
+    </div>
+
+    <div class="hero__scroll-hint" aria-hidden="true">
+      <span data-i18n="hero_scroll">Scroll to explore</span>
+      <span class="arrow"></span>
+    </div>
+  </section>
+
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 2: WHY JAMÓN
+       ────────────────────────────────────────────── -->
+  <section class="jamon section" id="jamon" aria-labelledby="jamon-title">
+    <div class="container">
+      <div class="jamon__header reveal">
+        <p class="label-tag" data-i18n="jamon_section_label">The Product</p>
+        <h2 id="jamon-title" data-i18n="jamon_title">Why Spanish Jamón<br>Is a Category of Its Own</h2>
+        <p class="jamon__intro" data-i18n="jamon_intro">Most buyers encounter jamón ibérico once and never look back. Here is why this product stands apart from everything else on the charcuterie board.</p>
+      </div>
+
+      <div class="jamon__grid">
+        <!-- Card 1: Dehesa -->
+        <article class="jamon__card reveal reveal-delay-1">
+          <h3 data-i18n="jamon_card1_title">La Dehesa Ecosystem</h3>
+          <p data-i18n="jamon_card1_body">
+            Iberian pigs roam free across ancient oak-forested pastures called
+            <span
+              tabindex="0"
+              data-i18n-tooltip="glossary_dehesa"
+              data-tooltip="Dehesa — the unique agroforestry landscape of southwestern Spain."
+              aria-describedby="tooltip-dehesa"
+            >dehesa</span>
+            — in the
+            <span
+              tabindex="0"
+              data-i18n-tooltip="glossary_montanera"
+              data-tooltip="Montanera — the acorn-foraging season (October–February)."
+            >montanera</span>
+            season they fatten exclusively on
+            <span
+              tabindex="0"
+              data-i18n-tooltip="glossary_bellota"
+              data-tooltip="Bellota — acorn. Designates pigs that foraged exclusively on acorns."
+            >bellotas</span>.
+          </p>
+        </article>
+
+        <!-- Card 2: Curing -->
+        <article class="jamon__card reveal reveal-delay-2">
+          <h3 data-i18n="jamon_card2_title">Minimum 2–4 Years of Curing</h3>
+          <p data-i18n="jamon_card2_body">Top-grade jamón ibérico de bellota is cured for a minimum of 36–48 months in mountain-air bodegas.</p>
+        </article>
+
+        <!-- Card 3: Label system -->
+        <article class="jamon__card reveal reveal-delay-3">
+          <h3 data-i18n="jamon_card3_title">A Transparent Label System</h3>
+          <p data-i18n="jamon_card3_body">Spain's official labelling law defines four quality tiers by breed purity and diet. Every product we supply carries the correct label — no guesswork.</p>
+        </article>
+
+        <!-- Card 4: DOP -->
+        <article class="jamon__card reveal reveal-delay-4">
+          <h3 data-i18n="jamon_card4_title">Protected Designations of Origin</h3>
+          <p data-i18n="jamon_card4_body">Four DOPs legally guarantee regional origin and production method. These are legal certifications backed by EU law — not marketing language.</p>
+        </article>
+      </div>
+
+      <!-- DOP badges -->
+      <div class="dop-row reveal">
+        <span
+          class="dop-badge"
+          tabindex="0"
+          data-i18n-tooltip="glossary_dop"
+          data-tooltip="DOP — EU Protected Designation of Origin, guaranteeing the product's region and production method."
+          aria-label="DOP — Protected Designation of Origin"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          DOP Jabugo
+        </span>
+        <span class="dop-badge" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin, guaranteeing the product's region and production method.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          DOP Guijuelo
+        </span>
+        <span class="dop-badge" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin, guaranteeing the product's region and production method.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          DOP Dehesa de Extremadura
+        </span>
+        <span class="dop-badge" tabindex="0" data-i18n-tooltip="glossary_dop" data-tooltip="DOP — EU Protected Designation of Origin, guaranteeing the product's region and production method.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          DOP Los Pedroches
+        </span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 3: CATALOG
+       ────────────────────────────────────────────── -->
+  <section class="catalog section" id="catalog" aria-labelledby="catalog-title">
+    <div class="container">
+      <div class="catalog__header reveal">
+        <p class="label-tag" data-i18n="catalog_section_label">Catalog</p>
+        <h2 id="catalog-title" data-i18n="catalog_title">Our Product Range</h2>
+        <p class="catalog__sub" data-i18n="catalog_sub">A curated selection of Spain's finest jamón, embutidos, and quesos — available under one order.</p>
+      </div>
+
+      <!-- Tab controls -->
+      <div class="catalog__tabs" role="tablist" aria-label="Product categories">
+        <button
+          class="tab-btn active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="tab-jamon"
+          data-tab="tab-jamon"
+          data-i18n="catalog_tab_jamon"
+        >Jamón &amp; Embutidos</button>
+        <button
+          class="tab-btn"
+          role="tab"
+          aria-selected="false"
+          aria-controls="tab-queso"
+          data-tab="tab-queso"
+          data-i18n="catalog_tab_queso"
+        >Quesos</button>
+      </div>
+
+      <!-- Tab: Jamón & Embutidos -->
+      <div id="tab-jamon" class="tab-panel active" role="tabpanel" aria-label="Jamón and Embutidos">
+        <div class="catalog__grid reveal">
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_jamon_bellota_name">Jamón Ibérico de Bellota</p>
+              <p class="catalog__item-desc" data-i18n="cat_jamon_bellota_desc">The pinnacle of Spanish jamón. 100% purebred Iberian pig, acorn-fed during montanera, cured 36–48+ months.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_jamon_bellota_label">Black Label</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_jamon_campo_name">Jamón Ibérico de Cebo de Campo</p>
+              <p class="catalog__item-desc" data-i18n="cat_jamon_campo_desc">Free-range Iberian pig, pasture and feed-finished. Cured 24–36 months.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_jamon_campo_label">Green Label</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_jamon_serrano_name">Jamón Serrano</p>
+              <p class="catalog__item-desc" data-i18n="cat_jamon_serrano_desc">Classic Spanish mountain ham from white-breed pigs. Cured 12–18 months.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_jamon_serrano_label">White Label</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_paleta_name">Paleta Ibérica</p>
+              <p class="catalog__item-desc" data-i18n="cat_paleta_desc">The front leg counterpart to jamón. More compact format, same breed and production standards.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_paleta_label">Shoulder Cut</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_chorizo_name">Chorizo Ibérico</p>
+              <p class="catalog__item-desc" data-i18n="cat_chorizo_desc">Slow-cured Iberian pork sausage seasoned with pimentón and garlic.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_chorizo_label">Cured Sausage</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_salchichon_name">Salchichón Ibérico</p>
+              <p class="catalog__item-desc" data-i18n="cat_salchichon_desc">Iberian pork sausage cured with black pepper and spices. Milder and more aromatic than chorizo.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_salchichon_label">Cured Sausage</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_lomo_name">Lomo Ibérico</p>
+              <p class="catalog__item-desc" data-i18n="cat_lomo_desc">Cured Iberian pork tenderloin — lean, silky, deeply flavourful.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_lomo_label">Cured Loin</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_morcilla_name">Morcilla</p>
+              <p class="catalog__item-desc" data-i18n="cat_morcilla_desc">Traditional Spanish blood sausage, available in regional styles.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_morcilla_label">On Request</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tab: Quesos -->
+      <div id="tab-queso" class="tab-panel" role="tabpanel" aria-label="Quesos">
+        <div class="catalog__grid reveal">
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_manchego_name">Manchego (DOP)</p>
+              <p class="catalog__item-desc" data-i18n="cat_manchego_desc">Spain's most recognised cheese. Sheep's milk from La Mancha, available in semicurado, curado, and viejo.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_manchego_label">La Mancha</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_idiazabal_name">Idiazábal (DOP)</p>
+              <p class="catalog__item-desc" data-i18n="cat_idiazabal_desc">Smoked or unsmoked Latxa sheep's milk cheese from the Basque Country and Navarre.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_idiazabal_label">Basque Country</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_mahon_name">Mahón-Menorca (DOP)</p>
+              <p class="catalog__item-desc" data-i18n="cat_mahon_desc">Cow's milk cheese from Menorca, recognisable by its paprika-rubbed rind.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_mahon_label">Menorca</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_cabrales_name">Cabrales (DOP)</p>
+              <p class="catalog__item-desc" data-i18n="cat_cabrales_desc">Asturian blue cheese aged in natural limestone caves. Bold, pungent, and complex.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_cabrales_label">Asturias</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_tetilla_name">Tetilla (DOP)</p>
+              <p class="catalog__item-desc" data-i18n="cat_tetilla_desc">Soft, mild, creamy cow's milk cheese from Galicia, named for its distinctive conical shape.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_tetilla_label">Galicia</span>
+          </div>
+
+          <div class="catalog__item">
+            <div class="catalog__item-main">
+              <p class="catalog__item-name" data-i18n="cat_iberico_name">Queso Ibérico</p>
+              <p class="catalog__item-desc" data-i18n="cat_iberico_desc">A blend of cow, goat, and sheep's milk. Smooth, mild, and versatile.</p>
+            </div>
+            <span class="catalog__item-label" data-i18n="cat_iberico_label">Blended Milk</span>
+          </div>
+
+        </div>
+      </div>
+
+      <p class="catalog__note reveal" data-i18n="catalog_note">Product availability and SKU selection are confirmed at time of order.</p>
+    </div>
+  </section>
+
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 4: WHY US
+       ────────────────────────────────────────────── -->
+  <section class="why section" id="why" aria-labelledby="why-title">
+    <div class="container">
+      <div class="reveal">
+        <p class="label-tag" data-i18n="why_section_label">Why La Bellota Co.</p>
+        <h2 id="why-title" data-i18n="why_title">A Direct Channel,&#10;Not Another Middleman</h2>
+        <p class="why__sub" data-i18n="why_sub">We say what we can actually deliver — and we deliver what we say.</p>
+      </div>
+
+      <ul class="why__grid" role="list">
+
+        <li class="why__item reveal reveal-delay-1">
+          <div class="why__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+          </div>
+          <div class="why__item-body">
+            <h4 data-i18n="why_1_title">Direct Supply Chain</h4>
+            <p data-i18n="why_1_body">We work directly with Spanish producers, bypassing importers and re-sellers.</p>
+          </div>
+        </li>
+
+        <li class="why__item reveal reveal-delay-2">
+          <div class="why__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
+            </svg>
+          </div>
+          <div class="why__item-body">
+            <h4 data-i18n="why_2_title">Broad Iberian Portfolio</h4>
+            <p data-i18n="why_2_body">Jamón, embutidos, and quesos under one relationship — one contact, one order, one shipment.</p>
+          </div>
+        </li>
+
+        <li class="why__item reveal reveal-delay-3">
+          <div class="why__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="why__item-body">
+            <h4 data-i18n="why_3_title">A Real Person in Los Angeles</h4>
+            <p data-i18n="why_3_body">You speak directly with our US representative — not a call centre.</p>
+          </div>
+        </li>
+
+        <li class="why__item reveal reveal-delay-1">
+          <div class="why__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div class="why__item-body">
+            <h4 data-i18n="why_4_title">Flexible Volume</h4>
+            <p data-i18n="why_4_body">Trial orders for a single restaurant. Container shipments for distributors. We scale to your operation.</p>
+          </div>
+        </li>
+
+        <li class="why__item reveal reveal-delay-2">
+          <div class="why__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div class="why__item-body">
+            <h4 data-i18n="why_5_title">Verified Origin, Every Time</h4>
+            <p data-i18n="why_5_body">Every product comes with its DOP certification — documented, not promised.</p>
+          </div>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 5: WHO WE SERVE
+       ────────────────────────────────────────────── -->
+  <section class="who section" id="who" aria-labelledby="who-title">
+    <div class="container">
+      <div class="reveal">
+        <p class="label-tag" data-i18n="who_section_label">Who We Serve</p>
+        <h2 id="who-title" data-i18n="who_title">Built for Buyers&#10;Who Know Quality</h2>
+      </div>
+
+      <div class="who__grid">
+
+        <article class="who__card reveal reveal-delay-1">
+          <h3 data-i18n="who_1_title">Restaurants &amp; Tapas Bars</h3>
+          <p data-i18n="who_1_body">Spanish, Mediterranean, and wine-forward restaurants; tapas bars and pintxos concepts; hotel F&amp;B programmes.</p>
+        </article>
+
+        <article class="who__card reveal reveal-delay-2">
+          <h3 data-i18n="who_2_title">Specialty Retailers &amp; Gastro Markets</h3>
+          <p data-i18n="who_2_body">Gourmet delicatessens, specialty food shops, and gastro markets with a premium charcuterie or cheese section.</p>
+        </article>
+
+        <article class="who__card reveal reveal-delay-3">
+          <h3 data-i18n="who_3_title">Gourmet Distributors</h3>
+          <p data-i18n="who_3_body">Importers and distributors looking to expand their Iberian portfolio with verified DOP products.</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ──────────────────────────────────────────────
+       SECTION 6: FORM
+       ────────────────────────────────────────────── -->
+  <section class="form-section section" id="contact" aria-labelledby="form-title">
+    <div class="container form-section__inner">
+
+      <div class="form-section__text reveal">
+        <p class="label-tag" data-i18n="form_section_label">Get In Touch</p>
+        <h2 id="form-title" data-i18n="form_title">Request a Price List</h2>
+        <p class="form-desc" data-i18n="form_sub">Tell us a little about your business and what you are looking for. We will respond within 1–2 business days.</p>
+      </div>
+
+      <div class="reveal reveal-delay-1">
+        <!-- Form wrapper — hidden on success -->
+        <div id="form-wrap">
+          <!-- Error message (shown on fetch failure) -->
+          <div id="form-error" class="form-error-msg" role="alert" style="display:none">
+            <span data-i18n="form_error">Something went wrong. Please email us directly at</span>
+            <a href="mailto:hello@labellotaco.com">hello@labellotaco.com</a>
+          </div>
+
+          <form class="quote-form" id="quote-form" novalidate aria-label="Quote request form">
+            <div class="form-row">
+              <div class="form-field">
+                <label for="company" data-i18n="form_company">Company Name</label>
+                <input type="text" id="company" name="company" autocomplete="organization" required />
+              </div>
+              <div class="form-field">
+                <label for="contact" data-i18n="form_contact">Contact Person</label>
+                <input type="text" id="contact" name="contact" autocomplete="name" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="email" data-i18n="form_email">Email Address</label>
+                <input type="email" id="email" name="email" autocomplete="email" required />
+              </div>
+              <div class="form-field">
+                <label for="phone" data-i18n="form_phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="biz_type" data-i18n="form_biz_type">Type of Business</label>
+                <select id="biz_type" name="biz_type" required>
+                  <option value="" disabled selected></option>
+                  <option value="restaurant" data-i18n="form_biz_restaurant">Restaurant / Bar</option>
+                  <option value="retail" data-i18n="form_biz_retail">Retail / Specialty Store</option>
+                  <option value="distributor" data-i18n="form_biz_distributor">Distributor / Importer</option>
+                  <option value="other" data-i18n="form_biz_other">Other</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="volume" data-i18n="form_volume">Estimated Order Volume</label>
+                <select id="volume" name="volume" required>
+                  <option value="" disabled selected></option>
+                  <option value="trial" data-i18n="form_vol_trial">Trial Order (single shipment)</option>
+                  <option value="regular" data-i18n="form_vol_regular">Regular Supply (monthly / quarterly)</option>
+                  <option value="container" data-i18n="form_vol_container">Container-Level (wholesale / distribution)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row" style="grid-template-columns: 1fr;">
+              <div class="form-field">
+                <label for="message" data-i18n="form_message">What are you looking for?</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="4"
+                  data-i18n-placeholder="form_message_placeholder"
+                  placeholder="Which products interest you? Any specific quantities, formats, or certifications required?"
+                ></textarea>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit">
+              <span data-i18n="form_submit">Send Request</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+
+            <p class="form-privacy">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span data-i18n="form_privacy">We will never share your details with third parties.</span>
+            </p>
+          </form>
+        </div>
+
+        <!-- Success state -->
+        <div id="form-success" style="display:none" role="status">
+          <div class="form-success">
+            <div class="form-success__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B5481F" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h3 data-i18n="form_success_title">Request Received</h3>
+            <p data-i18n="form_success_body">Thank you. We will be in touch within 1–2 business days.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+
+<!-- ===================================================
+     FOOTER
+     =================================================== -->
+<footer class="footer" aria-label="Site footer">
+  <div class="container">
+    <div class="footer__grid">
+
+      <!-- Brand -->
+      <div>
+        <p class="footer__brand">La Bellota <span>Co.</span></p>
+        <p class="footer__tagline" data-i18n="footer_tagline">Direct Spanish Delicacies for the American Table.</p>
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <p class="footer__col-label" data-i18n="footer_contact_label">Contact Us</p>
+        <ul class="footer__contact-list" role="list">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span data-i18n="footer_location">Los Angeles, California, USA</span>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <!-- TODO: replace with real contact name -->
+            <span data-i18n="footer_name_placeholder">[Contact Name]</span>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <!-- TODO: replace with real email -->
+            <a href="mailto:hello@labellotaco.com" data-i18n="footer_email_placeholder">hello@labellotaco.com</a>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.53A2 2 0 0 1 3.55 1.35h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.06 6.06l.87-.87a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+            </svg>
+            <!-- TODO: replace with real phone -->
+            <a href="tel:+12130000000" data-i18n="footer_phone_placeholder">+1 (213) 000-0000</a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Origin -->
+      <div>
+        <p class="footer__col-label" data-i18n="footer_origin">Products sourced directly from Spain</p>
+        <p class="footer__dop-note" data-i18n="footer_dop_note">All products carry valid DOP certification from their respective region of origin.</p>
+      </div>
+
+    </div>
+
+    <div class="footer__bottom">
+      <p class="footer__legal" data-i18n="footer_legal">© 2025 La Bellota Co. All rights reserved.</p>
+      <p class="footer__origin">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>España → USA</span>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>
