@@ -343,6 +343,7 @@ p { max-width: 68ch; }
    HERO
    =================================================== */
 .hero {
+  min-height: 100vh;
   min-height: 100svh;
   padding-block-start: var(--nav-h);
   display: grid;
@@ -1113,6 +1114,16 @@ p { max-width: 68ch; }
     color: rgba(34,31,28,.55);
     white-space: nowrap;
     z-index: 1;
+  }
+  .hero__jamon-svg {
+    position: absolute;
+    width: clamp(140px, 20vw, 220px);
+    height: auto;
+    opacity: .18;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -54%);
+    z-index: 0;
   }
   .hero__deco-text {
     font-family: 'Fraunces', serif;

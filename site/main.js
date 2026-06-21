@@ -267,6 +267,20 @@ function initNav() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeLangDropdown();
   });
+
+  /* Mobile nav focus trap */
+  mobileNav?.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !mobileNav.classList.contains('open')) return;
+    const focusable = [...mobileNav.querySelectorAll('a, button')].filter(el => !el.disabled);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last  = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  });
 }
 
 /* ===================================================
@@ -310,6 +324,10 @@ function initTabs() {
       tabPanels.forEach(p => {
         p.classList.toggle('active', p.id === target);
       });
+      /* Trigger reveal for items in the newly shown panel */
+      document.getElementById(target)
+        ?.querySelectorAll('.reveal:not(.in-view)')
+        .forEach(el => el.classList.add('in-view'));
     });
   });
 }
