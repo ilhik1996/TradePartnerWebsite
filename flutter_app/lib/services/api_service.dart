@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:meta/meta.dart';
 
 class ApiService {
   static const String _baseUrl = String.fromEnvironment(
@@ -13,6 +14,9 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+
+  @visibleForTesting
+  Dio get dioForTesting => _dio;
 
   final _storage = const FlutterSecureStorage();
   late final Dio _dio = Dio(BaseOptions(
