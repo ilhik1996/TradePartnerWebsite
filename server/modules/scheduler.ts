@@ -27,7 +27,7 @@ export function startScheduler(broadcastFn: (data: object) => void) {
   renewDueSubscriptions();
 }
 
-async function checkAndConductDraws(broadcastFn: (data: object) => void) {
+export async function checkAndConductDraws(broadcastFn: (data: object) => void) {
   const now = new Date();
   const currentHourUtc = now.getUTCHours();
   const todayStr = todayDateString();
@@ -121,7 +121,7 @@ async function checkAndConductDraws(broadcastFn: (data: object) => void) {
   }
 }
 
-async function autoEnterUsers() {
+export async function autoEnterUsers() {
   const todayStr = todayDateString();
   try {
     const activeCountries = await db.select().from(countries).where(eq(countries.isActive, true));
