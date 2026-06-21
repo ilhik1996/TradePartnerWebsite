@@ -48,12 +48,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         _api.getResponsibleGaming(),
         _api.getProfile(),
       ]);
-      _user = results[0] as Map<String, dynamic>?;
-      _level = results[1] as Map<String, dynamic>?;
-      _rg = results[2] as Map<String, dynamic>?;
-      _profile = results[3] as Map<String, dynamic>?;
-      _firstNameCtrl.text = _profile?['firstName'] ?? '';
-      _lastNameCtrl.text = _profile?['lastName'] ?? '';
+      if (mounted) {
+        _user = results[0] as Map<String, dynamic>?;
+        _level = results[1] as Map<String, dynamic>?;
+        _rg = results[2] as Map<String, dynamic>?;
+        _profile = results[3] as Map<String, dynamic>?;
+        _firstNameCtrl.text = _profile?['firstName'] ?? '';
+        _lastNameCtrl.text = _profile?['lastName'] ?? '';
+      }
     } catch (e) {
       if (mounted) _showSnack('Failed to load profile: $e', error: true);
     }
@@ -901,44 +903,3 @@ class _KycFullSheetState extends State<_KycFullSheet> {
   }
 }
 
-// ── Safety card ────────────────────────────────────────────────────────────
-
-class _SafetyCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _SafetyCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: VionaColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: VionaColors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: VionaColors.purple, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: VionaColors.textSecondary)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: VionaColors.textSecondary),
-          ],
-        ),
-      ),
-    );
-  }
-}
