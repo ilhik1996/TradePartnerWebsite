@@ -1181,21 +1181,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       rejectedTx = tx;
 
       const [wallet] = await txn.select().from(wallets).where(eq(wallets.userId, tx.userId!)).for("update");
-      if (wallet) {
-        const refundAmount = Math.abs(parseFloat(tx.amount as string));
-        const newBalance = parseFloat(wallet.balance as string) + refundAmount;
-        await txn.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
-        await txn.insert(transactions).values({
-          walletId: wallet.id,
-          userId: tx.userId!,
-          type: "refund",
-          amount: refundAmount.toFixed(2),
-          balanceAfter: newBalance.toFixed(2),
-          status: "completed",
-          description: `Withdrawal refund: ${reason ?? "rejected by admin"}`,
-          metadata: { originalTxId: txId },
-        });
-      }
+      if (!wallet) throw new Error("Wallet not found for refund");
+      const refundAmount = Math.abs(parseFloat(tx.amount as string));
+      const newBalance = parseFloat(wallet.balance as string) + refundAmount;
+      await txn.update(wallets).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
+      await txn.insert(transactions).values({
+        walletId: wallet.id,
+        userId: tx.userId!,
+        type: "refund",
+        amount: refundAmount.toFixed(2),
+        balanceAfter: newBalance.toFixed(2),
+        status: "completed",
+        description: `Withdrawal refund: ${reason ?? "rejected by admin"}`,
+        metadata: { originalTxId: txId },
+      });
       await txn.update(transactions).set({ status: "failed" }).where(eq(transactions.id, txId));
     });
 

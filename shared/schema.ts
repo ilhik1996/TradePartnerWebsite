@@ -17,6 +17,7 @@ export const txTypeEnum = pgEnum("tx_type", [
 export const txStatusEnum = pgEnum("tx_status", ["pending", "completed", "failed", "reversed"]);
 export const subscriptionTypeEnum = pgEnum("subscription_type", ["weekly", "monthly"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "cancelled", "expired", "paused"]);
+export const referralStatusEnum = pgEnum("referral_status", ["pending", "paid", "revoked"]);
 
 // ─── Countries / Markets ──────────────────────────────────────────────────────
 
@@ -173,7 +174,7 @@ export const referrals = pgTable("referrals", {
   refereeId: integer("referee_id").notNull().references(() => users.id),
   bonusAmount: numeric("bonus_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   currency: text("currency").notNull(),
-  status: text("status").notNull().default("pending"),   // "pending" | "paid" | "revoked"
+  status: referralStatusEnum("status").notNull().default("pending"),
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => [
