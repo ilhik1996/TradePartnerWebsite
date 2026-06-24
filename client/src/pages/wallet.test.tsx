@@ -212,4 +212,71 @@ describe("Wallet page", () => {
     // Restore default so subsequent tests are unaffected
     vi.mocked(useAuth).mockReturnValue({ user: { id: 1, countryId: 1, kycLevel: "verified" } } as any);
   });
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
+
+  it("shows Load more button when server returns exactly 20 transactions", async () => {
+    const txs = Array.from({ length: 20 }, (_, i) => ({ ..._tx, id: i + 1 }));
+    stubLoad(_wallet, txs);
+    render(<WalletPage />);
+    expect(await screen.findByRole("button", { name: "Load more" })).toBeInTheDocument();
+  });
+
+  it("hides Load more button when server returns fewer than 20 transactions", async () => {
+    stubLoad(_wallet, [_tx]);
+    render(<WalletPage />);
+    await screen.findByText("Top up");
+    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
+
+  it("clicking Load more appends transactions", async () => {
+    const user = userEvent.setup();
+    const firstPage  = Array.from({ length: 20 }, (_, i) => ({ ..._tx, id: i + 1, type: "deposit" }));
+    const secondPage = [{ ..._tx, id: 99, type: "prize_payout", amount: "100.00", balanceAfter: "400.00" }];
+
+    mockGet.mockResolvedValueOnce(_wallet);
+    mockTransactions.mockResolvedValueOnce(firstPage);   // initial load
+    mockCountry.mockResolvedValue(_country);
+    mockTransactions.mockResolvedValueOnce(secondPage);  // load more
+
+    render(<WalletPage />);
+    await screen.findByRole("button", { name: "Load more" });
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(screen.getByText("Prize won")).toBeInTheDocument());
+    // First page still visible
+    expect(screen.getAllByText("Top up").length).toBeGreaterThan(0);
+  });
+
+  it("hides Load more after last page returns fewer than 20 items", async () => {
+    const user = userEvent.setup();
+    const firstPage  = Array.from({ length: 20 }, (_, i) => ({ ..._tx, id: i + 1 }));
+    const secondPage = [{ ..._tx, id: 99 }];
+
+    mockGet.mockResolvedValueOnce(_wallet);
+    mockTransactions.mockResolvedValueOnce(firstPage);
+    mockCountry.mockResolvedValue(_country);
+    mockTransactions.mockResolvedValueOnce(secondPage);
+
+    render(<WalletPage />);
+    await screen.findByRole("button", { name: "Load more" });
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument());
+  });
+
+  it("Load more passes correct offset to api.wallet.transactions", async () => {
+    const user = userEvent.setup();
+    const firstPage = Array.from({ length: 20 }, (_, i) => ({ ..._tx, id: i + 1 }));
+
+    mockGet.mockResolvedValueOnce(_wallet);
+    mockTransactions.mockResolvedValueOnce(firstPage);
+    mockCountry.mockResolvedValue(_country);
+    mockTransactions.mockResolvedValueOnce([]);
+
+    render(<WalletPage />);
+    await screen.findByRole("button", { name: "Load more" });
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() =>
+      expect(mockTransactions).toHaveBeenLastCalledWith(20, 20)
+    );
+  });
 });

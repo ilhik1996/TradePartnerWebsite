@@ -34,6 +34,8 @@ function fmt(amount: string | number, symbol: string) {
   return `${symbol}${Math.abs(parseFloat(String(amount))).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 
+const TX_PAGE = 20;
+
 export default function WalletPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,14 +48,19 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [depositing, setDepositing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [txOffset, setTxOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
 
   const countryId = user?.countryId ?? 1;
 
   const reloadWallet = useCallback(async () => {
-    const [w, txs] = await Promise.all([api.wallet.get(), api.wallet.transactions(30)]);
+    const [w, txs] = await Promise.all([api.wallet.get(), api.wallet.transactions(TX_PAGE, 0)]);
     setWallet(w);
     setTransactions(txs);
+    setTxOffset(0);
+    setHasMore(txs.length === TX_PAGE);
   }, []);
 
   // Refresh balance when a draw completes (prize) or a referral bonus is credited to this user
@@ -65,14 +72,30 @@ export default function WalletPage() {
     }
   }, [reloadWallet, user?.id]));
 
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const next = txOffset + TX_PAGE;
+      const newTxs = await api.wallet.transactions(TX_PAGE, next);
+      setTransactions(prev => [...prev, ...newTxs]);
+      setTxOffset(next);
+      setHasMore(newTxs.length === TX_PAGE);
+    } catch {
+      // silently ignore — the existing list stays intact
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [txOffset]);
+
   useEffect(() => {
     Promise.all([
       api.wallet.get(),
-      api.wallet.transactions(30),
+      api.wallet.transactions(TX_PAGE, 0),
       api.countries.get(countryId),
     ]).then(([w, txs, c]) => {
       setWallet(w);
       setTransactions(txs);
+      setHasMore(txs.length === TX_PAGE);
       setCountry(c);
     }).catch((err: any) => {
       toast({ title: "Failed to load wallet", description: err.message, variant: "destructive" });
@@ -88,8 +111,10 @@ export default function WalletPage() {
       toast({ title: "Balance topped up!", description: `${country?.currencySymbol}${amt.toFixed(2)} added` });
       setWallet((w: any) => ({ ...w, balance: (parseFloat(w.balance) + amt).toFixed(2) }));
       setDepositAmt("");
-      const txs = await api.wallet.transactions(30);
+      const txs = await api.wallet.transactions(TX_PAGE, 0);
       setTransactions(txs);
+      setTxOffset(0);
+      setHasMore(txs.length === TX_PAGE);
     } catch (err: any) {
       toast({ title: "Deposit failed", description: err.message, variant: "destructive" });
     } finally {
@@ -108,8 +133,10 @@ export default function WalletPage() {
         setWallet((w: any) => ({ ...w, balance: result.newBalance.toFixed(2) }));
       }
       setWithdrawAmt("");
-      const txs = await api.wallet.transactions(30);
+      const txs = await api.wallet.transactions(TX_PAGE, 0);
       setTransactions(txs);
+      setTxOffset(0);
+      setHasMore(txs.length === TX_PAGE);
     } catch (err: any) {
       toast({ title: "Withdrawal failed", description: err.message, variant: "destructive" });
     } finally {
@@ -309,6 +336,23 @@ export default function WalletPage() {
               );
             })}
           </div>
+          {hasMore && (
+            <Button
+              variant="ghost"
+              className="w-full mt-3 text-muted-foreground text-sm"
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  Loading…
+                </span>
+              ) : (
+                "Load more"
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
