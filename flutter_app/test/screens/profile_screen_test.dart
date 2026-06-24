@@ -266,6 +266,83 @@ void main() {
     // Test passes if no FlutterError: controller used after dispose
   });
 
+  // ── Change password ───────────────────────────────────────────────────────
+
+  testWidgets('Change Password button opens dialog with three fields', (tester) async {
+    _stubLoad(adapter);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+    expect(find.text('Change Password'), findsWidgets); // button + dialog title
+    expect(find.widgetWithText(TextField, 'Current password'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'New password (min 8 chars)'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Confirm new password'), findsOneWidget);
+  });
+
+  testWidgets('Change Password dialog Cancel button closes dialog', (tester) async {
+    _stubLoad(adapter);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Current password'), findsNothing);
+  });
+
+  testWidgets('shows snackbar when new passwords do not match', (tester) async {
+    _stubLoad(adapter);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Current password'), 'oldpass123');
+    await tester.enterText(find.widgetWithText(TextField, 'New password (min 8 chars)'), 'newpass123');
+    await tester.enterText(find.widgetWithText(TextField, 'Confirm new password'), 'differentpass');
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("don't match"), findsOneWidget);
+  });
+
+  testWidgets('shows snackbar when new password is too short', (tester) async {
+    _stubLoad(adapter);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Current password'), 'oldpass123');
+    await tester.enterText(find.widgetWithText(TextField, 'New password (min 8 chars)'), 'short');
+    await tester.enterText(find.widgetWithText(TextField, 'Confirm new password'), 'short');
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('8 characters'), findsOneWidget);
+  });
+
+  testWidgets('successful password change closes dialog and shows snackbar', (tester) async {
+    _stubLoad(adapter);
+    adapter.onPatch('/auth/password', (s) => s.reply(200, {'ok': true, 'token': 'new_token'}));
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Current password'), 'currentpass');
+    await tester.enterText(find.widgetWithText(TextField, 'New password (min 8 chars)'), 'newpassword1');
+    await tester.enterText(find.widgetWithText(TextField, 'Confirm new password'), 'newpassword1');
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    // Dialog dismissed
+    expect(find.text('Current password'), findsNothing);
+    // Success snackbar
+    expect(find.textContaining('Password changed'), findsOneWidget);
+  });
+
   // ── Logout ────────────────────────────────────────────────────────────────
 
   testWidgets('logout dialog appears on logout icon tap', (tester) async {
