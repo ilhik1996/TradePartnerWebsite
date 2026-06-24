@@ -19,6 +19,11 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   bool _loading = true;
   bool _loadError = false;
   bool _processing = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _txOffset = 0;
+
+  static const _txPage = 20;
 
   final _amountCtrl = TextEditingController();
   final _cardCtrl = TextEditingController();
@@ -52,19 +57,43 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     try {
       final results = await Future.wait([
         _api.getWallet(),
-        _api.getTransactions(),
+        _api.getTransactions(limit: _txPage, offset: 0),
         _api.me(),
       ]);
       _wallet = results[0] as Map<String, dynamic>?;
-      _txs = results[1] as List<dynamic>;
+      final txs = results[1] as List<dynamic>;
       _user = results[2] as Map<String, dynamic>?;
       final countryId = _user?['countryId'] ?? 1;
       _country = await _api.getCountry(countryId);
+      if (!mounted) return;
+      setState(() {
+        _txs = txs;
+        _txOffset = 0;
+        _hasMore = txs.length == _txPage;
+      });
     } catch (e) {
       if (mounted) setState(() => _loadError = true);
       _showSnack(e.toString().replaceFirst('Exception: ', ''), error: true);
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore) return;
+    if (mounted) setState(() => _loadingMore = true);
+    try {
+      final next = _txOffset + _txPage;
+      final newTxs = await _api.getTransactions(limit: _txPage, offset: next);
+      if (!mounted) return;
+      setState(() {
+        _txs = [..._txs, ...newTxs];
+        _txOffset = next;
+        _hasMore = newTxs.length == _txPage;
+      });
+    } catch (_) {
+      // keep existing list intact on failure
+    }
+    if (mounted) setState(() => _loadingMore = false);
   }
 
   Future<void> _deposit() async {
@@ -314,7 +343,21 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           // Transaction history
           Text('Recent transactions', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 8),
-          ..._txs.take(10).map((tx) => _TxTile(tx: tx)),
+          ..._txs.map((tx) => _TxTile(tx: tx as Map<String, dynamic>)),
+          if (_hasMore)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: OutlinedButton(
+                onPressed: _loadingMore ? null : _loadMore,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+                child: _loadingMore
+                    ? const SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: VionaColors.purple),
+                      )
+                    : const Text('Load more'),
+              ),
+            ),
         ],
       ),
     );

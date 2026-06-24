@@ -228,4 +228,51 @@ void main() {
     // Let the deferred callback complete — must not throw
     await tester.pumpAndSettle(const Duration(milliseconds: 200));
   });
+
+  // ── Pagination ────────────────────────────────────────────────────────────
+
+  testWidgets('shows Load more button when server returns exactly 20 transactions', (tester) async {
+    final txs = List.generate(20, (i) => {
+      'id': i + 1, 'type': 'deposit', 'amount': '10.00',
+      'description': 'Top up', 'createdAt': '2025-06-01T10:00:00Z',
+    });
+    _stubLoad(adapter, txs: txs);
+    await tester.pumpWidget(_wrap(const WalletScreen()));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(OutlinedButton, 'Load more'), findsOneWidget);
+  });
+
+  testWidgets('does not show Load more when fewer than 20 transactions', (tester) async {
+    final txs = [
+      {'id': 1, 'type': 'deposit', 'amount': '10.00', 'description': '', 'createdAt': '2025-06-01T10:00:00Z'},
+    ];
+    _stubLoad(adapter, txs: txs);
+    await tester.pumpWidget(_wrap(const WalletScreen()));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(OutlinedButton, 'Load more'), findsNothing);
+  });
+
+  testWidgets('Load more appends next page of transactions', (tester) async {
+    final firstPage = List.generate(20, (i) => {
+      'id': i + 1, 'type': 'deposit', 'amount': '10.00',
+      'description': 'Page 1', 'createdAt': '2025-06-01T10:00:00Z',
+    });
+    final secondPage = [
+      {'id': 99, 'type': 'prize_payout', 'amount': '500.00', 'description': 'Prize', 'createdAt': '2025-05-01T10:00:00Z'},
+    ];
+
+    _stubLoad(adapter, txs: firstPage);
+    adapter.onGet('/wallet/transactions?limit=20&offset=20', (s) => s.reply(200, secondPage));
+
+    await tester.pumpWidget(_wrap(const WalletScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Load more'));
+    await tester.pumpAndSettle();
+
+    // Second page item is now visible
+    expect(find.text('Prize Payout'), findsOneWidget);
+    // Load more is gone (last page had < 20 items)
+    expect(find.widgetWithText(OutlinedButton, 'Load more'), findsNothing);
+  });
 }
