@@ -71,6 +71,11 @@ class ApiService {
   }
 
   Future<void> logout() async {
+    try {
+      await _dio.post('/auth/logout');
+    } catch (_) {
+      // best-effort — always clear local token even if server is unreachable
+    }
     await _storage.delete(key: 'viona_token');
   }
 

@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken";
+import { createHash } from "crypto";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { users, adminUsers } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { users, adminUsers, userSessions } from "@shared/schema";
+import { eq, lt } from "drizzle-orm";
 
 const WEAK_JWT_SECRET = "viona-dev-secret-change-in-production";
 const JWT_SECRET = process.env.JWT_SECRET || WEAK_JWT_SECRET;
@@ -30,6 +31,22 @@ export function verifyToken(token: string): { userId: number; role?: string } | 
   }
 }
 
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export async function revokeToken(userId: number, token: string): Promise<void> {
+  const tokenHash = hashToken(token);
+  const payload = verifyToken(token);
+  const exp = (payload as any)?.exp;
+  const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await db.insert(userSessions).values({ userId, tokenHash, expiresAt }).onConflictDoNothing();
+}
+
+export async function purgeExpiredSessions(): Promise<void> {
+  await db.delete(userSessions).where(lt(userSessions.expiresAt, new Date()));
+}
+
 // Attaches req.user if valid JWT present; never rejects — downstream routes decide
 export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
@@ -50,9 +67,19 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ message: "Authentication required" });
     return;
   }
-  const payload = verifyToken(header.slice(7));
+  const token = header.slice(7);
+  const payload = verifyToken(token);
   if (!payload) {
     res.status(401).json({ message: "Invalid or expired token" });
+    return;
+  }
+  // Check revocation blacklist (tokens invalidated via /api/auth/logout)
+  const tokenHash = hashToken(token);
+  const [revoked] = await db.select({ id: userSessions.id })
+    .from(userSessions)
+    .where(eq(userSessions.tokenHash, tokenHash));
+  if (revoked) {
+    res.status(401).json({ message: "Token has been revoked" });
     return;
   }
   // Verify the account is still active — a valid JWT does not guarantee the account wasn't

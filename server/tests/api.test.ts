@@ -9,10 +9,16 @@ import request from "supertest";
 // (caught by ar() → 500), which is the pre-existing behaviour these tests
 // rely on for "Zod accepts; DB error expected" assertions.
 vi.mock("../db", () => {
-  const makeChain = (): any => {
+  const makeSelectChain = (): any => {
+    let _fromTable: any;
     const chain: any = {
-      from: () => makeChain(),
-      where: () => Promise.resolve([{ status: "active", id: 1, isActive: true }]),
+      from: (table: any) => { _fromTable = table; return chain; },
+      // userSessions blacklist check must return [] (token not revoked).
+      // All other queries (users.status, adminUsers.isActive) return an active stub.
+      where: () => {
+        const isSessionsTable = _fromTable && "tokenHash" in _fromTable;
+        return Promise.resolve(isSessionsTable ? [] : [{ status: "active", id: 1, isActive: true }]);
+      },
       for: () => chain,
       leftJoin: () => chain,
       innerJoin: () => chain,
@@ -22,7 +28,17 @@ vi.mock("../db", () => {
     };
     return chain;
   };
-  return { db: { select: makeChain } };
+  const makeInsertChain = (): any => ({
+    values: () => makeInsertChain(),
+    onConflictDoNothing: () => Promise.resolve(),
+  });
+  return {
+    db: {
+      select: makeSelectChain,
+      insert: () => makeInsertChain(),
+      delete: () => ({ where: () => Promise.resolve() }),
+    },
+  };
 });
 vi.mock("../modules/push", () => ({
   sendPushToUser: vi.fn(),
@@ -141,6 +157,31 @@ describe("Protected routes — invalid token returns 401", () => {
       .get("/api/auth/me")
       .set("Authorization", "Bearer garbage.token.here");
     expect(res.status).toBe(401);
+  });
+});
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+
+describe("POST /api/auth/logout", () => {
+  it("returns 401 without auth token", async () => {
+    const res = await request(app).post("/api/auth/logout");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 with invalid token", async () => {
+    const res = await request(app)
+      .post("/api/auth/logout")
+      .set("Authorization", "Bearer bad.token.here");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 200 with { ok: true } for a valid token", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .post("/api/auth/logout")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
   });
 });
 

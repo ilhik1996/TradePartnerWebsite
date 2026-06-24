@@ -34,6 +34,8 @@ export const api = {
       }),
 
     me: () => request<any>("/auth/me"),
+
+    logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   },
 
   countries: {

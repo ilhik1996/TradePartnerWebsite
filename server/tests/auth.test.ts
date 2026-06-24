@@ -5,7 +5,7 @@ vi.mock("../db", () => ({
   db: { select: vi.fn() },
 }));
 
-import { signToken, verifyToken } from "../auth";
+import { signToken, verifyToken, hashToken } from "../auth";
 
 // ─── signToken / verifyToken ──────────────────────────────────────────────────
 
@@ -42,6 +42,26 @@ describe("signToken + verifyToken round-trip", () => {
     const user = signToken({ userId: 5, role: "user" });
     const admin = signToken({ userId: 5, role: "admin" });
     expect(user).not.toBe(admin);
+  });
+});
+
+describe("hashToken", () => {
+  it("returns a 64-character hex string (SHA-256)", () => {
+    expect(hashToken("any-token")).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("is deterministic — same input always produces the same hash", () => {
+    const t = "some.jwt.token";
+    expect(hashToken(t)).toBe(hashToken(t));
+  });
+
+  it("produces different hashes for different tokens", () => {
+    expect(hashToken("token-a")).not.toBe(hashToken("token-b"));
+  });
+
+  it("hashes an empty string without throwing", () => {
+    expect(() => hashToken("")).not.toThrow();
+    expect(hashToken("")).toMatch(/^[a-f0-9]{64}$/);
   });
 });
 

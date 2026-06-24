@@ -6,6 +6,7 @@ import { renewDueSubscriptions } from "./subscriptions";
 import { awardXp, checkAndAwardBadges } from "./gamification";
 import { sendDrawResultEmail, sendLowBalanceEmail } from "./email";
 import { insertNotification } from "./notifications";
+import { purgeExpiredSessions } from "../auth";
 
 let _started = false;
 
@@ -20,6 +21,8 @@ export function startScheduler(broadcastFn: (data: object) => void) {
   setInterval(() => autoEnterUsers(), 5 * 60_000);
   // Renew due subscriptions every hour
   setInterval(() => renewDueSubscriptions(), 60 * 60_000);
+  // Purge expired revoked-token entries once per day
+  setInterval(() => purgeExpiredSessions(), 24 * 60 * 60_000);
 
   // Run immediately on startup
   checkAndConductDraws(broadcastFn);

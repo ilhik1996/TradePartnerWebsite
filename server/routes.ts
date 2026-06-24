@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { signToken, verifyToken, requireAuth, requireAdmin } from "./auth";
+import { signToken, verifyToken, requireAuth, requireAdmin, hashToken, revokeToken, purgeExpiredSessions } from "./auth";
 import { getOrCreateWallet, depositFunds, getBalance, getTransactionHistory } from "./modules/wallet";
 import {
   getOrCreateDraw, todayDateString, addPaidEntry, addFreeEntry, conductDraw
@@ -21,7 +21,7 @@ import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detec
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
-  subscriptions, referrals, partners, pushSubscriptions,
+  subscriptions, referrals, partners, pushSubscriptions, userSessions,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
 import { eq, desc, and, sql, inArray, count, gte, sum, ilike, or, isNull } from "drizzle-orm";
@@ -290,6 +290,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) { res.status(404).json({ message: "User not found" }); return; }
       res.json(sanitizeUser(user));
     } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
+  // Revoke the current token so it cannot be reused (even before its 7-day expiry)
+  app.post("/api/auth/logout", requireAuth, ar(async (req: Request, res: Response) => {
+    const token = req.headers.authorization!.slice(7);
+    await revokeToken(uid(req), token);
+    res.json({ ok: true });
   }));
 
   // ── Countries ─────────────────────────────────────────────────────────────

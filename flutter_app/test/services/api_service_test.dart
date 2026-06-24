@@ -115,8 +115,29 @@ void main() {
   });
 
   group('logout', () {
-    test('removes token from secure storage', () async {
+    test('calls POST /auth/logout and removes token from secure storage', () async {
       FlutterSecureStorage.setMockInitialValues({'viona_token': 'some_token'});
+      dioAdapter.onPost('/auth/logout', (server) => server.reply(200, {'ok': true}));
+      await ApiService().logout();
+      expect(await ApiService().hasToken(), isFalse);
+    });
+
+    test('still clears local token even when server returns an error', () async {
+      FlutterSecureStorage.setMockInitialValues({'viona_token': 'some_token'});
+      dioAdapter.onPost('/auth/logout', (server) => server.reply(500, {'message': 'Server error'}));
+      await ApiService().logout();
+      expect(await ApiService().hasToken(), isFalse);
+    });
+
+    test('still clears local token when server is unreachable', () async {
+      FlutterSecureStorage.setMockInitialValues({'viona_token': 'tok'});
+      dioAdapter.onPost(
+        '/auth/logout',
+        (server) => server.throws(
+          500,
+          DioException(requestOptions: RequestOptions(path: '/auth/logout')),
+        ),
+      );
       await ApiService().logout();
       expect(await ApiService().hasToken(), isFalse);
     });

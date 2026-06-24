@@ -87,8 +87,9 @@ describe("startScheduler — idempotency", () => {
     startScheduler(() => {});
     startScheduler(() => {}); // second call — _started is already true
 
-    // 3 setInterval calls come from the first invocation only
-    expect(spy).toHaveBeenCalledTimes(3);
+    // 4 setInterval calls come from the first invocation only
+    // (draws, auto-enter, subscription renewal, session cleanup)
+    expect(spy).toHaveBeenCalledTimes(4);
     vi.useRealTimers();
   });
 });
