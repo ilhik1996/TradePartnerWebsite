@@ -610,7 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Withdrawal request
-  app.post("/api/wallet/withdraw", requireAuth, ar(async (req: Request, res: Response) => {
+  app.post("/api/wallet/withdraw", requireAuth, paymentRateLimit, ar(async (req: Request, res: Response) => {
     try {
       const { amount } = z.object({ amount: z.number().positive().max(50000) }).parse(req.body);
 
@@ -1320,7 +1320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/kyc/start", requireAuth, ar(async (req: Request, res: Response) => {
     const { level, dateOfBirth } = z.object({
       level: z.enum(["age", "full"]),
-      dateOfBirth: z.string().optional(),
+      dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format").refine(d => new Date(d) < new Date(), "Date of birth cannot be in the future").optional(),
     }).parse(req.body);
 
     const userId = uid(req);

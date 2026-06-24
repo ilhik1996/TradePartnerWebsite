@@ -119,7 +119,7 @@ describe("Admin page", () => {
 
   it("submitting login form calls api.admin.login with credentials", async () => {
     const user = userEvent.setup();
-    mockLogin.mockResolvedValueOnce({ token: "admin-token" });
+    mockLogin.mockResolvedValueOnce({ token: "admin-token", admin: {} });
     stubOverview();
     render(<Admin />);
     await user.type(screen.getByPlaceholderText("Admin email"), "admin@viona.app");
@@ -132,7 +132,7 @@ describe("Admin page", () => {
 
   it("successful login saves token and shows admin panel", async () => {
     const user = userEvent.setup();
-    mockLogin.mockResolvedValueOnce({ token: "admin-token" });
+    mockLogin.mockResolvedValueOnce({ token: "admin-token", admin: {} });
     stubOverview();
     render(<Admin />);
     await user.type(screen.getByPlaceholderText("Admin email"), "admin@viona.app");

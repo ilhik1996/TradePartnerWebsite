@@ -162,6 +162,33 @@ describe("POST /api/kyc/start — age validation (requires auth, tested via Zod 
       .send({ level: "age", dateOfBirth: "2020-01-01" });
     expect(res.status).toBe(401);
   });
+
+  it("returns 400 for invalid level value", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .post("/api/kyc/start")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ level: "platinum", dateOfBirth: "2000-01-01" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for malformed dateOfBirth (non-ISO format)", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .post("/api/kyc/start")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ level: "age", dateOfBirth: "01/01/2000" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for future dateOfBirth", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .post("/api/kyc/start")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ level: "age", dateOfBirth: "2099-01-01" });
+    expect(res.status).toBe(400);
+  });
 });
 
 // ── Health endpoint ────────────────────────────────────────────────────────────
