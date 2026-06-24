@@ -262,6 +262,29 @@ void main() {
     });
   });
 
+  // ── Notifications ─────────────────────────────────────────────────────────
+
+  group('markAllNotificationsRead', () {
+    test('completes without error when server returns 200', () async {
+      dioAdapter.onPatch(
+        '/notifications/read-all',
+        (server) => server.reply(200, {'ok': true}),
+      );
+      await expectLater(ApiService().markAllNotificationsRead(), completes);
+    });
+
+    test('throws on non-2xx response', () async {
+      dioAdapter.onPatch(
+        '/notifications/read-all',
+        (server) => server.reply(401, {'message': 'Unauthorized'}),
+      );
+      expect(
+        () => ApiService().markAllNotificationsRead(),
+        throwsA(isA<DioException>()),
+      );
+    });
+  });
+
   // ── Countries ─────────────────────────────────────────────────────────────
 
   group('getCountries', () {

@@ -200,6 +200,10 @@ class ApiService {
     await _dio.patch('/notifications/$id/read');
   }
 
+  Future<void> markAllNotificationsRead() async {
+    await _dio.patch('/notifications/read-all');
+  }
+
   // ── Referrals ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getReferrals() async {

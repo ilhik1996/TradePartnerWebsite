@@ -126,8 +126,7 @@ void main() {
     await tester.pumpWidget(_wrap(const NotificationsScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPatch('/notifications/1/read', (s) => s.reply(200, {}));
-    adapter.onPatch('/notifications/3/read', (s) => s.reply(200, {}));
+    adapter.onPatch('/notifications/read-all', (s) => s.reply(200, {'ok': true}));
 
     await tester.tap(find.text('Mark all read'));
     await tester.pumpAndSettle();

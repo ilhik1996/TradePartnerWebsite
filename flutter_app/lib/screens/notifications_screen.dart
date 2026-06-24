@@ -47,9 +47,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_marking) return;
     if (mounted) setState(() => _marking = true);
     try {
-      final unread = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).toList();
-      await Future.wait(unread.map((n) => _api.markNotificationRead((n['id'] as num).toInt())));
-      if (mounted) setState(() => _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList());
+      await _api.markAllNotificationsRead();
+      if (!mounted) return;
+      setState(() => _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList());
     } catch (_) {}
     if (mounted) setState(() => _marking = false);
   }
