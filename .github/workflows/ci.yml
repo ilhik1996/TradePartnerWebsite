@@ -29,6 +29,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Run client tests
+        run: npm run test:client
+
   flutter-test:
     name: Flutter analyze & tests
     runs-on: ubuntu-latest
