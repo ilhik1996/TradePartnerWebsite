@@ -20,6 +20,7 @@ vi.mock("@/lib/api", () => ({
     notifications: {
       list: vi.fn(),
       markRead: vi.fn(),
+      markAllRead: vi.fn(),
     },
   },
 }));
@@ -29,6 +30,7 @@ vi.mock("@/lib/api", () => ({
 const { api } = await import("@/lib/api");
 const mockList = vi.mocked(api.notifications.list);
 const mockMarkRead = vi.mocked(api.notifications.markRead);
+const mockMarkAllRead = vi.mocked(api.notifications.markAllRead);
 
 const _unread = { id: 1, type: "draw_result", title: "Draw finished", body: "No winner today", isRead: false, createdAt: new Date().toISOString() };
 const _read   = { id: 2, type: "winner",      title: "You won!",       body: "Congrats",      isRead: true,  createdAt: new Date().toISOString() };
@@ -39,6 +41,7 @@ describe("Notifications page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMarkRead.mockResolvedValue({});
+    mockMarkAllRead.mockResolvedValue({ ok: true });
   });
 
   it("shows spinner while loading", () => {
@@ -117,7 +120,7 @@ describe("Notifications page", () => {
     expect(mockMarkRead).not.toHaveBeenCalled();
   });
 
-  it("Mark all read calls markRead for each unread item", async () => {
+  it("Mark all read calls markAllRead once (not individual markRead per item)", async () => {
     const user = userEvent.setup();
     const unread2 = { ...(_unread), id: 3, title: "Second unread", body: "Body" };
     mockList.mockResolvedValueOnce([_unread, _read, unread2]);
@@ -125,9 +128,17 @@ describe("Notifications page", () => {
     await screen.findByText("Mark all read");
     await user.click(screen.getByText("Mark all read"));
     await waitFor(() => {
-      expect(mockMarkRead).toHaveBeenCalledWith(1);
-      expect(mockMarkRead).toHaveBeenCalledWith(3);
-      expect(mockMarkRead).toHaveBeenCalledTimes(2);
+      expect(mockMarkAllRead).toHaveBeenCalledTimes(1);
+      expect(mockMarkRead).not.toHaveBeenCalled();
     });
+  });
+
+  it("Mark all read hides the button and clears badge after success", async () => {
+    const user = userEvent.setup();
+    mockList.mockResolvedValueOnce([_unread]);
+    render(<Notifications />);
+    await screen.findByText("Mark all read");
+    await user.click(screen.getByText("Mark all read"));
+    await waitFor(() => expect(screen.queryByText("Mark all read")).not.toBeInTheDocument());
   });
 });
