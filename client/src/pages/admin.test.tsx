@@ -281,6 +281,49 @@ describe("Admin page", () => {
     );
   });
 
+  it("UsersPanel shows KYC and status filter dropdowns", async () => {
+    const user = userEvent.setup();
+    logIn();
+    stubOverview();
+    mockUsers.mockResolvedValue([]);
+    render(<Admin />);
+    await screen.findByText("Total users");
+    await user.click(screen.getAllByText("Users")[0]);
+    await screen.findByPlaceholderText("Search by email, name…");
+    expect(screen.getByRole("combobox", { name: /Filter by KYC/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Filter by status/i })).toBeInTheDocument();
+  });
+
+  it("selecting KYC filter calls api.admin.users with kyc param", async () => {
+    const user = userEvent.setup();
+    logIn();
+    stubOverview();
+    mockUsers.mockResolvedValue([]);
+    render(<Admin />);
+    await screen.findByText("Total users");
+    await user.click(screen.getAllByText("Users")[0]);
+    await screen.findByPlaceholderText("Search by email, name…");
+    await user.selectOptions(screen.getByRole("combobox", { name: /Filter by KYC/i }), "full");
+    await waitFor(() =>
+      expect(mockUsers).toHaveBeenLastCalledWith(100, 0, "", "full", undefined)
+    );
+  });
+
+  it("selecting status filter calls api.admin.users with status param", async () => {
+    const user = userEvent.setup();
+    logIn();
+    stubOverview();
+    mockUsers.mockResolvedValue([]);
+    render(<Admin />);
+    await screen.findByText("Total users");
+    await user.click(screen.getAllByText("Users")[0]);
+    await screen.findByPlaceholderText("Search by email, name…");
+    await user.selectOptions(screen.getByRole("combobox", { name: /Filter by status/i }), "banned");
+    await waitFor(() =>
+      expect(mockUsers).toHaveBeenLastCalledWith(100, 0, "", undefined, "banned")
+    );
+  });
+
   it("clicking Withdrawals nav shows empty state when no pending", async () => {
     const user = userEvent.setup();
     logIn();

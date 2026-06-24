@@ -119,8 +119,8 @@ export const api = {
     createDraw: (body: { countryId: number; drawDate?: string }) =>
       request<any>("/admin/draws", { method: "POST", body: JSON.stringify(body) }),
     conductDraw: (id: number) => request<any>(`/admin/draws/${id}/conduct`, { method: "POST" }),
-    users: (limit = 50, offset = 0, search = "") =>
-      request<any[]>(`/admin/users?limit=${limit}&offset=${offset}${search ? `&search=${encodeURIComponent(search)}` : ""}`),
+    users: (limit = 50, offset = 0, search = "", kycLevel?: string, status?: string) =>
+      request<any[]>(`/admin/users?limit=${limit}&offset=${offset}${search ? `&search=${encodeURIComponent(search)}` : ""}${kycLevel ? `&kyc=${encodeURIComponent(kycLevel)}` : ""}${status ? `&status=${encodeURIComponent(status)}` : ""}`),
     updateUserStatus: (id: number, status: string) =>
       request<any>(`/admin/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     stats: () => request<any>("/admin/stats"),

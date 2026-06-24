@@ -343,6 +343,8 @@ function UsersPanel() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [kycFilter, setKycFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const { toast } = useToast();
 
   // Debounce search input — wait 400ms after the user stops typing before querying
@@ -353,8 +355,9 @@ function UsersPanel() {
 
   useEffect(() => {
     setLoading(true);
-    api.admin.users(100, 0, debouncedSearch).then(setUsers).finally(() => setLoading(false));
-  }, [debouncedSearch]);
+    api.admin.users(100, 0, debouncedSearch, kycFilter || undefined, statusFilter || undefined)
+      .then(setUsers).finally(() => setLoading(false));
+  }, [debouncedSearch, kycFilter, statusFilter]);
 
   const updateStatus = async (id: number, status: string) => {
     try {
@@ -376,14 +379,36 @@ function UsersPanel() {
 
   return (
     <div className="space-y-3 max-w-3xl">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <h3 className="font-bold">Users ({users.length})</h3>
         <input
-          className="flex-1 h-9 px-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none"
+          className="flex-1 h-9 px-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none min-w-[140px]"
           placeholder="Search by email, name…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <select
+          aria-label="Filter by KYC"
+          className="h-9 px-2 rounded-xl bg-secondary border border-border text-sm focus:outline-none text-muted-foreground"
+          value={kycFilter}
+          onChange={e => setKycFilter(e.target.value)}
+        >
+          <option value="">All KYC</option>
+          <option value="none">Unverified</option>
+          <option value="age_verified">Age verified</option>
+          <option value="full">Full KYC</option>
+        </select>
+        <select
+          aria-label="Filter by status"
+          className="h-9 px-2 rounded-xl bg-secondary border border-border text-sm focus:outline-none text-muted-foreground"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="banned">Banned</option>
+        </select>
         {users.length > 0 && (
           <Button size="sm" variant="outline" onClick={exportCsv} className="h-8 px-3 text-xs border-border shrink-0">
             Export CSV
