@@ -185,6 +185,44 @@ describe("POST /api/auth/logout", () => {
   });
 });
 
+// ── Change password ───────────────────────────────────────────────────────────
+
+describe("PATCH /api/auth/password", () => {
+  it("returns 401 without auth token", async () => {
+    const res = await request(app)
+      .patch("/api/auth/password")
+      .send({ currentPassword: "old", newPassword: "newpass123" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when newPassword is too short", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ currentPassword: "old", newPassword: "short" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when currentPassword is missing", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ newPassword: "validnewpass" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when body is empty", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
 // ── Admin guard ───────────────────────────────────────────────────────────────
 
 describe("Admin routes — non-admin token returns 403 or 401", () => {

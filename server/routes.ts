@@ -680,6 +680,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   }));
 
+  // Change password — verifies current password, issues a fresh token so the client stays logged in
+  app.patch("/api/auth/password", requireAuth, authRateLimit, ar(async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = z.object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8, "New password must be at least 8 characters"),
+    }).parse(req.body);
+
+    const [user] = await db.select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, uid(req)));
+    if (!user) { res.status(404).json({ message: "User not found" }); return; }
+
+    const match = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!match) { res.status(403).json({ message: "Current password is incorrect" }); return; }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await db.update(users).set({ passwordHash: newHash }).where(eq(users.id, uid(req)));
+
+    // Invalidate the current token and return a fresh one
+    const oldToken = req.headers.authorization!.slice(7);
+    await revokeToken(uid(req), oldToken);
+    const newToken = signToken({ userId: uid(req) });
+    res.json({ ok: true, token: newToken });
+  }));
+
   // Toggle auto-participate
   app.patch("/api/settings/auto-participate", requireAuth, ar(async (req, res) => {
     const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);

@@ -242,6 +242,87 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  // ── Change password ───────────────────────────────────────────────────────
+
+  void _showChangePasswordDialog() {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool saving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          backgroundColor: VionaColors.surface,
+          title: const Text('Change Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: currentCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Current password'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'New password (min 8 chars)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Confirm new password'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                currentCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+                Navigator.pop(ctx);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: saving
+                ? null
+                : () async {
+                    if (newCtrl.text != confirmCtrl.text) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text("Passwords don't match")),
+                      );
+                      return;
+                    }
+                    if (newCtrl.text.length < 8) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text("New password must be at least 8 characters")),
+                      );
+                      return;
+                    }
+                    setSt(() => saving = true);
+                    try {
+                      await _api.changePassword(currentCtrl.text, newCtrl.text);
+                      currentCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _showSnack('Password changed successfully');
+                    } catch (e) {
+                      setSt(() => saving = false);
+                      _showSnack('$e', error: true);
+                    }
+                  },
+              child: saving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -332,6 +413,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: _saving
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Text('Save changes'),
+          ),
+          const SizedBox(height: 16),
+
+          // Change password
+          OutlinedButton.icon(
+            onPressed: _showChangePasswordDialog,
+            icon: const Icon(Icons.lock_outline, size: 18),
+            label: const Text('Change Password'),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
           ),
           const SizedBox(height: 24),
 

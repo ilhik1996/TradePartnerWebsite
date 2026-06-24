@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, User, Trophy, Shield, Bell, LogOut,
-  ChevronRight, AlertTriangle, CheckCircle, Clock, BellRing, Star
+  ChevronRight, AlertTriangle, CheckCircle, Clock, BellRing, Star, Lock
 } from "lucide-react";
 import { usePush } from "@/hooks/use-push";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { api } from "@/lib/api";
+import { api, saveToken } from "@/lib/api";
 
 function StatusBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
@@ -44,6 +44,12 @@ export default function Cabinet() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Password change
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   // Self-exclusion
   const [exDays, setExDays] = useState(30);
@@ -148,6 +154,28 @@ export default function Cabinet() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (pwNew !== pwConfirm) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    if (pwNew.length < 8) {
+      toast({ title: "New password must be at least 8 characters", variant: "destructive" });
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const result = await api.auth.changePassword(pwCurrent, pwNew);
+      saveToken(result.token);
+      setPwCurrent(""); setPwNew(""); setPwConfirm("");
+      toast({ title: "Password changed", description: "Your password has been updated." });
+    } catch (err: any) {
+      toast({ title: "Failed to change password", description: err.message, variant: "destructive" });
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   const handleSelfExclude = async () => {
     if (!excludeConfirm) {
       setExcludeConfirm(true);
@@ -244,6 +272,43 @@ export default function Cabinet() {
                 disabled={saving}
               >
                 {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+
+            <div className="viona-card p-5 space-y-4">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Lock className="w-4 h-4 text-primary" /> Change Password
+              </h3>
+              <input
+                type="password"
+                className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Current password"
+                value={pwCurrent}
+                onChange={e => setPwCurrent(e.target.value)}
+                autoComplete="current-password"
+              />
+              <input
+                type="password"
+                className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="New password (min 8 characters)"
+                value={pwNew}
+                onChange={e => setPwNew(e.target.value)}
+                autoComplete="new-password"
+              />
+              <input
+                type="password"
+                className="w-full h-11 px-4 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Confirm new password"
+                value={pwConfirm}
+                onChange={e => setPwConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
+              <Button
+                className="btn-viona-primary w-full h-10 text-sm"
+                onClick={handleChangePassword}
+                disabled={pwSaving || !pwCurrent || !pwNew || !pwConfirm}
+              >
+                {pwSaving ? "Updating…" : "Update password"}
               </Button>
             </div>
 

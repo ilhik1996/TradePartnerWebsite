@@ -143,6 +143,32 @@ void main() {
     });
   });
 
+  group('changePassword', () {
+    test('stores returned token and returns response', () async {
+      FlutterSecureStorage.setMockInitialValues({'viona_token': 'old_token'});
+      dioAdapter.onPatch(
+        '/auth/password',
+        (server) => server.reply(200, {'ok': true, 'token': 'new_jwt_token'}),
+      );
+      final result = await ApiService().changePassword('oldpass', 'newpass123');
+      expect(result['ok'], isTrue);
+      final stored = await ApiService().hasToken();
+      expect(stored, isTrue);
+    });
+
+    test('throws DioException on 403 wrong current password', () async {
+      FlutterSecureStorage.setMockInitialValues({'viona_token': 'tok'});
+      dioAdapter.onPatch(
+        '/auth/password',
+        (server) => server.reply(403, {'message': 'Current password is incorrect'}),
+      );
+      expect(
+        () => ApiService().changePassword('wrong', 'newpass123'),
+        throwsA(isA<DioException>()),
+      );
+    });
+  });
+
   group('hasToken', () {
     test('returns true when token is present', () async {
       FlutterSecureStorage.setMockInitialValues({'viona_token': 'tok'});

@@ -79,6 +79,19 @@ class ApiService {
     await _storage.delete(key: 'viona_token');
   }
 
+  Future<Map<String, dynamic>> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final r = await _dio.patch('/auth/password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+    final token = r.data['token'] as String?;
+    if (token != null) await _storage.write(key: 'viona_token', value: token);
+    return r.data;
+  }
+
   Future<bool> hasToken() async {
     final t = await _storage.read(key: 'viona_token');
     return t != null;

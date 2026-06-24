@@ -36,6 +36,12 @@ export const api = {
     me: () => request<any>("/auth/me"),
 
     logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
+
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ ok: boolean; token: string }>("/auth/password", {
+        method: "PATCH",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
   },
 
   countries: {
