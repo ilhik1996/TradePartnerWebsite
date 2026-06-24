@@ -32,10 +32,15 @@ vi.mock("../db", () => {
     values: () => makeInsertChain(),
     onConflictDoNothing: () => Promise.resolve(),
   });
+  const makeUpdateChain = (): any => ({
+    set: () => makeUpdateChain(),
+    where: () => Promise.resolve(),
+  });
   return {
     db: {
       select: makeSelectChain,
       insert: () => makeInsertChain(),
+      update: () => makeUpdateChain(),
       delete: () => ({ where: () => Promise.resolve() }),
     },
   };
@@ -835,6 +840,25 @@ describe("PATCH /api/notifications/:id/read — id validation", () => {
 
   it("returns 401 without auth token", async () => {
     const res = await request(app).patch("/api/notifications/1/read");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── Notification mark-all-read ────────────────────────────────────────────────
+
+describe("PATCH /api/notifications/read-all", () => {
+  const token = signToken({ userId: 999 });
+
+  it("returns 200 with ok:true when authenticated", async () => {
+    const res = await request(app)
+      .patch("/api/notifications/read-all")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it("returns 401 without auth token", async () => {
+    const res = await request(app).patch("/api/notifications/read-all");
     expect(res.status).toBe(401);
   });
 });

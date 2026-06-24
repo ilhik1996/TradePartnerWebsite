@@ -11,7 +11,7 @@ import {
 } from "./modules/lottery";
 import { processDeposit, chargebackRiskScore } from "./modules/payments";
 import { createSubscription, cancelSubscription, getActiveSubscription } from "./modules/subscriptions";
-import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail } from "./modules/email";
+import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail, sendPasswordChangedEmail } from "./modules/email";
 import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamification";
 import { getPartners, getPartner } from "./modules/partners";
 import { sendPushToUser, VAPID_PUBLIC_KEY } from "./modules/push";
@@ -687,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       newPassword: z.string().min(8, "New password must be at least 8 characters"),
     }).parse(req.body);
 
-    const [user] = await db.select({ passwordHash: users.passwordHash })
+    const [user] = await db.select({ passwordHash: users.passwordHash, email: users.email })
       .from(users)
       .where(eq(users.id, uid(req)));
     if (!user) { res.status(404).json({ message: "User not found" }); return; }
@@ -702,6 +702,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const oldToken = req.headers.authorization!.slice(7);
     await revokeToken(uid(req), oldToken);
     const newToken = signToken({ userId: uid(req) });
+
+    // Security email — fire-and-forget, never block the response
+    if (user.email) sendPasswordChangedEmail(user.email).catch(() => {});
+
     res.json({ ok: true, token: newToken });
   }));
 
@@ -782,6 +786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await db.update(notifications)
       .set({ isRead: true })
       .where(and(eq(notifications.id, id), eq(notifications.userId, uid(req))));
+    res.json({ ok: true });
+  }));
+
+  // Mark every unread notification for this user as read in one round-trip
+  app.patch("/api/notifications/read-all", requireAuth, ar(async (req, res) => {
+    await db.update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.userId, uid(req)), eq(notifications.isRead, false)));
     res.json({ ok: true });
   }));
 

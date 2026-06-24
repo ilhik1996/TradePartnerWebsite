@@ -82,6 +82,7 @@ export const api = {
   notifications: {
     list: () => request<any[]>("/notifications"),
     markRead: (id: number) => request<any>(`/notifications/${id}/read`, { method: "PATCH" }),
+    markAllRead: () => request<{ ok: boolean }>("/notifications/read-all", { method: "PATCH" }),
   },
 
   subscription: {

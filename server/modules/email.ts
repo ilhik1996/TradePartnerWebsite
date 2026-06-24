@@ -192,3 +192,22 @@ export async function sendLowBalanceEmail(to: string, currencySymbol: string, en
     `, `Top up your balance to enter today's draw`),
   });
 }
+
+export async function sendPasswordChangedEmail(to: string) {
+  const date = new Date().toUTCString();
+  return sendEmail({
+    to,
+    subject: "Your VIONA password was changed",
+    text: `Your VIONA password was successfully changed on ${date}. If you did not make this change, please contact support immediately at support@viona.app.`,
+    html: layout(`
+      <div class="card">
+        <h2>Password changed</h2>
+        <p>Your VIONA account password was successfully changed.</p>
+        <p class="muted">${date}</p>
+        <p style="margin-top:16px;">If you made this change, no action is needed.</p>
+        <p>If you did <strong>not</strong> make this change, contact support immediately:</p>
+        <a class="btn" href="mailto:support@viona.app">Contact support</a>
+      </div>
+    `),
+  });
+}

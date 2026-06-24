@@ -43,12 +43,11 @@ export default function Notifications() {
   }, []);
 
   const markAllRead = async () => {
-    const unread = notifs.filter(n => !n.isRead);
     try {
-      await Promise.all(unread.map(n => api.notifications.markRead(n.id)));
+      await api.notifications.markAllRead();
       setNotifs(ns => ns.map(n => ({ ...n, isRead: true })));
     } catch {
-      // best-effort; partial success is fine
+      // best-effort
     }
   };
 

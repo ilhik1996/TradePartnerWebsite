@@ -152,6 +152,42 @@ describe("sendLowBalanceEmail — dev fallback", () => {
   });
 });
 
+describe("sendPasswordChangedEmail — dev fallback", () => {
+  const origEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...origEnv };
+    delete process.env.RESEND_API_KEY;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.env = origEnv;
+    vi.restoreAllMocks();
+  });
+
+  it("returns true when RESEND_API_KEY is absent", async () => {
+    const { sendPasswordChangedEmail } = await import("../modules/email");
+    expect(await sendPasswordChangedEmail("secure@example.com")).toBe(true);
+  });
+
+  it("logs the recipient address in dev mode", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { sendPasswordChangedEmail } = await import("../modules/email");
+    await sendPasswordChangedEmail("secure@example.com");
+    const logText = spy.mock.calls.flat().join(" ");
+    expect(logText).toContain("secure@example.com");
+  });
+
+  it("includes 'password' in the subject logged to console", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { sendPasswordChangedEmail } = await import("../modules/email");
+    await sendPasswordChangedEmail("u@example.com");
+    const logText = spy.mock.calls.flat().join(" ");
+    expect(logText.toLowerCase()).toMatch(/password/);
+  });
+});
+
 describe("sendDrawResultEmail — dev fallback", () => {
   const origEnv = process.env;
 
