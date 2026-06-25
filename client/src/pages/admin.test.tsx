@@ -38,7 +38,8 @@ vi.mock("@/lib/api", () => ({
       approveWithdrawal:  vi.fn(),
       rejectWithdrawal:   vi.fn(),
     },
-    partners: { list: vi.fn() },
+    partners:      { list: vi.fn() },
+    gamification:  { award: vi.fn() },
   },
   saveToken:  vi.fn(),
   clearToken: vi.fn(),
@@ -74,6 +75,7 @@ const mockUpdateUserStatus = vi.mocked(api.admin.updateUserStatus);
 const mockWithdrawals      = vi.mocked(api.admin.withdrawals);
 const mockApprove          = vi.mocked(api.admin.approveWithdrawal);
 const mockPartnersList     = vi.mocked(api.partners.list);
+const mockAwardXp          = vi.mocked(api.gamification.award);
 
 const _stats = { totalUsers: 42, completedDraws: 7, totalDeposits: "1000.00", totalPrizesPaid: "500.00" };
 const _draw  = { id: 1, drawDate: "2026-06-24", status: "open", totalPool: "300.00", prizeAmount: null, totalEntries: 10 };
@@ -406,6 +408,36 @@ describe("Admin page", () => {
     await user.click(petitionBtns[0]);
     expect(await screen.findByText("123")).toBeInTheDocument();
     expect(screen.getByText("Total active signatures")).toBeInTheDocument();
+  });
+
+  it("Gamification tab shows Award XP form", async () => {
+    const user = userEvent.setup();
+    logIn();
+    stubOverview();
+    render(<Admin />);
+    await screen.findByText("Total users");
+    const gamBtns = screen.getAllByText("Gamification");
+    await user.click(gamBtns[0]);
+    expect(screen.getByText("Gamification — Award XP")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g. 42")).toBeInTheDocument();
+    expect(screen.getByText("Award XP")).toBeInTheDocument();
+  });
+
+  it("Award XP button calls api.gamification.award with userId and reason", async () => {
+    const user = userEvent.setup();
+    logIn();
+    stubOverview();
+    mockAwardXp.mockResolvedValueOnce({ ok: true, totalXp: 60 });
+    render(<Admin />);
+    await screen.findByText("Total users");
+    const gamBtns = screen.getAllByText("Gamification");
+    await user.click(gamBtns[0]);
+    const input = screen.getByPlaceholderText("e.g. 42");
+    await user.type(input, "7");
+    await user.click(screen.getByRole("button", { name: "Award XP" }));
+    await waitFor(() =>
+      expect(mockAwardXp).toHaveBeenCalledWith({ userId: 7, reason: "entry" })
+    );
   });
 
   it("Sign out clears localStorage and returns to login form", async () => {
