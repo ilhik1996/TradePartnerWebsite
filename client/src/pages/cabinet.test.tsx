@@ -41,7 +41,7 @@ vi.mock("@/lib/api", () => ({
       selfExclude:          vi.fn(),
     },
     draws:        { history: vi.fn() },
-    gamification: { me: vi.fn() },
+    gamification: { me: vi.fn(), leaderboard: vi.fn() },
     kyc:          { start: vi.fn() },
   },
 }));
@@ -53,6 +53,7 @@ const mockProfileGet  = vi.mocked(api.profile.get);
 const mockRgGet       = vi.mocked(api.profile.getResponsibleGaming);
 const mockHistory     = vi.mocked(api.draws.history);
 const mockGamify      = vi.mocked(api.gamification.me);
+const mockLeaderboard = vi.mocked(api.gamification.leaderboard);
 const mockProfileUpd  = vi.mocked(api.profile.update);
 const mockSaveRg      = vi.mocked(api.profile.setResponsibleGaming);
 const mockSelfExclude = vi.mocked(api.profile.selfExclude);
@@ -72,11 +73,12 @@ const _draw = {
   totalPool: "500.00", prizeAmount: "250.00", totalEntries: 20, isWinner: true,
 };
 
-function stubLoad(profile = _profile, rg: any = _rg, draws: any[] = [], gam: any = null) {
+function stubLoad(profile = _profile, rg: any = _rg, draws: any[] = [], gam: any = null, lb: any[] = []) {
   mockProfileGet.mockResolvedValueOnce(profile);
   mockRgGet.mockResolvedValueOnce(rg);
   mockHistory.mockResolvedValueOnce(draws);
   mockGamify.mockResolvedValueOnce(gam);
+  mockLeaderboard.mockResolvedValueOnce(lb);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -269,6 +271,29 @@ describe("Cabinet page", () => {
     await screen.findByText("My Account");
     await user.click(screen.getByRole("button", { name: "Level" }));
     expect(screen.getByText("No badges yet — start earning XP!")).toBeInTheDocument();
+  });
+
+  it("Level tab shows leaderboard when data is available", async () => {
+    const user = userEvent.setup();
+    const lb = [
+      { rank: 1, userId: 99, displayName: "Top Player", totalXp: 500, level: 5, title: "Expert" },
+      { rank: 2, userId: 1,  displayName: "Alice Smith", totalXp: 200, level: 3, title: "Explorer" },
+    ];
+    stubLoad(_profile, _rg, [], _gamification, lb);
+    render(<Cabinet />);
+    await screen.findByText("My Account");
+    await user.click(screen.getByRole("button", { name: "Level" }));
+    expect(screen.getByText("Top Players")).toBeInTheDocument();
+    expect(screen.getByText("Top Player")).toBeInTheDocument();
+  });
+
+  it("Level tab hides leaderboard when empty", async () => {
+    const user = userEvent.setup();
+    stubLoad(_profile, _rg, [], _gamification, []);
+    render(<Cabinet />);
+    await screen.findByText("My Account");
+    await user.click(screen.getByRole("button", { name: "Level" }));
+    expect(screen.queryByText("Top Players")).not.toBeInTheDocument();
   });
 
   it("Safety tab shows Spending Limits section", async () => {
