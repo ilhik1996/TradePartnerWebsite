@@ -803,6 +803,99 @@ function PetitionPanel() {
   );
 }
 
+// ─── Gamification panel ───────────────────────────────────────────────────────
+
+const XP_REASONS = ["entry", "win", "referral", "weekly_sub", "monthly_sub", "deposit"] as const;
+type XpReason = typeof XP_REASONS[number];
+
+function GamificationPanel() {
+  const { toast } = useToast();
+  const [userId, setUserId] = useState("");
+  const [reason, setReason] = useState<XpReason>("entry");
+  const [submitting, setSubmitting] = useState(false);
+  const [lastResult, setLastResult] = useState<{ userId: number; reason: string; totalXp: number } | null>(null);
+
+  const handleAward = async () => {
+    const uid = parseInt(userId, 10);
+    if (!uid || uid <= 0) {
+      toast({ title: "Invalid user ID", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await api.gamification.award({ userId: uid, reason });
+      setLastResult({ userId: uid, reason, totalXp: res.totalXp });
+      setUserId("");
+      toast({ title: `XP awarded — total: ${res.totalXp}` });
+    } catch {
+      toast({ title: "Failed to award XP", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      <h3 className="font-bold">Gamification — Award XP</h3>
+      <div className="viona-card p-5 space-y-4">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">User ID</label>
+          <input
+            type="number"
+            min={1}
+            value={userId}
+            onChange={e => setUserId(e.target.value)}
+            placeholder="e.g. 42"
+            className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Reason</label>
+          <select
+            value={reason}
+            onChange={e => setReason(e.target.value as XpReason)}
+            className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {XP_REASONS.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+        <Button
+          onClick={handleAward}
+          disabled={submitting || !userId}
+          className="w-full"
+          size="sm"
+        >
+          {submitting ? "Awarding…" : "Award XP"}
+        </Button>
+      </div>
+
+      {lastResult && (
+        <div className="viona-card p-4 border border-primary/30">
+          <p className="text-sm font-medium text-primary">XP awarded successfully</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            User #{lastResult.userId} · reason: <span className="font-mono">{lastResult.reason}</span>
+            {" · "}total XP: <span className="font-bold">{lastResult.totalXp}</span>
+          </p>
+        </div>
+      )}
+
+      <div className="text-xs text-muted-foreground space-y-1 viona-card p-4">
+        <p className="font-medium mb-2">XP values per reason</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {[["entry", 10], ["deposit", 5], ["win", 50], ["referral", 20], ["weekly_sub", 15], ["monthly_sub", 30]].map(([r, xp]) => (
+            <div key={r} className="flex justify-between">
+              <span className="font-mono">{r}</span>
+              <span className="font-bold text-primary">{xp} XP</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Partners panel ────────────────────────────────────────────────────────────
 
 const PARTNER_CATEGORIES = ["food", "retail", "pharmacy", "telecom", "fuel", "entertainment", "electronics", "delivery", "beauty", "fitness", "travel", "finance"] as const;
@@ -1150,6 +1243,7 @@ const SECTIONS = [
   { id: "partners",     label: "Partners",    icon: Store },
   { id: "audit",        label: "Audit",       icon: FileText },
   { id: "petition",     label: "Petition",    icon: Heart },
+  { id: "gamification", label: "Gamification", icon: Trophy },
 ] as const;
 
 type Section = typeof SECTIONS[number]["id"];
@@ -1212,6 +1306,7 @@ export default function Admin() {
         {active === "partners"     && <PartnersPanel />}
         {active === "audit"        && <AuditPanel />}
         {active === "petition"     && <PetitionPanel />}
+        {active === "gamification" && <GamificationPanel />}
       </main>
     </div>
   );

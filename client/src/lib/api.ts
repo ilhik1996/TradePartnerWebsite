@@ -152,6 +152,8 @@ export const api = {
 
   gamification: {
     me: () => request<any>("/gamification/me"),
+    award: (body: { userId: number; reason: string }) =>
+      request<any>("/gamification/award", { method: "POST", body: JSON.stringify(body) }),
   },
 
   dev: {
