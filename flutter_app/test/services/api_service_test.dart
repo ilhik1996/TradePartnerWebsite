@@ -308,4 +308,36 @@ void main() {
       expect(country['drawHourUtc'], equals(21));
     });
   });
+
+  // ── Gamification leaderboard ──────────────────────────────────────────────
+
+  group('getLeaderboard', () {
+    test('returns list of leaderboard entries', () async {
+      dioAdapter.onGet('/gamification/leaderboard', (server) => server.reply(200, [
+        {'rank': 1, 'userId': 5, 'displayName': 'Alice', 'totalXp': 500, 'level': 5, 'title': 'Expert'},
+        {'rank': 2, 'userId': 7, 'displayName': 'Bob',   'totalXp': 300, 'level': 3, 'title': 'Explorer'},
+      ]));
+      final board = await ApiService().getLeaderboard();
+      expect(board, hasLength(2));
+      expect(board[0]['rank'], equals(1));
+      expect(board[0]['displayName'], equals('Alice'));
+      expect(board[1]['totalXp'], equals(300));
+    });
+
+    test('passes custom limit as query parameter', () async {
+      String? capturedPath;
+      dioAdapter.onGet('/gamification/leaderboard', (server) {
+        capturedPath = server.request.path;
+        return server.reply(200, <dynamic>[]);
+      });
+      await ApiService().getLeaderboard(limit: 5);
+      expect(capturedPath, contains('limit=5'));
+    });
+
+    test('returns empty list when no entries exist', () async {
+      dioAdapter.onGet('/gamification/leaderboard', (server) => server.reply(200, <dynamic>[]));
+      final board = await ApiService().getLeaderboard();
+      expect(board, isEmpty);
+    });
+  });
 }
