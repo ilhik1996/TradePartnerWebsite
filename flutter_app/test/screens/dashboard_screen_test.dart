@@ -198,4 +198,89 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Get free ticket'), findsOneWidget);
   });
+
+  // ── Free entry form submission ─────────────────────────────────────────────
+
+  testWidgets('free entry form has name and email fields', (tester) async {
+    _stubLoad(adapter, myEntry: null);
+    await tester.pumpWidget(_wrapWithRouter());
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Free entry'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsWidgets);
+    expect(
+      find.byWidgetPredicate((w) => w is TextField && (w.decoration?.hintText?.contains('Full name') == true)),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate((w) => w is TextField && (w.decoration?.hintText?.contains('email') == true || w.decoration?.hintText?.contains('Email') == true)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Get free ticket button is disabled when fields are empty', (tester) async {
+    _stubLoad(adapter, myEntry: null);
+    await tester.pumpWidget(_wrapWithRouter());
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Free entry'));
+    await tester.pumpAndSettle();
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Get free ticket'),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('submitting free entry form calls enterFree and shows ticket snackbar', (tester) async {
+    _stubLoad(adapter, myEntry: null);
+    await tester.pumpWidget(_wrapWithRouter());
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Free entry'));
+    await tester.pumpAndSettle();
+
+    adapter.onPost('/draws/7/enter-free', (s) => s.reply(200, {'ticketNumber': 55}));
+    // After success, _loadData() is called again
+    _stubLoad(adapter, myEntry: {'ticketNumber': 55, 'type': 'free'});
+
+    final nameField = find.byWidgetPredicate(
+      (w) => w is TextField && (w.decoration?.hintText?.contains('Full name') == true),
+    );
+    final emailField = find.byWidgetPredicate(
+      (w) => w is TextField && (w.decoration?.hintText?.contains('mail') == true || w.decoration?.hintText?.contains('Mail') == true),
+    );
+    await tester.enterText(nameField, 'Alice Smith');
+    await tester.enterText(emailField, 'alice@example.com');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Get free ticket'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ticket #55'), findsOneWidget);
+  });
+
+  // ── Paid entry flow ─────────────────────────────────────────────────────────
+
+  testWidgets('tapping Enter draw button calls enterDraw API', (tester) async {
+    _stubLoad(adapter, myEntry: null);
+    await tester.pumpWidget(_wrapWithRouter());
+    await tester.pumpAndSettle();
+
+    adapter.onPost('/draws/7/enter', (s) => s.reply(200, {'ticketNumber': 12}));
+    _stubLoad(adapter, myEntry: {'ticketNumber': 12, 'type': 'paid'});
+
+    await tester.tap(find.textContaining('Enter draw'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ticket #12'), findsOneWidget);
+  });
+
+  testWidgets('shows error snackbar when enterDraw fails', (tester) async {
+    _stubLoad(adapter, myEntry: null);
+    await tester.pumpWidget(_wrapWithRouter());
+    await tester.pumpAndSettle();
+
+    adapter.onPost('/draws/7/enter', (s) => s.reply(402, {'message': 'Insufficient balance'}));
+
+    await tester.tap(find.textContaining('Enter draw'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Could not enter'), findsOneWidget);
+  });
 }
