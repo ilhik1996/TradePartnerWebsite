@@ -1712,3 +1712,315 @@ describe("POST /api/admin/countries", () => {
     expect(res.status).not.toBe(401);
   });
 });
+
+// ── Admin draws ───────────────────────────────────────────────────────────────
+
+describe("GET /api/admin/draws", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/draws");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with user token", async () => {
+    const userToken = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/admin/draws")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns list with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/draws")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+
+  it("accepts pagination params", async () => {
+    const res = await request(app)
+      .get("/api/admin/draws?limit=10&offset=5")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("POST /api/admin/draws", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/admin/draws").send({ countryId: 1 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when countryId is missing", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when drawDate format is invalid", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ countryId: 1, drawDate: "25-06-2026" }); // wrong format
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid countryId — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ countryId: 1 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts countryId with optional drawDate", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ countryId: 1, drawDate: "2026-12-31" });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("POST /api/admin/draws/:id/conduct", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/admin/draws/1/conduct");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws/abc/conduct")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with admin token — not 401", async () => {
+    const res = await request(app)
+      .post("/api/admin/draws/1/conduct")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ── Admin users ───────────────────────────────────────────────────────────────
+
+describe("GET /api/admin/users", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/users");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns list with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/users")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+
+  it("accepts search query param", async () => {
+    const res = await request(app)
+      .get("/api/admin/users?search=alice")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("PATCH /api/admin/users/:id/status", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).patch("/api/admin/users/1/status").send({ status: "suspended" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .patch("/api/admin/users/abc/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "suspended" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid status value", async () => {
+    const res = await request(app)
+      .patch("/api/admin/users/1/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "deleted" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts suspended status — not 400 or 401", async () => {
+    const res = await request(app)
+      .patch("/api/admin/users/1/status")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ status: "suspended" });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Admin withdrawals ─────────────────────────────────────────────────────────
+
+describe("GET /api/admin/withdrawals", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/withdrawals");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns list with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/withdrawals")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+describe("POST /api/admin/withdrawals/:id/approve", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/admin/withdrawals/1/approve");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/abc/approve")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with admin token — not 401", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/approve")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+describe("POST /api/admin/withdrawals/:id/reject", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/admin/withdrawals/1/reject");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/abc/reject")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with admin token — not 401", async () => {
+    const res = await request(app)
+      .post("/api/admin/withdrawals/1/reject")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ── Admin stats & petition ────────────────────────────────────────────────────
+
+describe("GET /api/admin/stats", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/stats");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns stats object with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/stats")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+describe("GET /api/admin/petition", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/petition");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns petition data with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/petition")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+// ── Public petition ───────────────────────────────────────────────────────────
+
+describe("GET /api/petition/count", () => {
+  it("returns count without auth (public endpoint)", async () => {
+    const res = await request(app).get("/api/petition/count");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("count");
+  });
+});
+
+describe("GET /api/countries", () => {
+  it("returns list without auth (public endpoint)", async () => {
+    const res = await request(app).get("/api/countries");
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("GET /api/countries/:id", () => {
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app).get("/api/countries/abc");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns data for numeric id (public endpoint)", async () => {
+    const res = await request(app).get("/api/countries/1");
+    expect(res.status).not.toBe(400);
+  });
+});
+
+// ── Admin transactions ────────────────────────────────────────────────────────
+
+describe("GET /api/admin/transactions", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/transactions");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns list with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/transactions")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
