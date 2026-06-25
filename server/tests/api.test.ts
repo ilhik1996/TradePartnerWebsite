@@ -1292,3 +1292,423 @@ describe("DELETE /api/admin/partners/:id", () => {
     expect(res.status).not.toBe(401);
   });
 });
+
+// ── Draws ─────────────────────────────────────────────────────────────────────
+
+describe("GET /api/draws/today/:countryId", () => {
+  it("returns 400 for non-numeric countryId", async () => {
+    const res = await request(app).get("/api/draws/today/abc");
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts numeric countryId — responds (not 400)", async () => {
+    const res = await request(app).get("/api/draws/today/1");
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("GET /api/draws/history/:countryId", () => {
+  it("returns 400 for non-numeric countryId", async () => {
+    const res = await request(app).get("/api/draws/history/abc");
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts numeric countryId without auth — responds (not 400)", async () => {
+    const res = await request(app).get("/api/draws/history/1");
+    expect(res.status).not.toBe(400);
+  });
+
+  it("accepts numeric countryId with auth token — responds (not 400)", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/draws/history/1")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("GET /api/draws/:drawId/verify", () => {
+  it("returns 400 for non-numeric drawId", async () => {
+    const res = await request(app).get("/api/draws/abc/verify");
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts numeric drawId — responds (not 400)", async () => {
+    const res = await request(app).get("/api/draws/7/verify");
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("POST /api/draws/:drawId/enter", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/draws/7/enter");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric drawId", async () => {
+    const res = await request(app)
+      .post("/api/draws/abc/enter")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid drawId with auth — not 401", async () => {
+    const res = await request(app)
+      .post("/api/draws/7/enter")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("POST /api/draws/:drawId/enter-free", () => {
+  it("returns 400 when name/email missing", async () => {
+    const res = await request(app).post("/api/draws/7/enter-free").send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when name only (no email)", async () => {
+    const res = await request(app)
+      .post("/api/draws/7/enter-free")
+      .send({ name: "Alice" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid firstName + email + countryId — not 400", async () => {
+    const res = await request(app)
+      .post("/api/draws/7/enter-free")
+      .send({ firstName: "Alice", lastName: "Smith", email: "alice@example.com", countryId: 1 });
+    expect(res.status).not.toBe(400);
+  });
+
+  it("returns 400 for non-numeric drawId even with valid body", async () => {
+    const res = await request(app)
+      .post("/api/draws/abc/enter-free")
+      .send({ name: "Alice Smith", email: "alice@example.com" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/draws/:drawId/my-entry", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/draws/7/my-entry");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric drawId", async () => {
+    const res = await request(app)
+      .get("/api/draws/abc/my-entry")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid drawId with auth — not 401", async () => {
+    const res = await request(app)
+      .get("/api/draws/7/my-entry")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+describe("PATCH /api/settings/auto-participate", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).patch("/api/settings/auto-participate").send({ enabled: true });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when enabled field is missing", async () => {
+    const res = await request(app)
+      .patch("/api/settings/auto-participate")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when enabled is not a boolean", async () => {
+    const res = await request(app)
+      .patch("/api/settings/auto-participate")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ enabled: "yes" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts enabled: true — responds with autoParticipate", async () => {
+    const res = await request(app)
+      .patch("/api/settings/auto-participate")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ enabled: true });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts enabled: false", async () => {
+    const res = await request(app)
+      .patch("/api/settings/auto-participate")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ enabled: false });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("POST /api/settings/self-exclude", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/settings/self-exclude").send({ days: 30 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when days is missing", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when days is 0 (min 1)", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ days: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when days exceeds 365", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ days: 366 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts days: 30 — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ days: 30 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts days: 1 (boundary min)", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ days: 1 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts days: 365 (boundary max)", async () => {
+    const res = await request(app)
+      .post("/api/settings/self-exclude")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ days: 365 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+describe("GET /api/notifications", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/notifications");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns list with auth token — not 401", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("PATCH /api/notifications/:id/read", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).patch("/api/notifications/1/read");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .patch("/api/notifications/abc/read")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with auth — not 400 or 401", async () => {
+    const res = await request(app)
+      .patch("/api/notifications/1/read")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Subscription history ──────────────────────────────────────────────────────
+
+describe("GET /api/subscription/history", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/subscription/history");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns list with auth token — not 401", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/subscription/history")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Referrals ─────────────────────────────────────────────────────────────────
+
+describe("GET /api/referrals/my", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/referrals/my");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns data with auth token — not 401", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/referrals/my")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("POST /api/referrals/apply", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/referrals/apply").send({ code: "ALICE10" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when code is missing", async () => {
+    const res = await request(app)
+      .post("/api/referrals/apply")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when code is too short (min 4 chars)", async () => {
+    const res = await request(app)
+      .post("/api/referrals/apply")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ code: "AB" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts a valid code string — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/referrals/apply")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ code: "ALICE10" });
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── Admin login ───────────────────────────────────────────────────────────────
+
+describe("POST /api/admin/login", () => {
+  it("returns 400 when body is empty", async () => {
+    const res = await request(app).post("/api/admin/login").send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when password is missing", async () => {
+    const res = await request(app).post("/api/admin/login").send({ username: "admin" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when username is missing", async () => {
+    const res = await request(app).post("/api/admin/login").send({ password: "secret" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when body has email but no password", async () => {
+    const res = await request(app)
+      .post("/api/admin/login")
+      .send({ email: "admin@example.com" });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Admin countries ───────────────────────────────────────────────────────────
+
+describe("GET /api/admin/countries", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/admin/countries");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with regular user token", async () => {
+    const userToken = signToken({ userId: 1 });
+    const res = await request(app)
+      .get("/api/admin/countries")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns list with admin token — not 401 or 403", async () => {
+    const res = await request(app)
+      .get("/api/admin/countries")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
+});
+
+describe("POST /api/admin/countries", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/admin/countries").send({ name: "France", currency: "EUR", currencySymbol: "€", prizePercentage: 50, entryAmountDaily: 5, drawHourUtc: 21 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when name is missing", async () => {
+    const res = await request(app)
+      .post("/api/admin/countries")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ currency: "EUR", currencySymbol: "€", prizePercentage: 50, entryAmountDaily: 5, drawHourUtc: 21 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when drawHourUtc is out of range (24)", async () => {
+    const res = await request(app)
+      .post("/api/admin/countries")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "France", currency: "EUR", currencySymbol: "€", prizePercentage: 50, entryAmountDaily: 5, drawHourUtc: 24 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid payload — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/admin/countries")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ code: "FR", name: "France", currency: "EUR", currencySymbol: "€", locale: "fr-FR", prizePercentage: 50, entryAmountDaily: 5, entryAmountWeekly: 30, entryAmountMonthly: 100, drawHourUtc: 21 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
