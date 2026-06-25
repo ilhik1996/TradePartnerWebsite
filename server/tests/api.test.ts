@@ -2120,3 +2120,93 @@ describe("PATCH /api/admin/countries/:id", () => {
     expect(res.status).not.toBe(401);
   });
 });
+
+// ── POST /api/dev/seed ────────────────────────────────────────────────────────
+
+describe("POST /api/dev/seed", () => {
+  it("returns 403 in non-seeded environment (SEED_ALLOWED not set)", async () => {
+    const prev = process.env.SEED_ALLOWED;
+    delete process.env.SEED_ALLOWED;
+    const res = await request(app).post("/api/dev/seed");
+    expect(res.status).toBe(403);
+    if (prev !== undefined) process.env.SEED_ALLOWED = prev;
+  });
+
+  it("returns 403 when NODE_ENV is production", async () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevSeed = process.env.SEED_ALLOWED;
+    process.env.NODE_ENV = "production";
+    process.env.SEED_ALLOWED = "true";
+    const res = await request(app).post("/api/dev/seed");
+    expect(res.status).toBe(403);
+    process.env.NODE_ENV = prevEnv;
+    if (prevSeed !== undefined) process.env.SEED_ALLOWED = prevSeed;
+    else delete process.env.SEED_ALLOWED;
+  });
+});
+
+// ── PATCH /api/settings/responsible-gaming ────────────────────────────────────
+
+describe("PATCH /api/settings/responsible-gaming", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .send({ dailyLimitAmount: 50 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for negative dailyLimitAmount", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: -10 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts null to clear a limit", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: null });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts positive limit values — not 400 or 401", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ dailyLimitAmount: 100, weeklyLimitAmount: 500, monthlyLimitAmount: 1500 });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts empty body (no-op update) — not 400", async () => {
+    const res = await request(app)
+      .patch("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── GET /api/settings/responsible-gaming ─────────────────────────────────────
+
+describe("GET /api/settings/responsible-gaming", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).get("/api/settings/responsible-gaming");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns data with auth token — not 401", async () => {
+    const res = await request(app)
+      .get("/api/settings/responsible-gaming")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
