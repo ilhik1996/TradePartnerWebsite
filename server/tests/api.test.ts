@@ -2025,6 +2025,49 @@ describe("GET /api/admin/transactions", () => {
   });
 });
 
+// ── POST /api/subscription ────────────────────────────────────────────────────
+
+describe("POST /api/subscription", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).post("/api/subscription").send({ type: "weekly" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when type is missing", async () => {
+    const res = await request(app)
+      .post("/api/subscription")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid type value", async () => {
+    const res = await request(app)
+      .post("/api/subscription")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ type: "daily" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts type: weekly — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/subscription")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ type: "weekly" });
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts type: monthly — not 400 or 401", async () => {
+    const res = await request(app)
+      .post("/api/subscription")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ type: "monthly" });
+    expect(res.status).not.toBe(401);
+  });
+});
+
 // ── DELETE /api/subscription/:id ──────────────────────────────────────────────
 
 describe("DELETE /api/subscription/:id", () => {
