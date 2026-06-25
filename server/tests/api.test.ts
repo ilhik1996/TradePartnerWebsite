@@ -12,12 +12,19 @@ vi.mock("../db", () => {
   const makeSelectChain = (): any => {
     let _fromTable: any;
     const chain: any = {
-      from: (table: any) => { _fromTable = table; return chain; },
+      from: (table: any) => {
+        _fromTable = table;
+        // Make chain thenable so `await db.select().from(t)` works for
+        // aggregate queries that have no .where() call (e.g. COUNT/SUM stats).
+        chain.then = (resolve: any) => resolve([{ count: 0, total: "0" }]);
+        return chain;
+      },
       // userSessions blacklist check must return [] (token not revoked).
-      // All other queries (users.status, adminUsers.isActive) return an active stub.
+      // All other queries (users.status, adminUsers.isActive) return an active stub
+      // that also includes aggregate fields (count, total) for stats-style routes.
       where: () => {
         const isSessionsTable = _fromTable && "tokenHash" in _fromTable;
-        return Promise.resolve(isSessionsTable ? [] : [{ status: "active", id: 1, isActive: true }]);
+        return Promise.resolve(isSessionsTable ? [] : [{ status: "active", id: 1, isActive: true, count: 0, total: "0" }]);
       },
       for: () => chain,
       leftJoin: () => chain,
@@ -958,5 +965,27 @@ describe("GET /api/wallet/transactions — pagination", () => {
       .get("/api/wallet/transactions?limit=10&offset=0")
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).not.toBe(400);
+  });
+});
+
+describe("GET /api/stats — public aggregate stats", () => {
+  it("returns 200 without authentication", async () => {
+    const res = await request(app).get("/api/stats");
+    expect(res.status).toBe(200);
+  });
+
+  it("returns JSON with totalUsers, completedDraws, and totalPrizesPaid fields", async () => {
+    const res = await request(app).get("/api/stats");
+    expect(res.body).toHaveProperty("totalUsers");
+    expect(res.body).toHaveProperty("completedDraws");
+    expect(res.body).toHaveProperty("totalPrizesPaid");
+  });
+
+  it("returns numeric-compatible values for all fields", async () => {
+    const res = await request(app).get("/api/stats");
+    expect(Number.isFinite(Number(res.body.totalUsers))).toBe(true);
+    expect(Number.isFinite(Number(res.body.completedDraws))).toBe(true);
+    // totalPrizesPaid comes from SUM — may be number or numeric string
+    expect(Number.isNaN(Number(res.body.totalPrizesPaid))).toBe(false);
   });
 });
