@@ -20,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Map<String, dynamic>? _profile;
   Map<String, dynamic>? _level;
   Map<String, dynamic>? _rg;
+  List<dynamic>? _leaderboard;
   bool _loading = true;
 
   final _firstNameCtrl = TextEditingController();
@@ -47,12 +48,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         _api.getUserLevel(),
         _api.getResponsibleGaming(),
         _api.getProfile(),
+        _api.getLeaderboard(),
       ]);
       if (mounted) {
         _user = results[0] as Map<String, dynamic>?;
         _level = results[1] as Map<String, dynamic>?;
         _rg = results[2] as Map<String, dynamic>?;
         _profile = results[3] as Map<String, dynamic>?;
+        _leaderboard = results[4] as List<dynamic>?;
         _firstNameCtrl.text = _profile?['firstName'] ?? '';
         _lastNameCtrl.text = _profile?['lastName'] ?? '';
       }
@@ -608,6 +611,68 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 );
               }).toList(),
             ),
+          ],
+
+          if (_leaderboard != null && _leaderboard!.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Top Players', style: Theme.of(context).textTheme.bodyMedium),
+            ),
+            const SizedBox(height: 10),
+            ..._leaderboard!.map((entry) {
+              final rank = entry['rank'] as int;
+              final isMe = entry['userId'] == _user?['id'];
+              final name = (entry['displayName'] as String?) ?? 'Player #${entry['userId']}';
+              final entryXp = entry['totalXp'] as int? ?? 0;
+              final entryLevel = entry['level'] as int? ?? 1;
+              final medal = rank == 1 ? '🥇' : rank == 2 ? '🥈' : rank == 3 ? '🥉' : null;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isMe ? VionaColors.purple.withOpacity(0.12) : VionaColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isMe ? VionaColors.purple.withOpacity(0.4) : VionaColors.border,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      child: Text(
+                        medal ?? '#$rank',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isMe ? '$name (you)' : name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isMe ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      'Lv.$entryLevel',
+                      style: const TextStyle(fontSize: 12, color: VionaColors.textSecondary),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$entryXp XP',
+                      style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700, color: VionaColors.purple,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ],
       ),

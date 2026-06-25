@@ -51,11 +51,13 @@ void _stubLoad(
   Map<String, dynamic> profile = _profileResponse,
   Map<String, dynamic> level = _levelResponse,
   Map<String, dynamic>? rg = _rgResponse,
+  List<dynamic> leaderboard = const [],
 }) {
   adapter.onGet('/auth/me',                     (s) => s.reply(200, me));
   adapter.onGet('/gamification/me',             (s) => s.reply(200, level));
   adapter.onGet('/settings/responsible-gaming', (s) => s.reply(rg == null ? 404 : 200, rg ?? {}));
   adapter.onGet('/profile',                     (s) => s.reply(200, profile));
+  adapter.onGet('/gamification/leaderboard',    (s) => s.reply(200, leaderboard));
 }
 
 void main() {
@@ -120,6 +122,7 @@ void main() {
     adapter.onGet('/gamification/me', (s) => s.reply(200, _levelResponse));
     adapter.onGet('/settings/responsible-gaming', (s) => s.reply(200, _rgResponse));
     adapter.onGet('/profile', (s) => s.reply(200, _profileResponse));
+    adapter.onGet('/gamification/leaderboard', (s) => s.reply(200, <dynamic>[]));
     await tester.pumpWidget(_wrap(const ProfileScreen()));
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsOneWidget);
@@ -254,6 +257,10 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 100));
       return s.reply(200, _profileResponse);
     });
+    adapter.onGet('/gamification/leaderboard', (s) async {
+      await Future.delayed(const Duration(milliseconds: 100));
+      return s.reply(200, <dynamic>[]);
+    });
 
     await tester.pumpWidget(_wrap(const ProfileScreen()));
     await tester.pump(); // let initState run but not settle
@@ -379,5 +386,31 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Sign out'));
     await tester.pumpAndSettle();
     expect(find.byKey(loginKey), findsOneWidget);
+  });
+
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+
+  testWidgets('leaderboard is shown in Level tab when data is available', (tester) async {
+    _stubLoad(adapter, leaderboard: [
+      {'rank': 1, 'userId': 99, 'displayName': 'Top Player', 'totalXp': 500, 'level': 5, 'title': 'Expert'},
+      {'rank': 2, 'userId': 1,  'displayName': 'Alice Smith', 'totalXp': 200, 'level': 3, 'title': 'Explorer'},
+    ]);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Level'));
+    await tester.pumpAndSettle();
+    expect(find.text('Top Players'), findsOneWidget);
+    expect(find.textContaining('Top Player'), findsOneWidget);
+    // Current user row is annotated with "(you)"
+    expect(find.textContaining('(you)'), findsOneWidget);
+  });
+
+  testWidgets('leaderboard is not shown when empty', (tester) async {
+    _stubLoad(adapter, leaderboard: []);
+    await tester.pumpWidget(_wrap(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Level'));
+    await tester.pumpAndSettle();
+    expect(find.text('Top Players'), findsNothing);
   });
 }

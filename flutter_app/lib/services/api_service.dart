@@ -244,6 +244,11 @@ class ApiService {
     return r.data;
   }
 
+  Future<List<dynamic>> getLeaderboard({int limit = 10}) async {
+    final r = await _dio.get('/gamification/leaderboard?limit=$limit');
+    return r.data;
+  }
+
   // ── Partners ──────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getPartners() async {
