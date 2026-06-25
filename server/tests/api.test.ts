@@ -22,10 +22,15 @@ vi.mock("../db", () => {
       // userSessions blacklist check must return [] (token not revoked).
       // All other queries (users.status, adminUsers.isActive) return an active stub
       // that also includes aggregate fields (count, total) for stats-style routes.
+      // Returns `chain` (not a raw Promise) so callers can chain .groupBy() after
+      // .where() — e.g. checkAndAwardBadges' streak_7 query.
       where: () => {
         const isSessionsTable = _fromTable && "tokenHash" in _fromTable;
-        return Promise.resolve(isSessionsTable ? [] : [{ status: "active", id: 1, isActive: true, count: 0, total: "0" }]);
+        const rows = isSessionsTable ? [] : [{ status: "active", id: 1, isActive: true, count: 0, total: "0", day: "2025-01-01", badgeId: undefined }];
+        chain.then = (resolve: any) => resolve(rows);
+        return chain;
       },
+      groupBy: () => chain,
       for: () => chain,
       leftJoin: () => chain,
       innerJoin: () => chain,
@@ -38,10 +43,14 @@ vi.mock("../db", () => {
   const makeInsertChain = (): any => ({
     values: () => makeInsertChain(),
     onConflictDoNothing: () => Promise.resolve(),
+    returning: () => Promise.resolve([{ id: 1, name: "Test", category: "retail", cashbackPercent: "5", isActive: true }]),
   });
   const makeUpdateChain = (): any => ({
     set: () => makeUpdateChain(),
-    where: () => Promise.resolve(),
+    where: () => ({
+      then: (resolve: any) => resolve([{ id: 1, name: "Updated", isActive: true }]),
+      returning: () => Promise.resolve([{ id: 1, name: "Updated", isActive: true }]),
+    }),
   });
   return {
     db: {
@@ -56,6 +65,19 @@ vi.mock("../modules/push", () => ({
   sendPushToUser: vi.fn(),
   VAPID_PUBLIC_KEY: null,
 }));
+// Replace rate limiters with passthrough middleware so the full test suite
+// can exceed 120 requests without hitting 429s. Rate-limiter logic itself is
+// covered by security.test.ts.
+const _pass = (_req: any, _res: any, next: any) => next();
+vi.mock("../middleware/security", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../middleware/security")>();
+  return {
+    ...real,
+    authRateLimit:   _pass,
+    apiRateLimit:    _pass,
+    paymentRateLimit: _pass,
+  };
+});
 
 // Import after mocks are registered
 const { registerRoutes } = await import("../routes");
@@ -987,5 +1009,286 @@ describe("GET /api/stats — public aggregate stats", () => {
     expect(Number.isFinite(Number(res.body.completedDraws))).toBe(true);
     // totalPrizesPaid comes from SUM — may be number or numeric string
     expect(Number.isNaN(Number(res.body.totalPrizesPaid))).toBe(false);
+  });
+});
+
+// ── Admin: audit logs ─────────────────────────────────────────────────────────
+
+describe("GET /api/admin/audit-logs", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+  const userToken  = signToken({ userId: 1 });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app).get("/api/admin/audit-logs");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with a regular user token (no admin role)", async () => {
+    const res = await request(app)
+      .get("/api/admin/audit-logs")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with admin token", async () => {
+    const res = await request(app)
+      .get("/api/admin/audit-logs")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts limit and offset query params without error", async () => {
+    const res = await request(app)
+      .get("/api/admin/audit-logs?limit=10&offset=0")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("treats non-numeric limit gracefully (caps / defaults) — no 400", async () => {
+    const res = await request(app)
+      .get("/api/admin/audit-logs?limit=abc&offset=xyz")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+
+  it("caps limit at 500 even when larger value is requested", async () => {
+    const res = await request(app)
+      .get("/api/admin/audit-logs?limit=99999")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+  });
+});
+
+// ── Admin: gamification XP award ─────────────────────────────────────────────
+
+describe("POST /api/gamification/award", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+  const userToken  = signToken({ userId: 1 });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .send({ userId: 1, reason: "entry" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with a regular user token", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ userId: 1, reason: "entry" });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 when userId is missing", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "entry" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when reason is missing", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ userId: 1 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for an invalid reason value", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ userId: 1, reason: "hack_the_planet" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when userId is not a positive integer", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ userId: -1, reason: "deposit" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts a valid payload (entry reason) — not 400", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ userId: 1, reason: "entry" });
+    expect(res.status).not.toBe(400);
+  });
+
+  it("accepts monthly_sub reason — not 400", async () => {
+    const res = await request(app)
+      .post("/api/gamification/award")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ userId: 1, reason: "monthly_sub" });
+    expect(res.status).not.toBe(400);
+  });
+});
+
+// ── Admin: partner CRUD ────────────────────────────────────────────────────────
+
+describe("POST /api/admin/partners", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+  const userToken  = signToken({ userId: 1 });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .send({ name: "Test", category: "food", cashbackPercent: 5 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with a regular user token", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ name: "Test", category: "food", cashbackPercent: 5 });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 when name is missing", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ category: "food", cashbackPercent: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when category is missing", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test Shop", cashbackPercent: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for an invalid category value", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test Shop", category: "crypto", cashbackPercent: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when cashbackPercent exceeds 50", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test", category: "retail", cashbackPercent: 51 });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when cashbackPercent is negative", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test", category: "retail", cashbackPercent: -1 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid category 'retail' without 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test Shop", category: "retail", cashbackPercent: 5 });
+    expect(res.status).not.toBe(400);
+  });
+
+  it("accepts valid category 'food' without 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/partners")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Test Cafe", category: "food", cashbackPercent: 3 });
+    expect(res.status).not.toBe(400);
+  });
+});
+
+describe("PATCH /api/admin/partners/:id", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/1")
+      .send({ name: "Updated" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/abc")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Updated" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid category value in update", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ category: "not_a_category" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when cashbackPercent exceeds 50 in update", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ cashbackPercent: 99 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts a valid partial update (name only) — not 400", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Renamed Partner" });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts isActive toggle in update — not 400", async () => {
+    const res = await request(app)
+      .patch("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ isActive: false });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("DELETE /api/admin/partners/:id", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+  const userToken  = signToken({ userId: 1 });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app).delete("/api/admin/partners/1");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with a regular user token", async () => {
+    const res = await request(app)
+      .delete("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .delete("/api/admin/partners/not-a-number")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with admin token — not 400 or 401", async () => {
+    const res = await request(app)
+      .delete("/api/admin/partners/1")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
   });
 });
