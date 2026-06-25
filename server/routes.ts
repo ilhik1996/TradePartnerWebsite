@@ -12,7 +12,7 @@ import {
 import { processDeposit, chargebackRiskScore } from "./modules/payments";
 import { createSubscription, cancelSubscription, getActiveSubscription } from "./modules/subscriptions";
 import { sendWelcomeEmail, sendDrawResultEmail, sendWithdrawalConfirmationEmail, sendPasswordChangedEmail } from "./modules/email";
-import { awardXp, getUserLevel, checkAndAwardBadges, XP } from "./modules/gamification";
+import { awardXp, getUserLevel, checkAndAwardBadges, computeLevel, XP } from "./modules/gamification";
 import { getPartners, getPartner } from "./modules/partners";
 import { sendPushToUser, VAPID_PUBLIC_KEY } from "./modules/push";
 import { insertNotification } from "./modules/notifications";
@@ -21,7 +21,7 @@ import { authRateLimit, apiRateLimit, paymentRateLimit, deviceFingerprint, detec
 import {
   users, userProfiles, countries, draws, drawEntries, wallets, transactions,
   responsibleGaming, notifications, adminUsers, auditLogs, petitionSignatures,
-  subscriptions, referrals, partners, pushSubscriptions, userSessions,
+  subscriptions, referrals, partners, pushSubscriptions, userSessions, gamificationEvents,
   insertUserSchema, loginSchema, freeEntrySchema,
 } from "@shared/schema";
 import { eq, desc, and, sql, inArray, count, gte, sum, ilike, or, isNull } from "drizzle-orm";
@@ -1598,6 +1598,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
+  }));
+
+  // GET /api/gamification/leaderboard — top-N users by total XP (public)
+  app.get("/api/gamification/leaderboard", ar(async (req: Request, res: Response) => {
+    const limitRaw = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 10;
+    const limit = isNaN(limitRaw) || limitRaw < 1 ? 10 : Math.min(limitRaw, 100);
+
+    const rows = await db
+      .select({
+        userId: gamificationEvents.userId,
+        totalXp: sql<number>`cast(coalesce(sum(${gamificationEvents.xp}), 0) as int)`,
+        firstName: userProfiles.firstName,
+        lastName: userProfiles.lastName,
+      })
+      .from(gamificationEvents)
+      .leftJoin(userProfiles, eq(gamificationEvents.userId, userProfiles.userId))
+      .groupBy(gamificationEvents.userId, userProfiles.firstName, userProfiles.lastName)
+      .orderBy(desc(sql`sum(${gamificationEvents.xp})`))
+      .limit(limit);
+
+    const board = rows.map((r, i) => {
+      const { level, title } = computeLevel(r.totalXp);
+      const name = [r.firstName, r.lastName].filter(Boolean).join(" ") || `Player #${r.userId}`;
+      return { rank: i + 1, userId: r.userId, displayName: name, totalXp: r.totalXp, level, title };
+    });
+
+    res.json(board);
   }));
 
   // ── Partners ──────────────────────────────────────────────────────────────

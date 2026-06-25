@@ -2253,3 +2253,21 @@ describe("GET /api/settings/responsible-gaming", () => {
     expect(res.status).not.toBe(401);
   });
 });
+
+describe("GET /api/gamification/leaderboard", () => {
+  it("is public — returns 200 without auth", async () => {
+    const res = await request(app).get("/api/gamification/leaderboard");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it("accepts ?limit param — defaults gracefully for bad value", async () => {
+    const res = await request(app).get("/api/gamification/leaderboard?limit=abc");
+    expect(res.status).toBe(200);
+  });
+
+  it("caps limit at 100", async () => {
+    const res = await request(app).get("/api/gamification/leaderboard?limit=999");
+    expect(res.status).toBe(200);
+  });
+});
