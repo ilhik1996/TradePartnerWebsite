@@ -2024,3 +2024,99 @@ describe("GET /api/admin/transactions", () => {
     expect(res.status).not.toBe(403);
   });
 });
+
+// ── DELETE /api/subscription/:id ──────────────────────────────────────────────
+
+describe("DELETE /api/subscription/:id", () => {
+  const token = signToken({ userId: 1 });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).delete("/api/subscription/1");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .delete("/api/subscription/abc")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid numeric id with auth — not 401", async () => {
+    const res = await request(app)
+      .delete("/api/subscription/1")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── DELETE /api/petition/sign ─────────────────────────────────────────────────
+
+describe("DELETE /api/petition/sign", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app).delete("/api/petition/sign");
+    expect(res.status).toBe(401);
+  });
+
+  it("revokes petition signature with auth — not 401", async () => {
+    const token = signToken({ userId: 1 });
+    const res = await request(app)
+      .delete("/api/petition/sign")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).not.toBe(401);
+  });
+});
+
+// ── PATCH /api/admin/countries/:id ───────────────────────────────────────────
+
+describe("PATCH /api/admin/countries/:id", () => {
+  const adminToken = signToken({ userId: 1, role: "admin" });
+
+  it("returns 401 without auth", async () => {
+    const res = await request(app).patch("/api/admin/countries/1").send({ name: "Updated" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with user token", async () => {
+    const userToken = signToken({ userId: 1 });
+    const res = await request(app)
+      .patch("/api/admin/countries/1")
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ name: "Updated" });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 for non-numeric id", async () => {
+    const res = await request(app)
+      .patch("/api/admin/countries/abc")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Updated" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when drawHourUtc is out of range", async () => {
+    const res = await request(app)
+      .patch("/api/admin/countries/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ drawHourUtc: 25 });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts name-only update with admin token — not 400 or 401", async () => {
+    const res = await request(app)
+      .patch("/api/admin/countries/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Ukraine Updated" });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("accepts isActive toggle", async () => {
+    const res = await request(app)
+      .patch("/api/admin/countries/1")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ isActive: false });
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(401);
+  });
+});
