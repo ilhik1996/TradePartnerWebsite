@@ -37,6 +37,7 @@ export default function Cabinet() {
   const [rgSettings, setRgSettings] = useState<any>(null);
   const [draws, setDraws] = useState<any[]>([]);
   const [gamification, setGamification] = useState<any>(null);
+  const [leaderboard, setLeaderboard] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState<"account" | "draws" | "responsible" | "level">("account");
 
@@ -75,11 +76,13 @@ export default function Cabinet() {
       api.profile.getResponsibleGaming(),
       api.draws.history(user?.countryId ?? 1),
       api.gamification.me(),
-    ]).then(([p, rg, d, g]) => {
+      api.gamification.leaderboard(10),
+    ]).then(([p, rg, d, g, lb]) => {
       setProfile(p);
       setRgSettings(rg);
       setDraws(d);
       setGamification(g);
+      setLeaderboard(lb);
       setFirstName(p?.firstName ?? "");
       setLastName(p?.lastName ?? "");
       setLimitDaily(rg?.dailyLimitAmount ?? "");
@@ -516,6 +519,36 @@ export default function Cabinet() {
                 ))}
               </div>
             </div>
+
+            {/* Leaderboard */}
+            {leaderboard && leaderboard.length > 0 && (
+              <div className="viona-card p-5">
+                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-primary" /> Top Players
+                </h3>
+                <div className="space-y-2">
+                  {leaderboard.map((entry: any) => {
+                    const isMe = entry.userId === user?.id;
+                    const medal = entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : null;
+                    return (
+                      <div
+                        key={entry.userId}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${isMe ? "bg-primary/10 border border-primary/20" : "bg-secondary/40"}`}
+                      >
+                        <span className="w-6 text-center font-bold text-muted-foreground shrink-0">
+                          {medal ?? `#${entry.rank}`}
+                        </span>
+                        <span className="flex-1 font-medium truncate">
+                          {isMe ? `${entry.displayName} (you)` : entry.displayName}
+                        </span>
+                        <span className="text-xs text-muted-foreground shrink-0">Lv.{entry.level}</span>
+                        <span className="font-bold text-purple-400 shrink-0">{entry.totalXp} XP</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
