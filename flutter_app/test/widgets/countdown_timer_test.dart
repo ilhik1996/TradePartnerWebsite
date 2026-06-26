@@ -29,33 +29,33 @@ void main() {
   testWidgets('displays two-digit zero-padded values', (tester) async {
     // Regardless of the actual time, values should always be 2-digit strings
     await tester.pumpWidget(_wrap(const CountdownTimer(targetHourUtc: 21)));
-    // Find digit-box RichText widgets (those with children) — excludes plain Text widgets
-    final richTexts = tester.widgetList<RichText>(find.byType(RichText))
-        .where((rt) => (rt.text as TextSpan).children != null)
+    // Find digit-box Text.rich widgets — they have a textSpan with children
+    final textWidgets = tester.widgetList<Text>(find.byType(Text))
+        .where((t) => t.textSpan != null && (t.textSpan as TextSpan).children != null)
         .toList();
     // Each digit box has 2 spans: the value (2 chars) and the label (1 char)
-    for (final rt in richTexts) {
-      final spans = (rt.text as TextSpan).children!;
+    for (final t in textWidgets) {
+      final spans = (t.textSpan as TextSpan).children!;
       expect(spans.first.toPlainText().length, 2);
     }
   });
 
   testWidgets('updates display when a second elapses', (tester) async {
     await tester.pumpWidget(_wrap(const CountdownTimer(targetHourUtc: 21)));
-    // Capture digit text before tick — filter out plain Text widgets (no children)
+    // Capture digit values from Text.rich widgets before tick
     final before = tester
-        .widgetList<RichText>(find.byType(RichText))
-        .where((rt) => (rt.text as TextSpan).children != null)
-        .map((rt) => (rt.text as TextSpan).children!.first.toPlainText())
+        .widgetList<Text>(find.byType(Text))
+        .where((t) => t.textSpan != null && (t.textSpan as TextSpan).children != null)
+        .map((t) => (t.textSpan as TextSpan).children!.first.toPlainText())
         .join();
 
     // Advance fake clock by 1 second — triggers Timer.periodic callback
     await tester.pump(const Duration(seconds: 1));
 
     final after = tester
-        .widgetList<RichText>(find.byType(RichText))
-        .where((rt) => (rt.text as TextSpan).children != null)
-        .map((rt) => (rt.text as TextSpan).children!.first.toPlainText())
+        .widgetList<Text>(find.byType(Text))
+        .where((t) => t.textSpan != null && (t.textSpan as TextSpan).children != null)
+        .map((t) => (t.textSpan as TextSpan).children!.first.toPlainText())
         .join();
 
     // The seconds digit must have changed (total string differs)

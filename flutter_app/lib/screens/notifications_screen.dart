@@ -38,7 +38,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       setState(() {
         final idx = _notifications.indexWhere((n) => n['id'] == id);
-        if (idx != -1) _notifications[idx] = {..._notifications[idx], 'isRead': true};
+        if (idx != -1) _notifications[idx] = <String, dynamic>{..._notifications[idx] as Map<String, dynamic>, 'isRead': true};
       });
     } catch (_) {}
   }
@@ -49,7 +49,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final unread = _notifications.where((n) => !(n['isRead'] as bool? ?? false)).toList();
       await Future.wait(unread.map((n) => _api.markNotificationRead((n['id'] as num).toInt())));
-      if (mounted) setState(() => _notifications = _notifications.map((n) => {...n, 'isRead': true}).toList());
+      if (mounted) setState(() => _notifications = _notifications.map((n) => <String, dynamic>{...n as Map<String, dynamic>, 'isRead': true}).toList());
     } catch (_) {}
     if (mounted) setState(() => _marking = false);
   }
