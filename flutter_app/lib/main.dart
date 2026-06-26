@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'theme/viona_theme.dart';
 import 'services/api_service.dart';
-import 'providers/auth_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/history_screen.dart';

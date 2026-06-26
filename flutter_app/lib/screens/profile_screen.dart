@@ -206,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 style: TextStyle(fontSize: 13, color: VionaColors.textSecondary),
               ),
               const SizedBox(height: 16),
-              ...for (final d in [30, 90, 180, 365])
+              for (final d in [30, 90, 180, 365])
                 RadioListTile<int>(
                   value: d,
                   groupValue: selectedDays,
@@ -752,7 +752,7 @@ class _KycAgeSheetState extends State<_KycAgeSheet> {
     try {
       final result = await _api.startKyc(level: 'age', dateOfBirth: _dobCtrl.text.trim());
       if (mounted) {
-        final sdkToken = result?['sdkToken'] as String?;
+        final sdkToken = result['sdkToken'] as String?;
         if (sdkToken != null) {
           // Sumsub configured: open WebSDK in browser
           final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
@@ -833,7 +833,7 @@ class _KycFullSheetState extends State<_KycFullSheet> {
     try {
       final result = await _api.startKyc(level: 'full');
       if (mounted) {
-        final sdkToken = result?['sdkToken'] as String?;
+        final sdkToken = result['sdkToken'] as String?;
         if (sdkToken != null) {
           final uri = Uri.parse('https://api.sumsub.com/idensic/l/#/$sdkToken');
           await launchUrl(uri, mode: LaunchMode.externalApplication);

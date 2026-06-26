@@ -135,7 +135,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     }
 
     final balance = double.tryParse(_wallet?['balance']?.toString() ?? '0') ?? 0;
-    final symbol = _country?['currencySymbol'] ?? '$';
+    final symbol = _country?['currencySymbol'] ?? '\$';
     final currency = _wallet?['currency'] ?? 'USD';
 
     return Scaffold(
