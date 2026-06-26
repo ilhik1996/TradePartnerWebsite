@@ -1,9 +1,18 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes, getBroadcast } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startScheduler } from "./modules/scheduler";
+
+// Safety net: log unhandled rejections instead of crashing (Node 15+)
+process.on("unhandledRejection", (reason) => {
+  console.error("[UnhandledRejection]", reason);
+});
 
 const app = express();
-app.use(express.json());
+// Save raw body buffer on every request — required for Stripe webhook HMAC verification
+app.use(express.json({
+  verify: (_req, _res, buf) => { (_req as any).rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
@@ -42,9 +51,8 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    if (status >= 500) console.error("[Server Error]", err);
+    if (!res.headersSent) res.status(status).json({ message });
   });
 
   // importantly only setup vite in development and after
@@ -66,5 +74,9 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    // Start draw scheduler and auto-participate engine
+    if (process.env.DATABASE_URL) {
+      startScheduler(getBroadcast());
+    }
   });
 })();
