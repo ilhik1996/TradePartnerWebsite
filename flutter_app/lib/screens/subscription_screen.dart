@@ -120,7 +120,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       );
     }
 
-    final symbol = _country?['currencySymbol'] ?? '$';
+    final symbol = _country?['currencySymbol'] ?? '\$';
     final weeklyAmt = double.tryParse(_country?['entryAmountWeekly']?.toString() ?? '35') ?? 35;
     final monthlyAmt = double.tryParse(_country?['entryAmountMonthly']?.toString() ?? '125') ?? 125;
     final dailyAmt = double.tryParse(_country?['entryAmountDaily']?.toString() ?? '5') ?? 5;

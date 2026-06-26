@@ -20,37 +20,30 @@ void main() {
     test('sends explicit null for all fields when no args given (regression: limits would not clear)', () async {
       // Before the fix, null params were silently dropped, making it impossible to clear a limit.
       // Now all three fields are always sent, allowing the server to set them to null.
-      Map<String, dynamic>? captured;
+      // The adapter only intercepts if the request body matches exactly — verifying the body.
       dioAdapter.onPatch(
         '/settings/responsible-gaming',
-        (server) {
-          captured = server.request.data as Map<String, dynamic>?;
-          return server.reply(200, {});
+        (server) => server.reply(200, {}),
+        data: {
+          'dailyLimitAmount': null,
+          'weeklyLimitAmount': null,
+          'monthlyLimitAmount': null,
         },
       );
       await ApiService().updateResponsibleGaming();
-      expect(captured, isNotNull);
-      expect(captured!.containsKey('dailyLimitAmount'), isTrue);
-      expect(captured!.containsKey('weeklyLimitAmount'), isTrue);
-      expect(captured!.containsKey('monthlyLimitAmount'), isTrue);
-      expect(captured!['dailyLimitAmount'], isNull);
-      expect(captured!['weeklyLimitAmount'], isNull);
-      expect(captured!['monthlyLimitAmount'], isNull);
     });
 
     test('sends provided values alongside null for unset fields', () async {
-      Map<String, dynamic>? captured;
       dioAdapter.onPatch(
         '/settings/responsible-gaming',
-        (server) {
-          captured = server.request.data as Map<String, dynamic>?;
-          return server.reply(200, {});
+        (server) => server.reply(200, {}),
+        data: {
+          'dailyLimitAmount': 50.0,
+          'weeklyLimitAmount': null,
+          'monthlyLimitAmount': 200.0,
         },
       );
       await ApiService().updateResponsibleGaming(dailyLimit: 50.0, monthlyLimit: 200.0);
-      expect(captured!['dailyLimitAmount'], equals(50.0));
-      expect(captured!['weeklyLimitAmount'], isNull);
-      expect(captured!['monthlyLimitAmount'], equals(200.0));
     });
   });
 
@@ -204,14 +197,13 @@ void main() {
 
   group('deposit', () {
     test('sends amount and currency to server', () async {
-      Map<String, dynamic>? captured;
-      dioAdapter.onPost('/wallet/deposit', (server) {
-        captured = server.request.data as Map<String, dynamic>?;
-        return server.reply(200, {'newBalance': 1350.0});
-      });
-      await ApiService().deposit(100.0, 'UAH');
-      expect(captured!['amount'], equals(100.0));
-      expect(captured!['currency'], equals('UAH'));
+      dioAdapter.onPost(
+        '/wallet/deposit',
+        (server) => server.reply(200, {'newBalance': 1350.0}),
+        data: {'amount': 100.0, 'currency': 'UAH'},
+      );
+      final result = await ApiService().deposit(100.0, 'UAH');
+      expect(result['newBalance'], equals(1350.0));
     });
   });
 
