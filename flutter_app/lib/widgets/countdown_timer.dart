@@ -70,8 +70,8 @@ class _CountdownTimerState extends State<CountdownTimer> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: VionaColors.border),
       ),
-      child: RichText(
-        text: TextSpan(
+      child: Text.rich(
+        TextSpan(
           children: [
             TextSpan(
               text: val,

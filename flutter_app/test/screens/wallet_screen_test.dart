@@ -125,7 +125,11 @@ void main() {
     await tester.pumpWidget(_wrap(const WalletScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/wallet/deposit', (s) => s.reply(200, {'newBalance': 350.0}));
+    adapter.onPost(
+      '/wallet/deposit',
+      (s) => s.reply(200, {'newBalance': 350.0}),
+      data: {'amount': 10.0, 'currency': 'UAH'},
+    );
     // _load() is called again after deposit
     _stubLoad(adapter, wallet: {'balance': '350.00', 'currency': 'UAH'});
 
@@ -179,10 +183,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // Slow deposit response gives us time to unmount before the callback
-    adapter.onPost('/wallet/deposit', (s) async {
-      await Future.delayed(const Duration(milliseconds: 100));
-      return s.reply(200, {'newBalance': 360.0});
-    });
+    adapter.onPost(
+      '/wallet/deposit',
+      (s) async {
+        await Future.delayed(const Duration(milliseconds: 100));
+        return s.reply(200, {'newBalance': 360.0});
+      },
+      data: {'amount': 10.0, 'currency': 'UAH'},
+    );
 
     await tester.tap(find.text('₴10'));
     await tester.pump();
@@ -207,10 +215,14 @@ void main() {
     await tester.tap(find.text('Withdraw'));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/wallet/withdraw', (s) async {
-      await Future.delayed(const Duration(milliseconds: 100));
-      return s.reply(200, {'newBalance': 150.0});
-    });
+    adapter.onPost(
+      '/wallet/withdraw',
+      (s) async {
+        await Future.delayed(const Duration(milliseconds: 100));
+        return s.reply(200, {'newBalance': 150.0});
+      },
+      data: {'amount': 100.0},
+    );
 
     // Find the withdraw amount TextField by its hint decoration
     final withdrawField = find.byWidgetPredicate((w) {

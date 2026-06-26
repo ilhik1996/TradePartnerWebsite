@@ -29,9 +29,11 @@ void main() {
   testWidgets('displays two-digit zero-padded values', (tester) async {
     // Regardless of the actual time, values should always be 2-digit strings
     await tester.pumpWidget(_wrap(const CountdownTimer(targetHourUtc: 21)));
-    // Find all RichText widgets and check digit boxes have 2-char value spans
-    final richTexts = tester.widgetList<RichText>(find.byType(RichText)).toList();
-    // Each digit box RichText has 2 spans: the value (2 chars) and the label (1 char)
+    // Find digit-box RichText widgets (those with children) — excludes plain Text widgets
+    final richTexts = tester.widgetList<RichText>(find.byType(RichText))
+        .where((rt) => (rt.text as TextSpan).children != null)
+        .toList();
+    // Each digit box has 2 spans: the value (2 chars) and the label (1 char)
     for (final rt in richTexts) {
       final spans = (rt.text as TextSpan).children!;
       expect(spans.first.toPlainText().length, 2);
@@ -40,9 +42,10 @@ void main() {
 
   testWidgets('updates display when a second elapses', (tester) async {
     await tester.pumpWidget(_wrap(const CountdownTimer(targetHourUtc: 21)));
-    // Capture all digit text before tick
+    // Capture digit text before tick — filter out plain Text widgets (no children)
     final before = tester
         .widgetList<RichText>(find.byType(RichText))
+        .where((rt) => (rt.text as TextSpan).children != null)
         .map((rt) => (rt.text as TextSpan).children!.first.toPlainText())
         .join();
 
@@ -51,6 +54,7 @@ void main() {
 
     final after = tester
         .widgetList<RichText>(find.byType(RichText))
+        .where((rt) => (rt.text as TextSpan).children != null)
         .map((rt) => (rt.text as TextSpan).children!.first.toPlainText())
         .join();
 

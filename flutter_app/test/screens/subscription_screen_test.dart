@@ -141,7 +141,7 @@ void main() {
     await tester.pumpWidget(_wrap(const SubscriptionScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/subscription', (s) => s.reply(200, _activeWeekly));
+    adapter.onPost('/subscription', (s) => s.reply(200, _activeWeekly), data: {'type': 'weekly'});
     _stubLoad(adapter, subscription: _activeWeekly);
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'Subscribe Weekly'));
@@ -155,7 +155,7 @@ void main() {
     await tester.pumpWidget(_wrap(const SubscriptionScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/subscription', (s) => s.reply(402, {'message': 'Insufficient balance'}));
+    adapter.onPost('/subscription', (s) => s.reply(402, {'message': 'Insufficient balance'}), data: {'type': 'weekly'});
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'Subscribe Weekly'));
     await tester.pumpAndSettle();

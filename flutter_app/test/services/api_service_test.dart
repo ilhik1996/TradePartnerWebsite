@@ -57,6 +57,7 @@ void main() {
           'token': 'jwt_abc123',
           'user': {'id': 1, 'email': 'user@example.com'},
         }),
+        data: {'identifier': 'user@example.com', 'password': 'pass1234'},
       );
       final result = await ApiService().login('user@example.com', 'pass1234');
       expect(result['token'], equals('jwt_abc123'));
@@ -70,6 +71,7 @@ void main() {
           'token': 'tok',
           'user': {'id': 7, 'email': 'x@y.com', 'countryId': 3},
         }),
+        data: {'identifier': 'x@y.com', 'password': 'secret'},
       );
       final result = await ApiService().login('x@y.com', 'secret');
       expect(result['user']['id'], equals(7));
@@ -80,6 +82,7 @@ void main() {
       dioAdapter.onPost(
         '/auth/login',
         (server) => server.reply(401, {'message': 'Invalid credentials'}),
+        data: {'identifier': 'bad@email.com', 'password': 'wrongpass'},
       );
       expect(
         () => ApiService().login('bad@email.com', 'wrongpass'),
@@ -96,6 +99,7 @@ void main() {
           'token': 'new_token',
           'user': {'id': 99, 'email': 'new@example.com'},
         }),
+        data: {'email': 'new@example.com', 'password': 'password123', 'countryId': 1, 'autoParticipate': true},
       );
       final result = await ApiService().register(
         email: 'new@example.com',

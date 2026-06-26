@@ -101,7 +101,7 @@ void main() {
     await tester.pumpWidget(_wrap(const ReferralsScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/referrals/apply', (s) => s.reply(200, {'message': 'Applied'}));
+    adapter.onPost('/referrals/apply', (s) => s.reply(200, {'message': 'Applied'}), data: {'code': 'FRIEND10'});
     adapter.onGet('/referrals/my', (s) => s.reply(200, {
       ..._referralsResponse,
       'totalBonusEarned': '25.50',
@@ -122,7 +122,7 @@ void main() {
     await tester.pumpWidget(_wrap(const ReferralsScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPost('/referrals/apply', (s) => s.reply(400, {'message': 'Invalid code'}));
+    adapter.onPost('/referrals/apply', (s) => s.reply(400, {'message': 'Invalid code'}), data: {'code': 'BADCODE'});
     await tester.enterText(find.byType(TextField), 'BADCODE');
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
@@ -142,10 +142,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // Slow apply — gives us a window to unmount during the in-flight request
-    adapter.onPost('/referrals/apply', (s) async {
-      await Future.delayed(const Duration(milliseconds: 100));
-      return s.reply(200, {'message': 'ok'});
-    });
+    adapter.onPost(
+      '/referrals/apply',
+      (s) async {
+        await Future.delayed(const Duration(milliseconds: 100));
+        return s.reply(200, {'message': 'ok'});
+      },
+      data: {'code': 'CODE123'},
+    );
     // We won't re-load after the apply because we'll be unmounted
     // (no GET mock registered intentionally)
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,12 +38,15 @@ void main() {
   // ── Initial render ─────────────────────────────────────────────────────────
 
   testWidgets('shows loading indicator while countries load', (tester) async {
+    final completer = Completer<void>();
     adapter.onGet('/countries', (s) async {
-      await Future.delayed(const Duration(seconds: 5));
+      await completer.future;
       return s.reply(200, _countries);
     });
     await tester.pumpWidget(_wrapSimple());
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    completer.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows country dropdown after countries load', (tester) async {
@@ -151,10 +155,15 @@ void main() {
 
   testWidgets('shows loading spinner during register call', (tester) async {
     adapter.onGet('/countries', (s) => s.reply(200, _countries));
-    adapter.onPost('/auth/register', (s) async {
-      await Future.delayed(const Duration(seconds: 5));
-      return s.reply(200, {'token': 't', 'user': {}});
-    });
+    final completer = Completer<void>();
+    adapter.onPost(
+      '/auth/register',
+      (s) async {
+        await completer.future;
+        return s.reply(200, {'token': 't', 'user': {}});
+      },
+      data: {'email': 'new@test.com', 'password': 'pass1234', 'countryId': 1, 'autoParticipate': false},
+    );
     await tester.pumpWidget(_wrapSimple());
     await tester.pumpAndSettle();
 
@@ -178,14 +187,21 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    completer.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('button is disabled during register call', (tester) async {
     adapter.onGet('/countries', (s) => s.reply(200, _countries));
-    adapter.onPost('/auth/register', (s) async {
-      await Future.delayed(const Duration(seconds: 5));
-      return s.reply(200, {'token': 't', 'user': {}});
-    });
+    final completer = Completer<void>();
+    adapter.onPost(
+      '/auth/register',
+      (s) async {
+        await completer.future;
+        return s.reply(200, {'token': 't', 'user': {}});
+      },
+      data: {'email': 'new@test.com', 'password': 'pass1234', 'countryId': 1, 'autoParticipate': false},
+    );
     await tester.pumpWidget(_wrapSimple());
     await tester.pumpAndSettle();
 
@@ -210,13 +226,15 @@ void main() {
 
     final btn = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(btn.onPressed, isNull);
+    completer.complete();
+    await tester.pumpAndSettle();
   });
 
   // ── API error ──────────────────────────────────────────────────────────────
 
   testWidgets('shows API error message on failed register', (tester) async {
     adapter.onGet('/countries', (s) => s.reply(200, _countries));
-    adapter.onPost('/auth/register', (s) => s.reply(409, {'message': 'Email already in use'}));
+    adapter.onPost('/auth/register', (s) => s.reply(409, {'message': 'Email already in use'}), data: {'email': 'taken@test.com', 'password': 'pass1234', 'countryId': 1, 'autoParticipate': false});
     await tester.pumpWidget(_wrapSimple());
     await tester.pumpAndSettle();
 

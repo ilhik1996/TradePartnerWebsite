@@ -202,7 +202,7 @@ void main() {
     await tester.pumpWidget(_wrap(const ProfileScreen()));
     await tester.pumpAndSettle();
 
-    adapter.onPatch('/profile', (s) => s.reply(200, {}));
+    adapter.onPatch('/profile', (s) => s.reply(200, {}), data: {'firstName': 'Alice', 'lastName': 'Smith'});
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'Save changes'));
     await tester.pumpAndSettle();

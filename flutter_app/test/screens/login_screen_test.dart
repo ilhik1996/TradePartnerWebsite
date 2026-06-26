@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,17 +74,24 @@ void main() {
   });
 
   testWidgets('shows loading indicator while API call is in progress', (tester) async {
-    // Adapter with no immediate reply simulates slow network
-    adapter.onPost('/auth/login', (s) async {
-      await Future.delayed(const Duration(seconds: 5));
-      return s.reply(200, {'token': 't', 'user': {}});
-    });
+    // Completer keeps the request in-flight without creating a pending timer
+    final completer = Completer<void>();
+    adapter.onPost(
+      '/auth/login',
+      (s) async {
+        await completer.future;
+        return s.reply(200, {'token': 't', 'user': {}});
+      },
+      data: {'identifier': 'user@test.com', 'password': 'password123'},
+    );
     await tester.pumpWidget(_wrapWithRouter());
     await tester.enterText(find.byType(TextField).first, 'user@test.com');
     await tester.enterText(find.byType(TextField).last, 'password123');
     await tester.tap(find.text('Sign in'));
-    await tester.pump(); // let setState run
+    await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    completer.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows error message on failed login (wrong credentials)', (tester) async {
@@ -101,10 +109,15 @@ void main() {
   });
 
   testWidgets('sign-in button is disabled while loading', (tester) async {
-    adapter.onPost('/auth/login', (s) async {
-      await Future.delayed(const Duration(seconds: 5));
-      return s.reply(200, {'token': 't', 'user': {}});
-    });
+    final completer = Completer<void>();
+    adapter.onPost(
+      '/auth/login',
+      (s) async {
+        await completer.future;
+        return s.reply(200, {'token': 't', 'user': {}});
+      },
+      data: {'identifier': 'user@test.com', 'password': 'password123'},
+    );
     await tester.pumpWidget(_wrapWithRouter());
     await tester.enterText(find.byType(TextField).first, 'user@test.com');
     await tester.enterText(find.byType(TextField).last, 'password123');
@@ -113,13 +126,16 @@ void main() {
 
     final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(button.onPressed, isNull);
+    completer.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('navigates to dashboard after successful login', (tester) async {
-    adapter.onPost('/auth/login', (s) => s.reply(200, {
-      'token': 'valid_jwt',
-      'user': {'id': 1, 'email': 'user@test.com'},
-    }));
+    adapter.onPost(
+      '/auth/login',
+      (s) => s.reply(200, {'token': 'valid_jwt', 'user': {'id': 1, 'email': 'user@test.com'}}),
+      data: {'identifier': 'user@test.com', 'password': 'password123'},
+    );
     const dashboardKey = Key('dashboard_stub');
     await tester.pumpWidget(_wrapWithRouter(
       dashboard: const SizedBox(key: dashboardKey),
