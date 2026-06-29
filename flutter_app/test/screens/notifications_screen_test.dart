@@ -35,6 +35,7 @@ void main() {
     adapter.onGet('/notifications', (s) => s.reply(200, []));
     await tester.pumpWidget(_wrap(const NotificationsScreen()));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows empty state when no notifications', (tester) async {

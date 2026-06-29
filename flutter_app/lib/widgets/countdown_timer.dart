@@ -4,8 +4,9 @@ import '../theme/viona_theme.dart';
 
 class CountdownTimer extends StatefulWidget {
   final int targetHourUtc;
+  final DateTime Function()? nowProvider;
 
-  const CountdownTimer({super.key, required this.targetHourUtc});
+  const CountdownTimer({super.key, required this.targetHourUtc, this.nowProvider});
 
   @override
   State<CountdownTimer> createState() => _CountdownTimerState();
@@ -31,7 +32,7 @@ class _CountdownTimerState extends State<CountdownTimer> {
   }
 
   Duration _calcRemaining() {
-    final now = DateTime.now().toUtc();
+    final now = (widget.nowProvider?.call() ?? DateTime.now()).toUtc();
     var target = DateTime.utc(now.year, now.month, now.day, widget.targetHourUtc);
     if (target.isBefore(now) || target.isAtSameMomentAs(now)) {
       target = target.add(const Duration(days: 1));

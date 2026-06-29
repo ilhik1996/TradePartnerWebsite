@@ -14,7 +14,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   final _api = ApiService();
-  late final TabController _tabs = TabController(length: 3, vsync: this);
+  late TabController _tabs;
 
   Map<String, dynamic>? _user;
   Map<String, dynamic>? _profile;
@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: 3, vsync: this);
     _load();
   }
 

@@ -41,15 +41,17 @@ void main() {
   });
 
   testWidgets('updates display when a second elapses', (tester) async {
-    await tester.pumpWidget(_wrap(const CountdownTimer(targetHourUtc: 21)));
-    // Capture digit values from Text.rich widgets before tick
+    var fakeNow = DateTime.utc(2025, 1, 1, 8, 0, 0);
+    await tester.pumpWidget(_wrap(CountdownTimer(targetHourUtc: 21, nowProvider: () => fakeNow)));
+    // Capture digit values before tick
     final before = tester
         .widgetList<Text>(find.byType(Text))
         .where((t) => t.textSpan != null && (t.textSpan as TextSpan).children != null)
         .map((t) => (t.textSpan as TextSpan).children!.first.toPlainText())
         .join();
 
-    // Advance fake clock by 1 second — triggers Timer.periodic callback
+    // Advance the injected clock and trigger Timer.periodic callback
+    fakeNow = fakeNow.add(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 
     final after = tester

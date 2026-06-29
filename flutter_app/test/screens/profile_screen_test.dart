@@ -74,6 +74,7 @@ void main() {
     _stubLoad(adapter);
     await tester.pumpWidget(_wrap(const ProfileScreen()));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows user email after load', (tester) async {
