@@ -49,6 +49,7 @@ void main() {
     _stubLoad(adapter);
     await tester.pumpWidget(_wrap(const SubscriptionScreen()));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows error state with Retry on API failure', (tester) async {

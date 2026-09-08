@@ -26,8 +26,8 @@ void main() {
   testWidgets('shows loading indicator before API responds', (tester) async {
     adapter.onGet('/partners', (s) => s.reply(200, []));
     await tester.pumpWidget(_wrap(const PartnersScreen()));
-    // pump() without settle — widget is still in loading state
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('renders partner cards after successful load', (tester) async {

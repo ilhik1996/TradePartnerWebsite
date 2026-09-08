@@ -68,7 +68,7 @@ void main() {
     adapter.onGet('/countries', (s) => s.reply(200, _countries));
     await tester.pumpWidget(_wrapSimple());
     await tester.pumpAndSettle();
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Create account'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(3));
   });
 

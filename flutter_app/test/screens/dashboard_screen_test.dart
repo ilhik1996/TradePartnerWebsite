@@ -81,6 +81,7 @@ void main() {
     _stubLoad(adapter);
     await tester.pumpWidget(_wrapWithRouter());
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows error state with Retry on API failure', (tester) async {

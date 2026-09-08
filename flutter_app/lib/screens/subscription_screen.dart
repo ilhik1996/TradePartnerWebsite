@@ -409,7 +409,7 @@ class _PlanCard extends StatelessWidget {
                 Text('Current plan', style: TextStyle(color: VionaColors.teal, fontWeight: FontWeight.w700)),
               ],
             )
-          else
+          else if (onTap != null)
             ElevatedButton(
               onPressed: processing ? null : onTap,
               style: ElevatedButton.styleFrom(
